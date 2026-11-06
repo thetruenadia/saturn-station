@@ -65,115 +65,153 @@ const cell=new THREE.Group();cell.position.set(0,.7,0);box(cell,.5,.3,.36,greenM
 scene.add(caseGroup);caseGroup.userData={name:'SEALED SERVICE CASE',x:-5,z:2};interactables.push(caseGroup);
 const generator=new THREE.Group();generator.position.set(-4,0,-3);box(generator,1,.7,.8,edgeMat,0,.35,0);box(generator,.7,.9,.6,wallMat,0,1.1,0);box(generator,.48,.22,.05,screenMat,0,1.25,.33);scene.add(generator);generator.userData={name:'AUXILIARY POWER DISTRIBUTION',x:-4,z:-3};interactables.push(generator);
 const hatch=new THREE.Group();hatch.position.set(7,0,1);cylinder(hatch,1.15,1.15,.22,edgeMat,0,1.4,0,Math.PI/2,0);cylinder(hatch,.83,.83,.24,darkMat,0,1.4,.02,Math.PI/2,0);const hatchDoor=new THREE.Group();hatchDoor.position.set(-.72,1.4,.2);hatch.add(hatchDoor);box(hatchDoor,.18,1.2,.22,rustMat,.72,0,0);box(hatchDoor,.12,.2,.28,greenMat,.72,.35,.12);scene.add(hatch);hatch.userData={name:'MAINTENANCE EXIT',x:7,z:1};interactables.push(hatch);
-// SRV-09: 0.2 reconstruction guided by the original 0.1 isometric sprite.
-// Keep the low, elongated chassis, offset optical nose, exposed underside and
-// asymmetric forward/rear walking legs. This is deliberately non-humanoid.
+// SRV-09 definitive mechanical reconstruction for 0.2.
+// Forward is +Z. Keep this model self-contained so the same asset can be
+// reused by the inventory preview and later animation work.
 const robot=new THREE.Group();scene.add(robot);
 const body=new THREE.Group();robot.add(body);
-const sage=mat(0x68765b,.88,.22),sageLight=mat(0x879176,.9,.12),sageDark=mat(0x424d3b,.92,.18);
-const gunmetal=mat(0x252c29,.76,.62),blackMetal=mat(0x101614,.7,.48),steel=mat(0x68716a,.52,.78);
-const grime=mat(0x33291f,.98,.08),hazard=mat(0x9b4a2d,.88,.18),ivory=mat(0xb5b49a,.9,.08);
-const opticDark=mat(0x090d0d,.24,.55);
-const optic=new THREE.MeshStandardMaterial({color:0x67241e,emissive:0x5d100c,emissiveIntensity:1.35,roughness:.22,metalness:.18});
-const bodyBox=(w,h,d,m,x,y,z)=>box(body,w,h,d,m,x,y,z);
-const cylX=(parent,r,h,m,x,y,z)=>cylinder(parent,r,r,h,m,x,y,z,0,Math.PI/2);
-function strut(parent,a,b,r1,r2,material){
-  const av=new THREE.Vector3(...a),bv=new THREE.Vector3(...b),delta=bv.clone().sub(av);
-  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,delta.length(),9),material);
-  mesh.position.copy(av.add(bv).multiplyScalar(.5));
-  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());
-  mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
+const sage= new THREE.MeshStandardMaterial({color:0x667865,roughness:.65,metalness:.15});
+const sageLight= new THREE.MeshStandardMaterial({color:0x82917a,roughness:.72,metalness:.18});
+const sageDark= new THREE.MeshStandardMaterial({color:0x414d43,roughness:.82,metalness:.25});
+const gunmetal=new THREE.MeshStandardMaterial({color:0x242826,roughness:.4,metalness:.85});
+const jointMetal=new THREE.MeshStandardMaterial({color:0x181a19,roughness:.25,metalness:.9});
+const rawSteel=new THREE.MeshStandardMaterial({color:0x777c70,roughness:.48,metalness:.82});
+const rubber=new THREE.MeshStandardMaterial({color:0x0f1010,roughness:.9,metalness:0});
+const rust=new THREE.MeshStandardMaterial({color:0x70412b,roughness:.94,metalness:.18});
+const brass=new THREE.MeshStandardMaterial({color:0x987344,roughness:.42,metalness:.78});
+const stencil=new THREE.MeshStandardMaterial({color:0xd0cbb2,roughness:.85,metalness:.08});
+const opticGlass=new THREE.MeshStandardMaterial({color:0xff3518,emissive:0x9b170b,emissiveIntensity:1.6,roughness:.1,metalness:0});
+const opticHousing=jointMetal;
+const bodyBox=(parent,w,h,d,m,x,y,z)=>box(parent,w,h,d,m,x,y,z);
+function cylAlongX(parent,r,h,m,x,y,z){return cylinder(parent,r,r,h,m,x,y,z,0,Math.PI/2)}
+function rodBetween(parent,a,b,r,material,r2=r){const av=new THREE.Vector3(...a),bv=new THREE.Vector3(...b),delta=bv.clone().sub(av);const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r2,delta.length(),10),material);mesh.position.copy(av.clone().add(bv).multiplyScalar(.5));mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh}
+function tube(parent,points,r,material,segments=24){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,segments,r,7,false),material);mesh.castShadow=true;parent.add(mesh);return mesh}
+function plate(parent,w,h,d,m,x,y,z,bevel=.035){const g=new THREE.Group();g.position.set(x,y,z);const core=new THREE.Mesh(new THREE.BoxGeometry(w-bevel,h-bevel,d-bevel),m);core.castShadow=true;core.receiveShadow=true;g.add(core);parent.add(g);return g}
+function label(parent,text,x,y,z,rotationY=0,size=.12,color=0xd0cbb2){const c=document.createElement('canvas');c.width=256;c.height=128;const ctx=c.getContext('2d');ctx.clearRect(0,0,256,128);ctx.fillStyle='#'+color.toString(16).padStart(6,'0');ctx.font='bold 76px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,128,65);const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;const mesh=new THREE.Mesh(new THREE.PlaneGeometry(size*2,size),new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide,depthWrite:false}));mesh.position.set(x,y,z);mesh.rotation.y=rotationY;parent.add(mesh);return mesh}
+function hazardMark(parent,x,y,z,rotationY=0){const s=new THREE.Shape();s.moveTo(0,.09);s.lineTo(.09,-.075);s.lineTo(-.09,-.075);s.closePath();const m=new THREE.Mesh(new THREE.ShapeGeometry(s),new THREE.MeshBasicMaterial({color:0x171b17,side:THREE.DoubleSide}));m.position.set(x,y,z);m.rotation.y=rotationY;parent.add(m)}
+// Main anvil/wedge chassis. The roof plate is pitched down towards the nose.
+const shell=new THREE.Group();shell.position.set(0,1.43,0);body.add(shell);
+const core=bodyBox(shell,1.9,.53,1.12,sage,0,0,0);
+const roof=bodyBox(shell,1.78,.12,1.02,sageLight,-.025,.29,-.015);roof.rotation.x=-.12;
+const frontApron=bodyBox(shell,1.72,.25,.12,sageDark,0,-.13,.55);
+const frontFace=bodyBox(shell,1.62,.31,.055,gunmetal,0,-.055,.612);
+const leftSkirt=bodyBox(shell,.13,.34,.92,sageDark,-.91,-.055,-.025);
+const rightSkirt=bodyBox(shell,.13,.29,.86,sage,.91,-.07,-.015);
+bodyBox(shell,.82,.075,.12,rawSteel,-.18,.32,-.48);
+bodyBox(shell,.42,.055,.11,rust,.35,.34,-.42);
+// Heavy edge rails and removable armour seams.
+for(const side of [-1,1]){
+  bodyBox(shell,.055,.42,.94,rawSteel,side*.965,-.015,-.015);
+  bodyBox(shell,.07,.07,.9,rust,side*.91,-.27,-.015);
+  for(let z of [-.42,.36]){const bolt=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.025,10),rawSteel);bolt.rotation.z=Math.PI/2;bolt.position.set(side*.99,.03,z);shell.add(bolt)}
 }
-function cable(parent,points,r=.025,material=blackMetal){
-  const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));
-  const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,20,r,6,false),material);
-  mesh.castShadow=true;parent.add(mesh);return mesh;
+for(let i=0;i<5;i++){const vent=bodyBox(shell,.075,.018,.24,jointMetal,-.68+i*.13,.36,-.16);vent.rotation.z=-.08}
+label(shell,'ば',-.58,.06,.577,0,.19);
+label(shell,'の',.18,-.05,.65,0,.085,0xb6b49e);
+// Recessed offset primary optic on the front-right nose.
+const opticGroup=new THREE.Group();opticGroup.position.set(.52,.015,.66);shell.add(opticGroup);
+const opticCup=new THREE.Mesh(new THREE.CylinderGeometry(.205,.23,.13,16),opticHousing);opticCup.rotation.x=Math.PI/2;opticGroup.add(opticCup);
+const opticRim=new THREE.Mesh(new THREE.TorusGeometry(.155,.035,9,28),rawSteel);opticRim.position.z=.077;opticGroup.add(opticRim);
+const lens=new THREE.Mesh(new THREE.SphereGeometry(.112,20,16),opticGlass);lens.position.z=.085;opticGroup.add(lens);
+const lensInner=new THREE.Mesh(new THREE.SphereGeometry(.042,12,10),new THREE.MeshBasicMaterial({color:0xffa16b}));lensInner.position.set(-.025,.025,.17);opticGroup.add(lensInner);
+const opticLight=new THREE.PointLight(0xff3217,.45,1.3);opticLight.position.set(.52,1.45,.88);body.add(opticLight);
+// Secondary top-right sensor pod and its forward-facing lens.
+const sensor=new THREE.Group();sensor.position.set(.61,1.82,-.27);body.add(sensor);
+bodyBox(sensor,.34,.22,.34,gunmetal,0,0,0);
+bodyBox(sensor,.27,.12,.25,sageDark,0,.14,-.01);
+const sensorBar=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.13,12),rawSteel);sensorBar.rotation.x=Math.PI/2;sensorBar.position.set(0,-.015,.19);sensor.add(sensorBar);
+const sensorLens=new THREE.Mesh(new THREE.SphereGeometry(.052,12,10),opticGlass);sensorLens.position.set(0,-.015,.255);sensor.add(sensorLens);
+// Hinged flush service hatch on the roof.
+const servicePanel=new THREE.Group();servicePanel.position.set(-.42,1.82,-.27);body.add(servicePanel);
+bodyBox(servicePanel,.34,.035,.27,gunmetal,0,0,0);
+bodyBox(servicePanel,.29,.025,.22,sageLight,0,.022,0);
+for(const x of [-.12,.12])cylAlongX(servicePanel,.018,.035,rawSteel,x,.045,-.1);
+// Exposed belly: rectangular pelvis/drive frame and symmetrical hip axle.
+bodyBox(body,1.05,.28,.68,gunmetal,0,1.04,-.02);
+bodyBox(body,.72,.19,.56,jointMetal,0,.88,-.01);
+bodyBox(body,.4,.12,.43,rawSteel,0,.79,-.02);
+for(const side of [-1,1]){
+  const drum=cylAlongX(body,.31,.25,jointMetal,side*.64,1.04,0);
+  cylAlongX(body,.235,.27,gunmetal,side*.66,1.04,0);
+  cylAlongX(body,.115,.29,rawSteel,side*.68,1.04,0);
+  const hub=cylAlongX(body,.065,.30,jointMetal,side*.69,1.04,0);
+  // Utility boxes mounted outboard of each hip, with hazard triangles.
+  bodyBox(body,.26,.22,.28,sageDark,side*.83,.91,-.02);
+  bodyBox(body,.21,.17,.025,rawSteel,side*.83,.91,.13);
+  hazardMark(body,side*.83,.91,.148);
 }
-// Main floating maintenance chassis: long and low, with layered battered armour.
-bodyBox(2.05,.48,1.02,sage,0,1.35,0);
-bodyBox(1.82,.12,.88,sageDark,-.04,1.64,-.015);
-bodyBox(1.52,.09,.78,sageLight,-.08,1.72,-.02);
-bodyBox(.58,.22,1.04,gunmetal,-.22,1.13,0); // exposed belly cradle
-bodyBox(.94,.16,.72,blackMetal,-.15,1.02,-.02);
-bodyBox(.72,.12,.62,gunmetal,-.18,.94,.02);
-bodyBox(.42,.28,.62,sageDark,-.55,1.31,-.03);
-bodyBox(.28,.18,.48,hazard,-.66,1.43,.02);
-// Raised armour shoulders and side skirts, deliberately unequal.
-bodyBox(.62,.2,.13,sageLight,-.52,1.53,.51);
-bodyBox(.88,.17,.12,sage,-.43,1.52,-.51);
-bodyBox(.36,.12,.16,hazard,.48,1.57,.49);
-bodyBox(.48,.08,.12,ivory,-.58,1.61,.34);
-bodyBox(.42,.07,.12,ivory,.18,1.61,-.43);
-// Front sensor/nose: offset multi-lens optical assembly in a recessed dark housing.
-const nose=new THREE.Group();nose.position.set(.47,1.34,.52);body.add(nose);
-const noseHousing=new THREE.Mesh(new THREE.CylinderGeometry(.23,.27,.22,10),gunmetal);
-noseHousing.rotation.x=Math.PI/2;noseHousing.castShadow=true;nose.add(noseHousing);
-const noseRim=new THREE.Mesh(new THREE.TorusGeometry(.17,.035,8,20),steel);noseRim.position.z=.125;nose.add(noseRim);
-const mainLens=new THREE.Mesh(new THREE.SphereGeometry(.115,16,12),optic);mainLens.position.z=.14;nose.add(mainLens);
-for(const [x,y,r] of [[-.085,.07,.035],[.085,.07,.035],[0,-.075,.027]]){
-  const l=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),opticDark);l.position.set(x,y,.17);nose.add(l);
+// Three ribbed central rubber conduits from chassis to the hip axle.
+for(let i=-1;i<=1;i++){
+  const x=i*.16;
+  tube(body,[[x,1.31,.24],[x*1.2,1.16,.3],[x*1.4,.98,.25],[x*1.8,.86,.12]],.043,rubber,28);
+  for(let j=0;j<8;j++){const tor=new THREE.Mesh(new THREE.TorusGeometry(.044,.012,6,10),gunmetal);tor.position.set(x+(i*.02),1.22-j*.043,.27-j*.018);tor.rotation.x=Math.PI/2;body.add(tor)}
 }
-const lensGlow=new THREE.PointLight(0x8e241b,.32,1.1);lensGlow.position.set(.47,1.34,.78);body.add(lensGlow);
-// Small secondary sensor pod on the upper ridge, offset to the opposite side.
-cylX(body,.14,.23,gunmetal,.68,1.67,-.22);
-const sensorCap=new THREE.Mesh(new THREE.SphereGeometry(.105,12,10),screenMat);sensorCap.position.set(.68,1.79,-.22);body.add(sensorCap);
-cable(body,[[-.82,1.2,-.3],[-.56,.99,-.42],[-.16,1.02,-.38],[.22,1.1,-.34]],.032,blackMetal);
-cable(body,[[-.62,1.17,.36],[-.35,.98,.48],[.02,1.03,.42],[.34,1.13,.4]],.025,grime);
-// Ribbed conduit running along the underside.
-for(let i=0;i<7;i++){
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(.105,.027,6,12),gunmetal);
-  ring.rotation.y=Math.PI/2;ring.position.set(-.48+i*.15,.94,.03);body.add(ring);
+// Two brass-ended hydraulic fluid lines routed along the rear underside.
+for(const side of [-1,1]){
+  tube(body,[[side*.32,1.23,-.43],[side*.46,1.12,-.55],[side*.62,.99,-.48],[side*.76,.9,-.35]],.022,brass,20);
+  cylAlongX(body,.04,.09,brass,side*.76,.9,-.35);
 }
-// Visible fasteners, chipped plates and stencilled maintenance marks.
-for(const x of [-.86,-.48,.08,.73]){
-  for(const z of [-.43,.43]){
-    const bolt=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.025,8),steel);
-    bolt.rotation.x=Math.PI/2;bolt.position.set(x,1.48,z);body.add(bolt);
-  }
-}
-for(let i=0;i<4;i++){
-  const vent=box(body,.055,.018,.22,blackMetal,-.82+i*.11,1.61,-.12,false);
-  vent.rotation.z=-.08;
-}
-bodyBox(.24,.035,.025,ivory,-.78,1.55,.523);
-bodyBox(.16,.035,.025,hazard,.43,1.55,.524);
-// Asymmetric two-leg walking gear. The rear leg is shorter and acts as a counterbalance.
+// Folded two-stage manipulator tucked beneath the rear belly.
+const manipulator=new THREE.Group();manipulator.position.set(-.05,.79,-.42);body.add(manipulator);
+bodyBox(manipulator,.18,.12,.34,gunmetal,0,0,-.08);
+bodyBox(manipulator,.12,.10,.28,rawSteel,0,-.015,-.31);
+rodBetween(manipulator,[0,-.02,-.42],[0,-.02,-.63],.045,gunmetal);
+for(const side of [-1,1])rodBetween(manipulator,[0,-.02,-.63],[side*.085,-.04,-.78],.018,rawSteel);
+// Reverse-jointed legs: rear-swept thigh, backward knee, forward shin, split toes.
 const legs=[];
-for(const spec of [{z:.34,side:1,upper:.48,lower:.64,forward:.22},{z:-.34,side:-1,upper:.42,lower:.52,forward:-.16}]){
-  const hip=new THREE.Group();hip.position.set(-.12,1.12,spec.z);robot.add(hip);
-  const pivot=cylX(hip,.235,.2,gunmetal,0,0,0);
-  const pivotCap=cylX(hip,.15,.225,steel,.015,0,0);
-  const pivotInset=cylX(hip,.095,.24,blackMetal,.025,0,0);
-  const upperEnd=[spec.side*.13,-spec.upper*.68,spec.forward*.55];
-  strut(hip,[0,-.06,0],upperEnd,.115,.16,sageDark);
-  strut(hip,[.11,-.08,.04],[upperEnd[0]+.08,upperEnd[1]+.04,upperEnd[2]+.06],.035,.045,steel);
-  // Hydraulic actuator alongside the upper strut.
-  strut(hip,[-.11,-.1,-.06],[upperEnd[0]-.08,upperEnd[1]+.12,upperEnd[2]-.04],.027,.045,blackMetal);
-  const piston=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.27,8),steel);
-  piston.position.set(-.045,-spec.upper*.38,-.015);piston.rotation.z=-spec.side*.18;hip.add(piston);
-  const knee=new THREE.Group();knee.position.set(...upperEnd);hip.add(knee);
-  const kneeShell=new THREE.Mesh(new THREE.SphereGeometry(.145,12,10),sage);knee.add(kneeShell);
-  const kneeAxle=cylX(knee,.105,.22,steel,0,0,0);
-  const shinEnd=[spec.side*.06,-spec.lower*.72,spec.forward*.95];
-  strut(knee,[0,-.04,0],shinEnd,.085,.12,sage);
-  strut(knee,[.075,-.08,.045],[shinEnd[0]+.035,shinEnd[1]+.04,shinEnd[2]+.035],.025,.035,steel);
-  cable(knee,[[-.09,-.05,-.06],[-.14,-.22,-.04],[-.1,-.42,.01],[shinEnd[0]-.06,shinEnd[1]+.12,shinEnd[2]-.04]],.022,blackMetal);
-  // Broad ankle block and two separate gripping toes.
+for(const spec of [{side:-1,z:.34,hipX:-.53,thighX:-.24,thighZ:-.22,shinX:.13,shinZ:.31,scale:1.04},{side:1,z:-.34,hipX:.53,thighX:.28,thighZ:-.2,shinX:-.12,shinZ:.3,scale:.94}]){
+  const hip=new THREE.Group();hip.position.set(spec.hipX,1.03,spec.z);robot.add(hip);
+  cylAlongX(hip,.255,.22,jointMetal,0,0,0);cylAlongX(hip,.19,.24,gunmetal,.02,0,0);cylAlongX(hip,.105,.255,rawSteel,.035,0,0);
+  bodyBox(hip,.23,.18,.24,sageDark,spec.side*.13,-.04,.02);
+  hazardMark(hip,spec.side*.13,-.04,.145);
+  const thighEnd=[spec.thighX,-.53,spec.thighZ];
+  rodBetween(hip,[0,-.08,0],thighEnd,.115,sageDark,.15);
+  rodBetween(hip,[.06,-.12,.08],[thighEnd[0]+.05,thighEnd[1]+.04,thighEnd[2]+.04],.035,rawSteel,.045);
+  // Double-clevis reverse knee, with exposed pin heads.
+  const knee=new THREE.Group();knee.position.set(...thighEnd);hip.add(knee);
+  const kneeCore=new THREE.Mesh(new THREE.SphereGeometry(.15,14,12),gunmetal);knee.add(kneeCore);
+  cylAlongX(knee,.115,.25,rawSteel,0,0,0);
+  for(const side of [-1,1]){const pin=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.035,10),jointMetal);pin.rotation.z=Math.PI/2;pin.position.set(side*.145,0,0);knee.add(pin)}
+  // Forward-slanted shin with removable green armour sleeve.
+  const shinEnd=[spec.shinX,-.83,spec.shinZ];
+  rodBetween(knee,[0,-.04,0],shinEnd,.072,gunmetal,.09);
+  const sleeve=bodyBox(knee,.22,.31,.19,sage,shinEnd[0]*.62,-.29,shinEnd[2]*.62);
+  sleeve.rotation.z=-.18;
+  bodyBox(knee,.235,.045,.205,sageLight,shinEnd[0]*.62,-.13,shinEnd[2]*.62);
+  label(knee,'09',shinEnd[0]*.62,-.29,shinEnd[2]*.62+.103,0,.045,0xc9c8ac);
+  // Front-spanning hydraulic piston, brass fittings and sensor wire clips.
+  rodBetween(knee,[-.11,-.13,.08],[shinEnd[0]-.06,shinEnd[1]+.15,shinEnd[2]+.12],.027,rawSteel,.035);
+  rodBetween(knee,[-.11,-.13,.08],[-.11,-.38,.15],.043,jointMetal,.043);
+  tube(knee,[[-.055,-.18,-.07],[-.09,-.36,-.04],[-.06,-.55,.01],[shinEnd[0]-.02,shinEnd[1]+.1,shinEnd[2]-.04]],.014,rubber,18);
+  for(let j=0;j<2;j++){const clip=bodyBox(knee,.035,.045,.04,brass,shinEnd[0]-.025,-.34-j*.18,shinEnd[2]-.025)}
+  // Two-axis ankle joint and low-profile steel foot plate.
   const ankle=new THREE.Group();ankle.position.set(...shinEnd);knee.add(ankle);
-  const ankleBlock=box(ankle,.34,.16,.3,gunmetal,0,-.04,.08);
-  const toeMat=steel;
+  cylAlongX(ankle,.105,.2,jointMetal,0,-.02,0);
+  bodyBox(ankle,.34,.10,.32,gunmetal,0,-.12,.08);
+  bodyBox(ankle,.28,.035,.26,rawSteel,0,-.06,.08);
+  // Split forward toes with slight downward pitch.
   for(const s of [-1,1]){
-    const toe=box(ankle,.105,.085,.34,toeMat,s*.105,-.105,.25);
+    const toe=bodyBox(ankle,.085,.075,.39,steel,s*.095,-.17,.31);
     toe.rotation.x=-.12;
-    const clawTip=box(ankle,.09,.07,.13,sageDark,s*.105,-.12,.46);
-    clawTip.rotation.x=-.18;
+    const tip=bodyBox(ankle,.095,.065,.13,s*.095,-.21,.53,sageDark);
+    tip.rotation.x=-.22;
   }
-  strut(ankle,[-.11,.02,-.02],[-.12,-.13,.19],.025,.035,hazard);
+  bodyBox(ankle,.20,.08,.22,sageDark,0,-.16,-.17); // rear heel spur
+  rodBetween(ankle,[-.1,-.02,-.03],[-.1,-.16,.19],.022,brass);
   legs.push({hip,knee,side:spec.side,ankle});
 }
+// Armour damage: restrained exposed-steel chips and rust streaks around the shell.
+for(let i=0;i<18;i++){
+  const x=-.88+((i*17)%170)/100;
+  const z=-.49+((i*29)%95)/100;
+  const chip=bodyBox(shell,.025+(i%3)*.012,.012,.035+(i%2)*.02,i%4===0?rust:rawSteel,x,.18+(i%4)*.035,z,false);
+  chip.rotation.y=(i%5)*.17;
+}
+for(let side of [-1,1]){
+  for(let i=0;i<4;i++){const rivet=new THREE.Mesh(new THREE.SphereGeometry(.025,8,6),rawSteel);rivet.position.set(side*.98,-.13,-.32+i*.2);shell.add(rivet)}
+}
 robot.position.set(0,0,4);robot.rotation.y=Math.PI*.18;
-const shadow=new THREE.Mesh(new THREE.CircleGeometry(1.05,28),new THREE.MeshBasicMaterial({color:0,transparent:true,opacity:.48}));
-shadow.rotation.x=-Math.PI/2;shadow.position.y=.018;robot.add(shadow);
+const shadow=new THREE.Mesh(new THREE.CircleGeometry(1.15,32),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.56}));shadow.rotation.x=-Math.PI/2;shadow.position.y=.018;robot.add(shadow);
 
 let charge=20,hasArm=false,armEquipped=false,caseOpen=false,hasCell=false,usedCell=false,powerOn=false,ended=false,paused=false,doorOpening=false,doorOpen=false,target=null,selected=null,walkTime=0;
 const keys={w:false,a:false,s:false,d:false};
