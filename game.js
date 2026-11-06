@@ -2,7 +2,7 @@
   const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
   const W=960,H=600,TW=78,TH=39,OX=480,OY=205;
   const held=new Set();let last=0,toastTimer=0,toastUntil=0,selectedItem='spanner',mode='move';
-  const player={x:4.3,y:4.4,face:1,step:0};
+  const player={x:4.3,y:4.4,face:1,step:0,walkPhase:0,actionUntil:0};
   const objects=[
     {id:'console',name:'AUXILIARY CONTROL CONSOLE',x:2,y:2,desc:'An old operations console. The display pulses with a weak green phosphor glow.',action:'The console rejects the service handshake. LOCAL AUTHORITY REQUIRED.'},
     {id:'pump',name:'COOLANT TRANSFER PUMP',x:7,y:2,desc:'A heavy pump housing. Its casing vibrates, though the pressure gauge reads zero.',action:'The pump is locked out. A manual pressure release is needed.'},
@@ -79,12 +79,16 @@
     if(Math.hypot(player.x-o.x,player.y-o.y)<1.35){ctx.fillStyle='#baff65';ctx.font='11px Share Tech Mono';ctx.fillText('[E] '+o.name,p.x-65,p.y-52);}
   }
   function drawRobot(t){
-    const p=iso(player.x,player.y),walk=player.step?Math.sin(t*.014)*3:Math.sin(t*.0018)*.7;
+    const p=iso(player.x,player.y),walking=!!player.step,phase=player.walkPhase;
+    const swing=walking?Math.sin(phase)*.27:Math.sin(t*.0017)*.018;
+    const bob=walking?Math.abs(Math.sin(phase*2))*1.8:Math.sin(t*.0021)*.85;
+    const now=performance.now(),action=Math.max(0,1-Math.abs((now-(player.actionUntil-400))/400));
+    const reach=Math.sin(action*Math.PI)*15;
     ctx.save();ctx.translate(p.x,p.y-5);
     // Ground shadow and a little oil-dark contact patch.
-    ctx.fillStyle='rgba(0,0,0,.58)';ctx.beginPath();ctx.ellipse(1,15,34,12,-.08,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,.58)';ctx.beginPath();ctx.ellipse(1,15+bob*.35,34,12,-.08,0,Math.PI*2);ctx.fill();
     // Rear counterbalance leg: swept back, deliberately unlike a human thigh and shin.
-    ctx.save();ctx.translate(-1,walk);
+    ctx.save();ctx.translate(-15,-37);ctx.rotate(-swing);ctx.translate(15,37);
     line([[-15,-37],[-27,-21],[-36,1],[-47,11]],'#171e19',11);
     line([[-15,-37],[-27,-21],[-36,1],[-47,11]],'#59634e',6);
     line([[-28,-19],[-35,0],[-45,10]],'#a0a17a',1.5);
@@ -94,7 +98,7 @@
     line([[-45,13],[-53,17]],'#b0a47c',2);line([[-36,12],[-41,19]],'#b0a47c',2);
     ctx.restore();
     // Forward load-bearing leg and articulated ankle.
-    ctx.save();ctx.translate(2,-walk);
+    ctx.save();ctx.translate(14,-34);ctx.rotate(swing);ctx.translate(-12,34);
     line([[14,-34],[25,-17],[28,3],[36,12]],'#171e19',13);
     line([[14,-34],[25,-17],[28,3],[36,12]],'#68745a',7);
     line([[23,-17],[27,2],[35,11]],'#b0a47c',1.5);
@@ -105,6 +109,8 @@
     polygon([[34,9],[44,7],[52,13],[47,17],[34,15]],'#252e28','#9a9b78',1.5);
     line([[45,13],[55,17]],'#b5a77b',2);line([[39,14],[44,21]],'#b5a77b',2);
     ctx.restore();
+    // The chassis floats slightly as the walker shifts its weight.
+    ctx.save();ctx.translate(0,bob);ctx.rotate(-action*.035);
     // Exposed undercarriage: dark cast frame, cross members, piston and cable loom.
     polygon([[-24,-43],[-15,-53],[18,-51],[29,-40],[22,-23],[-17,-22]],'#171f1a','#77816a',2);
     line([[-18,-38],[20,-37]],'#9a9a72',2);
@@ -142,7 +148,12 @@
     line([[17,-34],[12,-24],[17,-18]],'#111813',4);line([[17,-34],[12,-24],[17,-18]],'#9a9872',1.5);
     // Fasteners and tiny exposed piston caps.
     for(const [x,y] of [[-25,-57],[0,-70],[16,-43],[7,-35]]){ctx.fillStyle='#c0b88c';ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#333b2d';ctx.beginPath();ctx.arc(x,y,.6,0,Math.PI*2);ctx.fill();}
-    ctx.restore();
+    // Compact service manipulator unfolds from the chassis during an interaction.
+    const elbow=[31+reach*.55,-42-reach*.28],tip=[38+reach,-34-reach*.52];
+    line([[22,-48],elbow,tip],'#101712',7);line([[22,-48],elbow,tip],'#788365',3);
+    ctx.fillStyle='#252e27';ctx.beginPath();ctx.arc(elbow[0],elbow[1],3.2,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#b0a47c';ctx.lineWidth=1.2;ctx.stroke();
+    line([tip,[tip[0]+5,-31-reach*.52]],'#a9a17b',2);line([tip,[tip[0]+5,-37-reach*.52]],'#a9a17b',2);
+    ctx.restore();ctx.restore();
   }
   function drawScene(t){
     drawBackdrop(t);drawPipes(t);
@@ -163,9 +174,9 @@
     const vg=ctx.createRadialGradient(480,300,180,480,300,590);vg.addColorStop(0,'transparent');vg.addColorStop(1,'rgba(0,0,0,.65)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
   }
   function nearest(){let best=null,d=99;for(const o of objects){const n=Math.hypot(player.x-o.x,player.y-o.y);if(n<d){d=n;best=o;}}return d<1.5?best:null;}
-  function interact(){const o=nearest();if(!o){notify('NO SERVICE POINT IN RANGE');say('No accessible equipment nearby.');return;}say(o.action);notify(o.name);if(o.id==='terminal'){say('NOTICE 01: PRESSURE SENSOR FAULT / LOWER DECK');say('NOTICE 02: CREW QUARTERS POWER INTERRUPTED');}}
+  function interact(){player.actionUntil=performance.now()+800;const o=nearest();if(!o){notify('NO SERVICE POINT IN RANGE');say('No accessible equipment nearby.');return;}say(o.action);notify(o.name);if(o.id==='terminal'){say('NOTICE 01: PRESSURE SENSOR FAULT / LOWER DECK');say('NOTICE 02: CREW QUARTERS POWER INTERRUPTED');}}
   function inspect(o){if(!o)o=nearest();if(!o){say('Nothing of interest in immediate range.');notify('NO OBJECT SELECTED');return;}say(o.desc);notify(o.name);}
-  function update(dt){let dx=0,dy=0;if(held.has('w')||held.has('arrowup'))dy-=1;if(held.has('s')||held.has('arrowdown'))dy+=1;if(held.has('a')||held.has('arrowleft'))dx-=1;if(held.has('d')||held.has('arrowright'))dx+=1;if(dx&&dy){dx*=.707;dy*=.707;}player.x=Math.max(.25,Math.min(9.4,player.x+dx*2.5*dt));player.y=Math.max(.25,Math.min(7.4,player.y+dy*2.5*dt));player.step=dx||dy;if(dx)player.face=dx;document.getElementById('coords').textContent='GRID '+String(Math.floor(player.x)).padStart(2,'0')+'-'+String(Math.floor(player.y)).padStart(2,'0');}
+  function update(dt){let dx=0,dy=0;if(held.has('w')||held.has('arrowup'))dy-=1;if(held.has('s')||held.has('arrowdown'))dy+=1;if(held.has('a')||held.has('arrowleft'))dx-=1;if(held.has('d')||held.has('arrowright'))dx+=1;if(dx&&dy){dx*=.707;dy*=.707;}player.x=Math.max(.25,Math.min(9.4,player.x+dx*2.5*dt));player.y=Math.max(.25,Math.min(7.4,player.y+dy*2.5*dt));player.step=dx||dy;if(player.step)player.walkPhase+=dt*9;if(dx)player.face=dx;document.getElementById('coords').textContent='GRID '+String(Math.floor(player.x)).padStart(2,'0')+'-'+String(Math.floor(player.y)).padStart(2,'0');}
   function frame(t){const dt=Math.min((t-last)/1000||0,.04);last=t;update(dt);drawScene(t);if(t>toastUntil)toast.classList.remove('show');requestAnimationFrame(frame);}
   window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();held.add(k);if(k==='e')interact();if(k===' '){inspect();}});window.addEventListener('keyup',e=>held.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>held.clear());
   canvas.addEventListener('click',e=>{const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;let hit=null,dist=65;for(const o of objects){const p=iso(o.x,o.y),d=Math.hypot(x-p.x,y-(p.y+18));if(d<dist){dist=d;hit=o;}}inspect(hit);});
