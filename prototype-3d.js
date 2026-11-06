@@ -44,7 +44,7 @@ function crate(x,z){const g=new THREE.Group();g.position.set(x,0,z);box(g,1,.8,1
 crate(-7,3);crate(7,4);crate(6,-5);
 // Service objects, each with a simple visual marker and interaction data.
 const interactables=[];
-function marker(name,x,z,kind){const group=new THREE.Group();group.position.set(x,0,z);if(kind==='battery'){box(group,.65,.38,.45,greenMat,0,.3,0);box(group,.38,.17,.04,screenMat,0,.32,.24);cylinder(group,.09,.09,.1,rustMat,.38,.3,0,0,0)}else if(kind==='generator'){machine(0,0);group.clear();box(group,1,.7,.8,edgeMat,0,.35,0);box(group,.7,.9,.6,wallMat,0,1.1,0);box(group,.48,.22,.05,screenMat,0,1.25,.33)}else{box(group,.8,.22,.5,greenMat,0,.35,0);for(let s of [-1,1]){const rod=cylinder(group,.045,.045,.7,edgeMat,s*.2,.68,0,0,0);rod.rotation.z=s*.55;}}scene.add(group);group.userData={name,x,z};interactables.push(group);return group}
+function marker(name,x,z,kind){const group=new THREE.Group();group.position.set(x,0,z);if(kind==='battery'){box(group,.65,.38,.45,greenMat,0,.3,0);box(group,.38,.17,.04,screenMat,0,.32,.24);cylinder(group,.09,.09,.1,rustMat,.38,.3,0,0,0)}else if(kind==='generator'){box(group,1,.7,.8,edgeMat,0,.35,0);box(group,.7,.9,.6,wallMat,0,1.1,0);box(group,.48,.22,.05,screenMat,0,1.25,.33)}else{box(group,.8,.22,.5,greenMat,0,.35,0);for(let s of [-1,1]){const rod=cylinder(group,.045,.045,.7,edgeMat,s*.2,.68,0,0,0);rod.rotation.z=s*.55;}}scene.add(group);group.userData={name,x,z};interactables.push(group);return group}
 const battery=marker('PORTABLE POWER CELL',-5,2,'battery');
 const generator=marker('AUXILIARY POWER DISTRIBUTION',-4,-3,'generator');
 const tool=marker('LOCK-SERVICE MANIPULATOR',5,-4,'tool');
@@ -81,7 +81,7 @@ else if(id==='AUXILIARY POWER DISTRIBUTION'){if(!hasCell||!usedCell){say('START 
 else if(id==='LOCK-SERVICE MANIPULATOR'){if(!powerOn){say('STORAGE CRADLE IS UNPOWERED.');notify('CRADLE OFFLINE');return}hasTool=true;scene.remove(o);interactables.splice(interactables.indexOf(o),1);say('LOCK-SERVICE MANIPULATOR RECOVERED.');task.textContent='Reach the maintenance exit.';notify('NEW PART RECOVERED')}
 else if(id==='MAINTENANCE EXIT'){if(!hasTool||!powerOn){say('EXIT LOCKED. REQUIRED SYSTEMS OFFLINE.');notify('ACCESS DENIED');return}ended=true;say('MECHANICAL LOCK RELEASED. EXIT OPEN.');task.textContent='Demo complete.';notify('ACCESS GRANTED')}
 }
-window.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='e')interact();if(e.key==='Escape'){selected=null;target=null}});
+window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k==='e')interact();if(k==='q'&&hasCell&&!usedCell){usedCell=true;charge=Math.min(100,charge+55);updateCharge();say('POWER CELL CONSUMED. INTERNAL CHARGE RESTORED.');task.textContent='Restore auxiliary power distribution.';notify('CHARGE +55');}if(e.key==='Escape'){selected=null;target=null}});
 function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);const aspect=w/h;const view=8;camera.left=-view*aspect;camera.right=view*aspect;camera.top=view;camera.bottom=-view;camera.updateProjectionMatrix()}
 window.addEventListener('resize',resize);resize();
 const clock=new THREE.Clock();
