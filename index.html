@@ -63,9 +63,9 @@
             <div class="unit-id">SRV-09 / MODULAR WALKER<br>PERSONAL BUILD / CONFIGURATION UNKNOWN</div>
           </div>
           <div class="meters">
-            <div class="meter"><span>POWER</span><b>78%</b><i><em style="width:78%"></em></i></div>
-            <div class="meter"><span>INTEGRITY</span><b>92%</b><i><em style="width:92%"></em></i></div>
-            <div class="meter"><span>THERMAL</span><b>36.4°</b><i><em style="width:38%"></em></i></div>
+            <div class="meter"><span>CHARGE</span><b id="charge-value">08%</b><i><em id="charge-bar" style="width:8%"></em></i></div>
+            <div class="meter"><span>INTEGRITY</span><b>100%</b><i><em style="width:100%"></em></i></div>
+            <div class="meter"><span>CORE TEMP</span><b>STABLE</b><i><em style="width:38%"></em></i></div>
           </div>
         </section>
 
@@ -77,16 +77,16 @@
         </section>
 
         <section class="panel inventory-panel">
-          <div class="panel-heading"><span>04 / CARRYING</span><span id="item-count">03 ITEMS</span></div>
-          <div class="inventory-grid">
-            <button class="item selected" data-item="spanner" aria-label="Spanner"><span>⚒</span><small>SPANNER</small></button>
-            <button class="item" data-item="cell" aria-label="Power cell"><span>▥</span><small>POWER CELL</small></button>
-            <button class="item" data-item="keycard" aria-label="Access card"><span>▰</span><small>ACCESS CARD</small></button>
+          <div class="panel-heading"><span>04 / CARRYING</span><span id="item-count">00 ITEMS</span></div>
+          <div class="inventory-grid" id="inventory-grid">
+            <button class="item empty" aria-label="Empty slot"><span>·</span></button>
+            <button class="item empty" aria-label="Empty slot"><span>·</span></button>
+            <button class="item empty" aria-label="Empty slot"><span>·</span></button>
             <button class="item empty" aria-label="Empty slot"><span>·</span></button>
             <button class="item empty" aria-label="Empty slot"><span>·</span></button>
             <button class="item empty" aria-label="Empty slot"><span>·</span></button>
           </div>
-          <div id="item-description" class="item-description">FIELD SPANNER / WORN / SERVICE TOOL</div>
+          <div id="item-description" class="item-description">NO ITEMS STORED</div>
         </section>
       </aside>
     </section>
