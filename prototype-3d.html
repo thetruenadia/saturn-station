@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#05090a">
+  <title>Saturn Station // 3D Prototype 0.2</title>
+  <link rel="stylesheet" href="prototype-3d.css">
+</head>
+<body>
+  <main class="frame">
+    <header class="topbar">
+      <div class="identity"><span class="sigil">S</span><span>SATURN STATION <small>OUTER SYSTEMS AUTHORITY</small></span></div>
+      <div class="deck"><i></i> MAINTENANCE DECK B-7 <span>/</span> 03:17 STATION TIME</div>
+      <div class="build">PROTOTYPE 0.2 <b>● LIVE</b></div>
+    </header>
+    <section class="layout">
+      <section class="viewport-panel">
+        <div class="panel-head"><span>01 / DECK VIEW</span><span>ISOMETRIC SURVEY CAMERA</span></div>
+        <div id="viewport">
+          <div id="loading">INITIALISING THREE-DIMENSIONAL SYSTEMS...</div>
+          <div class="overlay top-left">SRV-09 / REMOTE VIEW</div>
+          <div class="overlay top-right" id="coords">GRID 04-04</div>
+          <div class="overlay bottom-left" id="hint">CLICK FLOOR TO MOVE · DRAG TO ROTATE · SCROLL TO ZOOM</div>
+          <div id="toast"></div>
+        </div>
+        <div class="controls"><span><kbd>CLICK</kbd> MOVE / SELECT</span><span><kbd>DRAG</kbd> ROTATE VIEW</span><span><kbd>SCROLL</kbd> ZOOM</span><span><kbd>E</kbd> INTERACT</span></div>
+      </section>
+      <aside class="sidebar">
+        <section class="panel">
+          <div class="panel-head"><span>02 / UNIT PROFILE</span><span>SRV-09</span></div>
+          <div class="unit-name">PERSONAL MAINTENANCE UNIT</div>
+          <p class="unit-copy">A hand-built service machine. Its original configuration is incomplete.</p>
+          <div class="meter"><span>CHARGE</span><b id="charge">08%</b><i><em id="charge-bar"></em></i></div>
+          <div class="meter"><span>INTEGRITY</span><b>100%</b><i><em class="full"></em></i></div>
+        </section>
+        <section class="panel log-panel">
+          <div class="panel-head"><span>03 / SYSTEM LOG</span><span class="green">● REC</span></div>
+          <div id="log"><p>BOOT SEQUENCE COMPLETE</p><p>DECK B-7 / LOCAL CONTROL</p><p class="dim">AWAITING INPUT_</p></div>
+        </section>
+        <section class="panel task-panel">
+          <div class="panel-head"><span>04 / RECOVERY TASK</span><span>ACTIVE</span></div>
+          <p id="task">Locate a portable power cell.</p>
+          <div class="task-note">This is an early 3D movement and camera test. The original 2D build is still available.</div>
+          <a href="index.html">OPEN ORIGINAL 2D BUILD ↗</a>
+        </section>
+      </aside>
+    </section>
+    <footer><span>SRV-09 // MAINTENANCE DECK B-7</span><span>THREE-DIMENSIONAL TEST ENVIRONMENT</span><span>BUILD 0.2.0</span></footer>
+  </main>
+  <script type="module" src="prototype-3d.js"></script>
+</body>
+</html>
