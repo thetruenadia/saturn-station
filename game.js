@@ -1,205 +1,133 @@
 (() => {
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const W = 960, H = 540;
-  const keys = new Set();
-  const robot = { x: 475, y: 0, facing: 1, step: 0 };
-  const floorY = 453;
-  let lastTime = 0;
-
-  window.addEventListener('keydown', (event) => {
-    if (['ArrowLeft', 'ArrowRight', ' '].includes(event.key)) event.preventDefault();
-    keys.add(event.key.toLowerCase());
-  });
-  window.addEventListener('keyup', (event) => keys.delete(event.key.toLowerCase()));
-  window.addEventListener('blur', () => keys.clear());
-
-  function roundedRect(x, y, w, h, r, fill, stroke) {
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, r);
-    ctx.fillStyle = fill;
-    ctx.fill();
-    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 3; ctx.stroke(); }
+  const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+  const W=960,H=600,TW=78,TH=39,OX=480,OY=205;
+  const held=new Set();let last=0,toastTimer=0,toastUntil=0,selectedItem='spanner',mode='move';
+  const player={x:4.3,y:4.4,face:1,step:0};
+  const objects=[
+    {id:'console',name:'AUXILIARY CONTROL CONSOLE',x:2,y:2,desc:'An old operations console. The display pulses with a weak green phosphor glow.',action:'The console rejects the service handshake. LOCAL AUTHORITY REQUIRED.'},
+    {id:'pump',name:'COOLANT TRANSFER PUMP',x:7,y:2,desc:'A heavy pump housing. Its casing vibrates, though the pressure gauge reads zero.',action:'The pump is locked out. A manual pressure release is needed.'},
+    {id:'locker',name:'PERSONAL STORAGE LOCKER',x:1,y:5,desc:'A dented locker with a faded name strip and several old inspection stamps.',action:'The locker is jammed. Something metallic rattles behind the door.'},
+    {id:'terminal',name:'MAINTENANCE TERMINAL',x:6,y:5,desc:'A maintenance terminal patched into a much older wall conduit.',action:'TERMINAL: 3 SERVICE NOTICES / 1 UNREAD MESSAGE.'},
+    {id:'hatch',name:'LOWER DECK HATCH',x:9,y:6,desc:'A circular access hatch set into the deck. Warm air leaks through its seal.',action:'HATCH SEALED. PRESSURE DIFFERENTIAL OUT OF RANGE.'}
+  ];
+  const log=document.getElementById('log'),toast=document.getElementById('toast');
+  const say=(message)=>{const p=document.createElement('p');p.textContent='> '+message;log.insertBefore(p,log.lastElementChild);while(log.children.length>5)log.removeChild(log.firstChild);};
+  function notify(message){toast.textContent=message;toast.classList.add('show');toastUntil=performance.now()+2300;}
+  function iso(x,y){return{x:OX+(x-y)*TW/2,y:OY+(x+y)*TH/2};}
+  function polygon(points,fill,stroke,width=1){ctx.beginPath();ctx.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)ctx.lineTo(points[i][0],points[i][1]);ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke();}}
+  function line(points,color,width=1){ctx.beginPath();ctx.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)ctx.lineTo(points[i][0],points[i][1]);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();}
+  function glow(x,y,r,color){const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,color);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);}
+  function drawBackdrop(t){
+    const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#080d10');g.addColorStop(.55,'#111613');g.addColorStop(1,'#050706');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    // distant station bulkheads and a narrow, dirty observation slit
+    ctx.fillStyle='#171b17';ctx.fillRect(0,0,W,120);ctx.fillStyle='#25291f';ctx.fillRect(0,105,W,12);
+    for(let x=15;x<W;x+=112){ctx.fillStyle='#25291e';ctx.fillRect(x,8,7,106);ctx.fillStyle='#080b09';ctx.fillRect(x+8,8,3,106);}
+    ctx.fillStyle='#030708';ctx.fillRect(44,30,280,100);ctx.fillStyle='#0a1b23';ctx.fillRect(49,35,270,90);
+    glow(185,82,130,'rgba(25,102,130,.2)');
+    // Saturn in the distant window
+    ctx.save();ctx.translate(183,81);ctx.rotate(-.18);ctx.strokeStyle='#8e9d91';ctx.lineWidth=10;ctx.beginPath();ctx.ellipse(0,0,80,23,0,Math.PI,Math.PI*2);ctx.stroke();ctx.fillStyle='#8d8b73';ctx.beginPath();ctx.arc(0,0,39,0,Math.PI*2);ctx.fill();ctx.fillStyle='#555d55';ctx.beginPath();ctx.ellipse(0,0,80,23,0,0,Math.PI);ctx.stroke();ctx.restore();
+    ctx.fillStyle='#080b09';ctx.fillRect(0,128,W,8);
+    // upper cable bundles
+    for(let i=0;i<8;i++){const x=i*137-20;line([[x,0],[x+12,27],[x+4,72],[x+30,111]],i%2?'#252d26':'#343027',3+i%3);}
+    // occasional warning lamps
+    glow(850,126,65,'rgba(185,25,17,.12)');ctx.fillStyle='#6e1d18';ctx.fillRect(824,105,43,7);ctx.fillStyle='#e34b27';ctx.fillRect(827,106,17,3);
+    const vignette=ctx.createRadialGradient(480,300,170,480,300,590);vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'rgba(0,0,0,.68)');ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
   }
-
-  function drawSaturn() {
-    const cx = 480, cy = 207;
-    const glow = ctx.createRadialGradient(cx, cy, 30, cx, cy, 210);
-    glow.addColorStop(0, '#28394a');
-    glow.addColorStop(1, '#172432');
-    ctx.fillStyle = glow;
-    ctx.fillRect(205, 62, 550, 290);
-
-    // Distant stars
-    for (let i = 0; i < 65; i++) {
-      const x = 220 + ((i * 137) % 520);
-      const y = 72 + ((i * 83) % 255);
-      ctx.fillStyle = i % 5 === 0 ? '#d8d6c8' : '#8295a4';
-      ctx.globalAlpha = .35 + (i % 4) * .13;
-      ctx.fillRect(x, y, i % 7 === 0 ? 2 : 1, i % 7 === 0 ? 2 : 1);
-    }
-    ctx.globalAlpha = 1;
-
-    // Saturn and its rings
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(-.16);
-    ctx.strokeStyle = '#b99d72';
-    ctx.lineWidth = 17;
-    ctx.beginPath(); ctx.ellipse(0, 0, 137, 43, 0, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke();
-    ctx.strokeStyle = '#d0b78b';
-    ctx.lineWidth = 8;
-    ctx.beginPath(); ctx.ellipse(0, 0, 137, 43, 0, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke();
-    const planet = ctx.createRadialGradient(-35, -28, 8, 0, 0, 84);
-    planet.addColorStop(0, '#e0c89d');
-    planet.addColorStop(.7, '#b99568');
-    planet.addColorStop(1, '#80684f');
-    ctx.fillStyle = planet;
-    ctx.beginPath(); ctx.arc(0, 0, 69, 0, Math.PI * 2); ctx.fill();
-    ctx.save();
-    ctx.beginPath(); ctx.arc(0, 0, 69, 0, Math.PI * 2); ctx.clip();
-    ctx.fillStyle = '#8f765b';
-    for (let i = 0; i < 5; i++) ctx.fillRect(-75, -37 + i * 17, 150, 5);
-    ctx.restore();
-    ctx.strokeStyle = '#d5bd93';
-    ctx.lineWidth = 12;
-    ctx.beginPath(); ctx.ellipse(0, 0, 137, 43, 0, .05, Math.PI - .05); ctx.stroke();
-    ctx.strokeStyle = '#78664f';
-    ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.ellipse(0, 0, 137, 43, 0, .05, Math.PI - .05); ctx.stroke();
-    ctx.restore();
+  function drawTile(x,y,t){
+    const p=iso(x,y),w=TW/2,h=TH/2;
+    polygon([[p.x,p.y],[p.x+w,p.y+h],[p.x,p.y+TH],[p.x-w,p.y+h]],(x+y)%3===0?'#292c25':(x*y)%4===0?'#202820':'#242821','#41463a',1);
+    if((x*7+y*11)%5===0){line([[p.x-18,p.y+13],[p.x-5,p.y+17],[p.x+7,p.y+12]],'#4c3b2b',2);}
+    if((x*3+y*5)%7===0){ctx.fillStyle='#0b100d';ctx.fillRect(p.x-3,p.y+14,8,2);}
+    // seams and bolts
+    if((x+y)%2===0){ctx.fillStyle='#59604b';ctx.fillRect(p.x-w+4,p.y+h-2,2,2);}
   }
-
-  function drawRoom() {
-    const wall = ctx.createLinearGradient(0, 0, 0, H);
-    wall.addColorStop(0, '#52606a');
-    wall.addColorStop(.55, '#394852');
-    wall.addColorStop(1, '#26343e');
-    ctx.fillStyle = wall;
-    ctx.fillRect(0, 0, W, H);
-
-    // Wall panels
-    ctx.strokeStyle = '#65737b';
-    ctx.lineWidth = 2;
-    for (let x = 25; x < W; x += 145) {
-      ctx.beginPath(); ctx.moveTo(x, 20); ctx.lineTo(x, 450); ctx.stroke();
-    }
-    ctx.fillStyle = '#293741';
-    ctx.fillRect(0, 0, W, 25);
-    ctx.fillRect(0, 438, W, 15);
-
-    // Window frame
-    roundedRect(188, 45, 584, 320, 15, '#18242e', '#87939a');
-    roundedRect(204, 61, 552, 288, 8, '#152332', '#202f3c');
-    ctx.save();
-    ctx.beginPath(); ctx.roundRect(205, 62, 550, 286, 5); ctx.clip();
-    drawSaturn();
-    ctx.restore();
-    ctx.strokeStyle = '#73818a';
-    ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.moveTo(480, 48); ctx.lineTo(480, 363); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(190, 205); ctx.lineTo(770, 205); ctx.stroke();
-
-    // Window sill and small room details
-    roundedRect(165, 356, 630, 18, 4, '#78848a', '#a0a9aa');
-    roundedRect(42, 95, 82, 190, 5, '#26343d', '#71808a');
-    for (let i = 0; i < 4; i++) {
-      roundedRect(55, 112 + i * 39, 55, 22, 3, i === 2 ? '#9b8159' : '#3d535e');
-      ctx.fillStyle = '#a6b4b4'; ctx.fillRect(61, 119 + i * 39, 8, 3);
-    }
-    roundedRect(835, 115, 82, 150, 5, '#293943', '#71808a');
-    ctx.fillStyle = '#b58f5b';
-    ctx.fillRect(852, 139, 47, 3);
-    ctx.fillStyle = '#82958f';
-    ctx.fillRect(852, 155, 47, 3);
-
-    // Floor
-    const floor = ctx.createLinearGradient(0, 450, 0, H);
-    floor.addColorStop(0, '#46535a'); floor.addColorStop(1, '#202b32');
-    ctx.fillStyle = floor; ctx.fillRect(0, 453, W, 87);
-    ctx.strokeStyle = '#647078'; ctx.lineWidth = 2;
-    for (let x = 0; x <= W; x += 120) {
-      ctx.beginPath(); ctx.moveTo(x, 454); ctx.lineTo(x - 35, H); ctx.stroke();
-    }
-    ctx.strokeStyle = '#87918e'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(0, 454); ctx.lineTo(W, 454); ctx.stroke();
-
-    // Warm work light
-    const light = ctx.createRadialGradient(480, 405, 10, 480, 405, 260);
-    light.addColorStop(0, 'rgba(202,169,112,.13)');
-    light.addColorStop(1, 'rgba(202,169,112,0)');
-    ctx.fillStyle = light; ctx.fillRect(180, 270, 600, 270);
+  function drawWall(x,y,height=72){
+    const p=iso(x,y),w=TW/2,h=TH/2;
+    polygon([[p.x-w,p.y+h],[p.x,p.y+TH],[p.x,p.y+TH+height],[p.x-w,p.y+h+height]],'#171d18','#343d30',2);
+    polygon([[p.x,p.y+TH],[p.x+w,p.y+h],[p.x+w,p.y+h+height],[p.x,p.y+TH+height]],'#25291f','#454638',2);
+    line([[p.x-w+7,p.y+h+12],[p.x-4,p.y+TH+12]],'#566044',2);
+    line([[p.x+6,p.y+TH+height-12],[p.x+w-5,p.y+h+height-12]],'#090d0a',3);
   }
-
-  function drawRobot(time) {
-    const x = robot.x, y = floorY;
-    const moving = Math.abs(robot.step) > 0;
-    const bob = moving ? Math.sin(time * .014) * 3 : Math.sin(time * .002) * 1.5;
-    const legSwing = moving ? Math.sin(time * .014) * 7 : 0;
-    ctx.save();
-    ctx.translate(x, y + bob);
-    ctx.scale(robot.facing, 1);
-
-    // Ground shadow
-    ctx.fillStyle = 'rgba(0,0,0,.28)';
-    ctx.beginPath(); ctx.ellipse(0, 0, 34, 8, 0, 0, Math.PI * 2); ctx.fill();
-
-    // Legs
-    roundedRect(-20, -48 + legSwing, 14, 39, 5, '#687b80', '#263940');
-    roundedRect(6, -48 - legSwing, 14, 39, 5, '#687b80', '#263940');
-    roundedRect(-24, -14 + legSwing, 22, 12, 4, '#b08d5e', '#263940');
-    roundedRect(3, -14 - legSwing, 22, 12, 4, '#b08d5e', '#263940');
-
-    // Body
-    roundedRect(-29, -111, 58, 65, 12, '#9ba9a6', '#34464d');
-    roundedRect(-20, -99, 40, 31, 6, '#647b7c');
-    ctx.fillStyle = '#d5b16f';
-    ctx.fillRect(-4, -91, 8, 4);
-    ctx.fillStyle = '#34464d';
-    ctx.fillRect(-4, -79, 8, 3);
-
-    // Arms
-    roundedRect(-42, -104, 13, 43, 6, '#788b8b', '#34464d');
-    roundedRect(29, -104, 13, 43, 6, '#788b8b', '#34464d');
-    ctx.fillStyle = '#bd9b68';
-    ctx.fillRect(-43, -67, 14, 6); ctx.fillRect(29, -67, 14, 6);
-
-    // Head
-    roundedRect(-28, -151, 56, 43, 10, '#c0c5b8', '#34464d');
-    roundedRect(-20, -141, 40, 20, 6, '#293b43');
-    ctx.fillStyle = '#d8b778';
-    ctx.fillRect(-11, -134, 6, 5); ctx.fillRect(6, -134, 6, 5);
-    ctx.strokeStyle = '#64777a'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(0, -151); ctx.lineTo(0, -160); ctx.stroke();
-    ctx.fillStyle = '#c49c60'; ctx.beginPath(); ctx.arc(0, -163, 4, 0, Math.PI * 2); ctx.fill();
-
-    // Small chest status light
-    ctx.fillStyle = '#9bb99c'; ctx.beginPath(); ctx.arc(0, -58, 3, 0, Math.PI * 2); ctx.fill();
+  function drawCrate(x,y,s=1){
+    const p=iso(x,y),w=25*s,h=13*s,z=27*s;
+    polygon([[p.x-w,p.y+h],[p.x,p.y+2*h],[p.x+w,p.y+h],[p.x,p.y]],'#5a4934','#92744a',1);
+    polygon([[p.x-w,p.y+h],[p.x,p.y+2*h],[p.x,p.y+2*h+z],[p.x-w,p.y+h+z]],'#302e25','#786344',1);
+    polygon([[p.x,p.y+2*h],[p.x+w,p.y+h],[p.x+w,p.y+h+z],[p.x,p.y+2*h+z]],'#403b2d','#8c7148',1);
+    line([[p.x-w+5,p.y+h+7],[p.x-4,p.y+2*h+4],[p.x-4,p.y+2*h+z-4]],'#a0804e',2);
+    ctx.fillStyle='#b58b4d';ctx.fillRect(p.x-3,p.y+2*h+z/2,7,3);
+  }
+  function drawMachine(x,y,tall=true){
+    const p=iso(x,y),z=tall?67:42;
+    polygon([[p.x-24,p.y+12],[p.x,p.y+24],[p.x+24,p.y+12],[p.x,p.y]],'#3c4133','#858565',2);
+    polygon([[p.x-24,p.y+12],[p.x,p.y+24],[p.x,p.y+24+z],[p.x-24,p.y+12+z]],'#292d25','#686c50',2);
+    polygon([[p.x,p.y+24],[p.x+24,p.y+12],[p.x+24,p.y+12+z],[p.x,p.y+24+z]],'#191f1a','#4b5540',2);
+    ctx.fillStyle='#aaff55';ctx.shadowColor='#aaff55';ctx.shadowBlur=9;ctx.fillRect(p.x-9,p.y+30,9,5);ctx.shadowBlur=0;
+    line([[p.x-17,p.y+48],[p.x-5,p.y+54],[p.x-5,p.y+61]],'#7e8a5d',3);
+  }
+  function drawPipes(t){
+    for(let i=0;i<5;i++){const x=50+i*185,y=144+(i%2)*22;line([[x,y],[x+100,y+25],[x+200,y+8]],i%2?'#3c342b':'#394238',7);line([[x,y-2],[x+100,y+23],[x+200,y+6]],'#687052',1);}
+    // hanging ribbed conduit
+    for(let i=0;i<12;i++){const x=590+i*16;ctx.strokeStyle=i%2?'#4b4030':'#272f26';ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,142,13,Math.PI,Math.PI*2);ctx.stroke();}
+  }
+  function drawObject(o,t){
+    const p=iso(o.x,o.y);
+    if(o.id==='console'){drawMachine(o.x,o.y,true);ctx.fillStyle='#aaff55';ctx.shadowColor='#aaff55';ctx.shadowBlur=13;ctx.fillRect(p.x-11,p.y+31,14,7);ctx.shadowBlur=0;}
+    if(o.id==='pump'){drawMachine(o.x,o.y,true);ctx.strokeStyle='#b15b32';ctx.lineWidth=4;ctx.beginPath();ctx.arc(p.x+5,p.y+45,14,0,Math.PI*2);ctx.stroke();}
+    if(o.id==='locker'){drawCrate(o.x,o.y,1.1);ctx.fillStyle='#b2a16b';ctx.fillRect(p.x-4,p.y+23,8,5);}
+    if(o.id==='terminal'){drawMachine(o.x,o.y,true);ctx.fillStyle='#aaff55';ctx.fillRect(p.x-8,p.y+30,16,9);}
+    if(o.id==='hatch'){ctx.strokeStyle='#7d8065';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(p.x,p.y+12,25,12,0,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#282e25';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(p.x,p.y+12,17,7,0,0,Math.PI*2);ctx.stroke();}
+    if(Math.hypot(player.x-o.x,player.y-o.y)<1.35){ctx.fillStyle='#baff65';ctx.font='11px Share Tech Mono';ctx.fillText('[E] '+o.name,p.x-65,p.y-52);}
+  }
+  function drawRobot(t){
+    const p=iso(player.x,player.y),bob=player.step?Math.sin(t*.018)*2:Math.sin(t*.002)*1;
+    ctx.save();ctx.translate(p.x,p.y-4+bob);
+    ctx.fillStyle='#0009';ctx.beginPath();ctx.ellipse(0,13,20,9,0,0,Math.PI*2);ctx.fill();
+    // legs with offset feet
+    polygon([[-12,-6],[-3,-2],[-5,17],[-14,19]],'#424a39','#8b9470',1);
+    polygon([[3,-3],[12,-8],[15,15],[5,18]],'#30392e','#7b8666',1);
+    // torso, deliberately asymmetrical utility chassis
+    polygon([[-15,-42],[-8,-53],[9,-51],[16,-39],[12,-8],[-13,-7]],'#60684e','#a1a47b',2);
+    polygon([[-8,-50],[9,-51],[12,-9],[-9,-9]],'#343d31','#778263',1);
+    // external chest core and hazard panel
+    ctx.fillStyle='#152018';ctx.fillRect(-5,-39,12,13);ctx.fillStyle='#aaff55';ctx.shadowColor='#aaff55';ctx.shadowBlur=8;ctx.fillRect(-2,-35,6,5);ctx.shadowBlur=0;
+    polygon([[-15,-39],[-23,-35],[-20,-16],[-12,-18]],'#4c5541','#8b9470',1);
+    polygon([[13,-40],[23,-34],[21,-12],[12,-15]],'#30382d','#87906c',1);
+    // head and sensor slit
+    polygon([[-10,-66],[-4,-73],[9,-70],[13,-60],[8,-51],[-9,-53]],'#778168','#b0b78a',2);
+    ctx.fillStyle='#111b15';ctx.fillRect(-6,-64,14,5);ctx.fillStyle='#aaff55';ctx.shadowColor='#aaff55';ctx.shadowBlur=10;ctx.fillRect(-3,-63,8,2);ctx.shadowBlur=0;
+    // cable bundle on one shoulder
+    ctx.strokeStyle='#6b7654';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(11,-43);ctx.bezierCurveTo(29,-53,26,-23,18,-18);ctx.stroke();
+    // spanner arm
+    ctx.strokeStyle='#8b8d6c';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(-17,-37);ctx.lineTo(-24,-18);ctx.lineTo(-20,-7);ctx.stroke();
+    ctx.fillStyle='#a2a47b';ctx.fillRect(-24,-10,10,4);
     ctx.restore();
   }
-
-  function update(dt) {
-    const left = keys.has('a') || keys.has('arrowleft');
-    const right = keys.has('d') || keys.has('arrowright');
-    let direction = 0;
-    if (left) direction -= 1;
-    if (right) direction += 1;
-    robot.x += direction * 190 * dt;
-    robot.x = Math.max(70, Math.min(W - 70, robot.x));
-    if (direction) robot.facing = direction;
-    robot.step = direction;
+  function drawScene(t){
+    drawBackdrop(t);drawPipes(t);
+    // far walls
+    for(let x=0;x<10;x++)drawWall(x,0,63);
+    // floor
+    for(let sum=0;sum<19;sum++)for(let x=0;x<10;x++){const y=sum-x;if(y>=0&&y<8)drawTile(x,y,t);}
+    // structural debris and industrial clutter
+    drawCrate(0,3,1.15);drawCrate(8,1,.9);drawCrate(8,5,1.15);drawMachine(3,1,false);
+    // oil-dark puddles and scattered metal
+    for(const [x,y] of [[2,5],[5,3],[7,6]]){const p=iso(x,y);ctx.fillStyle='#080e0d';ctx.beginPath();ctx.ellipse(p.x,p.y+10,25,7,-.2,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#39483d';ctx.stroke();}
+    // objects and player sorted by depth
+    const actors=[...objects.map(o=>({y:o.x+o.y,draw:()=>drawObject(o,t)})),{y:player.x+player.y,draw:()=>drawRobot(t)}].sort((a,b)=>a.y-b.y);
+    actors.forEach(a=>a.draw());
+    // harsh pools of practical light
+    const l1=iso(2,2),l2=iso(8,3);glow(l1.x,l1.y,90,'rgba(87,255,102,.09)');glow(l2.x,l2.y,85,'rgba(183,54,24,.12)');
+    // edge shadow
+    const vg=ctx.createRadialGradient(480,300,180,480,300,590);vg.addColorStop(0,'transparent');vg.addColorStop(1,'rgba(0,0,0,.65)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
   }
-
-  function frame(time) {
-    const dt = Math.min((time - lastTime) / 1000 || 0, .04);
-    lastTime = time;
-    update(dt);
-    ctx.clearRect(0, 0, W, H);
-    drawRoom();
-    drawRobot(time);
-    requestAnimationFrame(frame);
-  }
-
-  document.getElementById('loading').classList.add('hidden');
-  requestAnimationFrame(frame);
+  function nearest(){let best=null,d=99;for(const o of objects){const n=Math.hypot(player.x-o.x,player.y-o.y);if(n<d){d=n;best=o;}}return d<1.5?best:null;}
+  function interact(){const o=nearest();if(!o){notify('NO SERVICE POINT IN RANGE');say('No accessible equipment nearby.');return;}say(o.action);notify(o.name);if(o.id==='terminal'){say('NOTICE 01: PRESSURE SENSOR FAULT / LOWER DECK');say('NOTICE 02: CREW QUARTERS POWER INTERRUPTED');}}
+  function inspect(o){if(!o)o=nearest();if(!o){say('Nothing of interest in immediate range.');notify('NO OBJECT SELECTED');return;}say(o.desc);notify(o.name);}
+  function update(dt){let dx=0,dy=0;if(held.has('w')||held.has('arrowup'))dy-=1;if(held.has('s')||held.has('arrowdown'))dy+=1;if(held.has('a')||held.has('arrowleft'))dx-=1;if(held.has('d')||held.has('arrowright'))dx+=1;if(dx&&dy){dx*=.707;dy*=.707;}player.x=Math.max(.25,Math.min(9.4,player.x+dx*2.5*dt));player.y=Math.max(.25,Math.min(7.4,player.y+dy*2.5*dt));player.step=dx||dy;if(dx)player.face=dx;document.getElementById('coords').textContent='GRID '+String(Math.floor(player.x)).padStart(2,'0')+'-'+String(Math.floor(player.y)).padStart(2,'0');}
+  function frame(t){const dt=Math.min((t-last)/1000||0,.04);last=t;update(dt);drawScene(t);if(t>toastUntil)toast.classList.remove('show');requestAnimationFrame(frame);}
+  window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();held.add(k);if(k==='e')interact();if(k===' '){inspect();}});window.addEventListener('keyup',e=>held.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>held.clear());
+  canvas.addEventListener('click',e=>{const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;let hit=null,dist=65;for(const o of objects){const p=iso(o.x,o.y),d=Math.hypot(x-p.x,y-(p.y+18));if(d<dist){dist=d;hit=o;}}inspect(hit);});
+  document.querySelectorAll('.item').forEach(b=>b.addEventListener('click',()=>{if(b.classList.contains('empty'))return;document.querySelectorAll('.item').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');selectedItem=b.dataset.item;const desc={spanner:'FIELD SPANNER / WORN / SERVICE TOOL',cell:'POWER CELL / 62% CHARGE / STANDARD FIT',keycard:'ACCESS CARD / CREW SERVICES / LEVEL 2'};document.getElementById('item-description').textContent=desc[selectedItem];say('Selected '+selectedItem.toUpperCase()+'.');}));
+  document.querySelectorAll('.action').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.action').forEach(x=>x.classList.remove('active'));b.classList.add('active');mode=b.dataset.action;if(mode==='interact')interact();if(mode==='inspect')inspect();if(mode==='terminal'){say('LOCAL TERMINAL LINK ACTIVE.');say('3 SERVICE NOTICES AVAILABLE.');notify('TERMINAL LOG UPDATED');}if(mode==='move')notify('MOVEMENT CONTROL ACTIVE');}));
+  document.getElementById('loading')?.classList.add('hidden');say('SRV-09 ONLINE. AWAITING TASKING.');requestAnimationFrame(frame);
 })();
