@@ -18,35 +18,48 @@
   function line(points,color,width=1){ctx.beginPath();ctx.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)ctx.lineTo(points[i][0],points[i][1]);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();}
   function glow(x,y,r,color){const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,color);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);}
   function drawBackdrop(t){
-    const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#080d10');g.addColorStop(.55,'#111613');g.addColorStop(1,'#050706');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-    // distant station bulkheads and a narrow, dirty observation slit
-    ctx.fillStyle='#171b17';ctx.fillRect(0,0,W,120);ctx.fillStyle='#25291f';ctx.fillRect(0,105,W,12);
-    for(let x=15;x<W;x+=112){ctx.fillStyle='#25291e';ctx.fillRect(x,8,7,106);ctx.fillStyle='#080b09';ctx.fillRect(x+8,8,3,106);}
-    ctx.fillStyle='#030708';ctx.fillRect(44,30,280,100);ctx.fillStyle='#0a1b23';ctx.fillRect(49,35,270,90);
-    glow(185,82,130,'rgba(25,102,130,.2)');
-    // Saturn in the distant window
-    ctx.save();ctx.translate(183,81);ctx.rotate(-.18);ctx.strokeStyle='#8e9d91';ctx.lineWidth=10;ctx.beginPath();ctx.ellipse(0,0,80,23,0,Math.PI,Math.PI*2);ctx.stroke();ctx.fillStyle='#8d8b73';ctx.beginPath();ctx.arc(0,0,39,0,Math.PI*2);ctx.fill();ctx.fillStyle='#555d55';ctx.beginPath();ctx.ellipse(0,0,80,23,0,0,Math.PI);ctx.stroke();ctx.restore();
-    ctx.fillStyle='#080b09';ctx.fillRect(0,128,W,8);
-    // upper cable bundles
-    for(let i=0;i<8;i++){const x=i*137-20;line([[x,0],[x+12,27],[x+4,72],[x+30,111]],i%2?'#252d26':'#343027',3+i%3);}
-    // occasional warning lamps
-    glow(850,126,65,'rgba(185,25,17,.12)');ctx.fillStyle='#6e1d18';ctx.fillRect(824,105,43,7);ctx.fillStyle='#e34b27';ctx.fillRect(827,106,17,3);
-    const vignette=ctx.createRadialGradient(480,300,170,480,300,590);vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'rgba(0,0,0,.68)');ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
+    const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#03080c');g.addColorStop(.42,'#0a1112');g.addColorStop(1,'#020403');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    // Deep structural ribs disappear into shadow; the room should feel larger than the camera can see.
+    for(let x=-35;x<W+80;x+=94){
+      polygon([[x,0],[x+19,0],[x+30,135],[x+11,151]],'#111918','#26312d',2);
+      line([[x+5,0],[x+17,132]],'#3b4034',1);
+      line([[x+24,15],[x+32,118]],'#050a09',4);
+    }
+    // Observation slit, almost swallowed by darkness.
+    ctx.fillStyle='#010507';ctx.fillRect(42,29,286,105);ctx.fillStyle='#07151c';ctx.fillRect(48,35,274,91);
+    glow(184,80,150,'rgba(24,92,125,.23)');
+    ctx.save();ctx.translate(183,81);ctx.rotate(-.18);ctx.strokeStyle='#6b7d78';ctx.lineWidth=8;ctx.beginPath();ctx.ellipse(0,0,82,24,0,Math.PI,Math.PI*2);ctx.stroke();ctx.fillStyle='#887f69';ctx.beginPath();ctx.arc(0,0,39,0,Math.PI*2);ctx.fill();ctx.fillStyle='#35454a';ctx.beginPath();ctx.ellipse(0,0,80,23,0,0,Math.PI);ctx.stroke();ctx.restore();
+    ctx.fillStyle='#030606';ctx.fillRect(0,128,W,12);
+    // Bundles of old cable, sagging between structural ribs.
+    for(let i=0;i<10;i++){const x=i*112-30;const col=['#222b28','#302d26','#111a19'][i%3];line([[x,0],[x+8,32],[x+26,57],[x+20,94],[x+47,130]],col,3+i%3);line([[x+3,0],[x+12,31],[x+30,57],[x+24,94],[x+51,130]],'#080e0d',1);}
+    // Corroded conduit trunk with repeated collars.
+    line([[350,0],[366,34],[359,82],[389,132]],'#34362d',13);line([[350,0],[366,34],[359,82],[389,132]],'#111918',8);
+    for(let i=0;i<8;i++){const y=15+i*14;ctx.fillStyle='#62513b';ctx.fillRect(354+(i%2)*4,y,13,3);}
+    // Localised emergency lamp, red light falling into black.
+    glow(842,126,115,'rgba(175,28,18,.22)');ctx.fillStyle='#21100e';ctx.fillRect(814,101,55,13);ctx.fillStyle='#a32d20';ctx.fillRect(819,104,35,5);ctx.fillStyle='#ef6841';ctx.fillRect(821,105,12,2);
+    // Fine soot, scratches and vignette.
+    for(let i=0;i<145;i++){const x=(i*137)%W,y=(i*71)%H;ctx.fillStyle=i%3?'rgba(126,133,112,.055)':'rgba(0,0,0,.2)';ctx.fillRect(x,y,1+(i%3),1);}
+    const vignette=ctx.createRadialGradient(480,300,115,480,300,610);vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'rgba(0,0,0,.82)');ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
   }
   function drawTile(x,y,t){
     const p=iso(x,y),w=TW/2,h=TH/2;
-    polygon([[p.x,p.y],[p.x+w,p.y+h],[p.x,p.y+TH],[p.x-w,p.y+h]],(x+y)%3===0?'#292c25':(x*y)%4===0?'#202820':'#242821','#41463a',1);
-    if((x*7+y*11)%5===0){line([[p.x-18,p.y+13],[p.x-5,p.y+17],[p.x+7,p.y+12]],'#4c3b2b',2);}
-    if((x*3+y*5)%7===0){ctx.fillStyle='#0b100d';ctx.fillRect(p.x-3,p.y+14,8,2);}
-    // seams and bolts
-    if((x+y)%2===0){ctx.fillStyle='#59604b';ctx.fillRect(p.x-w+4,p.y+h-2,2,2);}
+    const shade=(x*13+y*7)%5;
+    polygon([[p.x,p.y],[p.x+w,p.y+h],[p.x+1,p.y+TH],[p.x-w,p.y+h]],shade===0?'#171f1d':shade===1?'#20221d':'#191e1b','#303b35',1);
+    // Broken seams, oily staining and hand-scratched maintenance marks.
+    if((x*7+y*11)%4===0){ctx.fillStyle='rgba(0,0,0,.48)';ctx.beginPath();ctx.ellipse(p.x+((x%3)-1)*7,p.y+19,18,4,-.25,0,Math.PI*2);ctx.fill();line([[p.x-18,p.y+12],[p.x-5,p.y+16],[p.x+8,p.y+11]],'#514333',1.5);}
+    if((x*3+y*5)%5===0){line([[p.x-w+8,p.y+h+2],[p.x-7,p.y+TH-5],[p.x+4,p.y+TH-2]],'#080d0b',2);line([[p.x-w+10,p.y+h+1],[p.x-7,p.y+TH-6]],'#586052',.7);}
+    if((x+y)%2===0){ctx.fillStyle='#7b7358';ctx.fillRect(p.x-w+5,p.y+h-1,2,2);}
+    if((x*5+y*3)%9===0){ctx.fillStyle='#090e0c';ctx.fillRect(p.x-23,p.y+18,34,2);for(let k=0;k<4;k++)ctx.fillRect(p.x-18+k*8,p.y+15,2,8);}
   }
   function drawWall(x,y,height=72){
     const p=iso(x,y),w=TW/2,h=TH/2;
-    polygon([[p.x-w,p.y+h],[p.x,p.y+TH],[p.x,p.y+TH+height],[p.x-w,p.y+h+height]],'#171d18','#343d30',2);
-    polygon([[p.x,p.y+TH],[p.x+w,p.y+h],[p.x+w,p.y+h+height],[p.x,p.y+TH+height]],'#25291f','#454638',2);
-    line([[p.x-w+7,p.y+h+12],[p.x-4,p.y+TH+12]],'#566044',2);
-    line([[p.x+6,p.y+TH+height-12],[p.x+w-5,p.y+h+height-12]],'#090d0a',3);
+    polygon([[p.x-w,p.y+h],[p.x,p.y+TH],[p.x,p.y+TH+height],[p.x-w,p.y+h+height]],'#0d1514','#29342e',2);
+    polygon([[p.x,p.y+TH],[p.x+w,p.y+h],[p.x+w,p.y+h+height],[p.x,p.y+TH+height]],'#171d19','#394039',2);
+    line([[p.x-w+7,p.y+h+12],[p.x-4,p.y+TH+12]],'#6a5438',2);
+    line([[p.x+6,p.y+TH+height-12],[p.x+w-5,p.y+h+height-12]],'#050908',4);
+    // Corroded seams and irregular repair plates.
+    for(let i=0;i<5;i++){const yy=p.y+h+12+i*12;line([[p.x-w+4,yy],[p.x-w+13,yy+3],[p.x-4,yy+1]],i%2?'#252e28':'#4c3c2d',1);}
+    ctx.fillStyle='#080d0b';ctx.fillRect(p.x-w+14,p.y+h+24,9,15);ctx.fillStyle='#8b482c';ctx.fillRect(p.x-w+15,p.y+h+25,2,12);
   }
   function drawCrate(x,y,s=1){
     const p=iso(x,y),w=25*s,h=13*s,z=27*s;
@@ -65,9 +78,12 @@
     line([[p.x-17,p.y+48],[p.x-5,p.y+54],[p.x-5,p.y+61]],'#7e8a5d',3);
   }
   function drawPipes(t){
-    for(let i=0;i<5;i++){const x=50+i*185,y=144+(i%2)*22;line([[x,y],[x+100,y+25],[x+200,y+8]],i%2?'#3c342b':'#394238',7);line([[x,y-2],[x+100,y+23],[x+200,y+6]],'#687052',1);}
-    // hanging ribbed conduit
-    for(let i=0;i<12;i++){const x=590+i*16;ctx.strokeStyle=i%2?'#4b4030':'#272f26';ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,142,13,Math.PI,Math.PI*2);ctx.stroke();}
+    // Heavy service pipes cross the ceiling, patched and sweating condensation.
+    for(let i=0;i<5;i++){const x=25+i*185,y=144+(i%2)*22;line([[x,y],[x+100,y+25],[x+200,y+8]],'#080e0d',12);line([[x,y-2],[x+100,y+23],[x+200,y+6]],i%2?'#514332':'#465047',7);line([[x,y-4],[x+100,y+21],[x+200,y+4]],'#77715a',1);}
+    // Ribbed, almost tendon-like insulated conduits.
+    for(let i=0;i<17;i++){const x=520+i*17;ctx.strokeStyle=i%2?'#5a4432':'#252f2b';ctx.lineWidth=8;ctx.beginPath();ctx.arc(x,143,16,Math.PI,Math.PI*2);ctx.stroke();ctx.strokeStyle='#090f0e';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,143,16,Math.PI,Math.PI*2);ctx.stroke();}
+    // Hanging cable bundles descend into the machinery.
+    for(let i=0;i<6;i++){const x=95+i*142;line([[x,0],[x-7,40],[x+4,76],[x-13,115]],'#080d0c',7);line([[x+2,0],[x-4,42],[x+9,77],[x-7,116]],'#515044',2);}
   }
   function drawObject(o,t){
     const p=iso(o.x,o.y);
