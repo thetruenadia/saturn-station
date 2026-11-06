@@ -108,92 +108,107 @@
     }
     if(Math.hypot(player.x-o.x,player.y-o.y)<1.35){ctx.fillStyle='#baff9b';ctx.font='11px Share Tech Mono';ctx.fillText('[E] '+o.name,p.x-65,p.y-52);}
   }
+  // Sprite-sheet animation. Frames are extracted once from the repository asset.
+  const unitSheet=new Image();
+  const unitAnimations={idle:[],walk:[],interact:[]};
+  let unitSpriteReady=false;
+  unitSheet.onload=()=>{
+    const specs={
+      idle:[[20,20,270,240],[320,20,270,240],[620,20,270,240],[920,20,270,240]],
+      walk:[[10,310,135,240],[160,310,135,240],[310,310,135,240],[460,310,135,240],[610,310,135,240],[760,310,135,240],[910,310,135,240],[1060,310,135,240]],
+      interact:[[10,600,135,240],[160,600,135,240],[310,600,135,240],[460,600,135,240],[610,600,135,240],[760,600,135,240]]
+    };
+    // The sheet has white paper and black cell rules. Remove the paper by alpha-keying
+    // near-white pixels; inset crops avoid most cell borders. Thin horizontal rules
+    // are repaired from their neighbouring scanlines before the frames are keyed.
+    const cleaned=document.createElement('canvas');
+    cleaned.width=unitSheet.naturalWidth;cleaned.height=unitSheet.naturalHeight;
+    const c=cleaned.getContext('2d',{willReadFrequently:true});
+    c.drawImage(unitSheet,0,0);
+    const imageData=c.getImageData(0,0,cleaned.width,cleaned.height),px=imageData.data;
+    for(const y of [148,447]){
+      for(let x=0;x<cleaned.width;x++){
+        const i=(y*cleaned.width+x)*4,up=((y-1)*cleaned.width+x)*4,dn=((y+1)*cleaned.width+x)*4;
+        for(let k=0;k<3;k++)px[i+k]=(px[up+k]+px[dn+k])>>1;
+      }
+    }
+    c.putImageData(imageData,0,0);
+    for(const [name,rects] of Object.entries(specs)){
+      unitAnimations[name]=rects.map(([x,y,w,h])=>{
+        const frame=document.createElement('canvas'),fc=frame.getContext('2d',{willReadFrequently:true});
+        frame.width=w;frame.height=h;fc.drawImage(cleaned,x,y,w,h,0,0,w,h);
+        const data=fc.getImageData(0,0,w,h),d=data.data;
+        let minX=w,minY=h,maxX=0,maxY=0;
+        for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){
+          const i=(yy*w+xx)*4,rr=d[i],gg=d[i+1],bb=d[i+2];
+          if(rr>218&&gg>218&&bb>210){d[i+3]=0;continue;}
+          if(d[i+3]>0){minX=Math.min(minX,xx);minY=Math.min(minY,yy);maxX=Math.max(maxX,xx);maxY=Math.max(maxY,yy);}
+        }
+        fc.putImageData(data,0,0);
+        const trim=document.createElement('canvas');
+        const tw=Math.max(1,maxX-minX+1),th=Math.max(1,maxY-minY+1);
+        trim.width=tw;trim.height=th;
+        trim.getContext('2d').drawImage(frame,minX,minY,tw,th,0,0,tw,th);
+        return {canvas:trim,width:tw,height:th};
+      });
+    }
+    unitSpriteReady=true;
+  };
+  unitSheet.onerror=()=>{unitSpriteReady=false;};
+  unitSheet.src='assets/sprites/Gemini_Generated_Image_jt74kajt74kajt74.jpeg';
+
   function drawRobot(t){
+    if(!unitSpriteReady){drawRobotFallback(t);return;}
+    const p=iso(player.x,player.y),now=performance.now();
+    const interacting=now<player.actionUntil;
+    const walking=!!player.step&&!interacting;
+    const name=interacting?'interact':walking?'walk':'idle';
+    const frames=unitAnimations[name];
+    const fps=name==='idle'?6:name==='walk'?10:8;
+    const index=name==='interact'
+      ?Math.min(frames.length-1,Math.floor((800-(player.actionUntil-now))*fps/1000))
+      :Math.floor((t/1000)*fps)%frames.length;
+    const frame=frames[index]||frames[0];
+    const targetHeight=112;
+    const scale=targetHeight/frame.height;
+    const dw=frame.width*scale,dh=targetHeight;
+    ctx.save();ctx.translate(p.x,p.y-5);
+    ctx.fillStyle='rgba(0,0,0,.58)';ctx.beginPath();ctx.ellipse(0,14,dw*.31,10,-.08,0,Math.PI*2);ctx.fill();
+    if(player.face<0){ctx.scale(-1,1);}
+    ctx.imageSmoothingEnabled=true;
+    ctx.drawImage(frame.canvas,-dw*.5,-dh*.88,dw,dh);
+    ctx.restore();
+  }
+
+  function drawRobotFallback(t){
     const p=iso(player.x,player.y),walking=!!player.step,phase=player.walkPhase;
     const swing=walking?Math.sin(phase)*.27:Math.sin(t*.0017)*.018;
     const bob=walking?Math.abs(Math.sin(phase*2))*1.8:Math.sin(t*.0021)*.85;
     const now=performance.now(),action=Math.max(0,1-Math.abs((now-(player.actionUntil-400))/400));
     const reach=action*15;
     ctx.save();ctx.translate(p.x,p.y-5);
-    // Ground shadow and a little oil-dark contact patch.
     ctx.fillStyle='rgba(0,0,0,.58)';ctx.beginPath();ctx.ellipse(1,15+bob*.35,34,12,-.08,0,Math.PI*2);ctx.fill();
-    // Rear counterbalance leg: swept back, deliberately unlike a human thigh and shin.
     ctx.save();ctx.translate(-15,-37);ctx.rotate(-swing);ctx.translate(15,37);
-    line([[-15,-37],[-27,-21],[-36,1],[-47,11]],'#171e19',11);
-    line([[-15,-37],[-27,-21],[-36,1],[-47,11]],'#59634e',6);
-    line([[-28,-19],[-35,0],[-45,10]],'#a0a17a',1.5);
+    line([[-15,-37],[-27,-21],[-36,1],[-47,11]],'#171e19',11);line([[-15,-37],[-27,-21],[-36,1],[-47,11]],'#59634e',6);
     ctx.fillStyle='#242d26';ctx.beginPath();ctx.arc(-27,-22,7,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#9a9b74';ctx.lineWidth=2;ctx.stroke();
-    // Rear gripping foot, split into two narrow toes.
     polygon([[-48,9],[-39,5],[-31,12],[-36,16],[-51,15]],'#252e28','#8b9271',1.5);
-    line([[-45,13],[-53,17]],'#b0a47c',2);line([[-36,12],[-41,19]],'#b0a47c',2);
-    ctx.restore();
-    // Forward load-bearing leg and articulated ankle.
+    line([[-45,13],[-53,17]],'#b0a47c',2);line([[-36,12],[-41,19]],'#b0a47c',2);ctx.restore();
     ctx.save();ctx.translate(14,-34);ctx.rotate(swing);ctx.translate(-12,34);
-    line([[14,-34],[25,-17],[28,3],[36,12]],'#171e19',13);
-    line([[14,-34],[25,-17],[28,3],[36,12]],'#68745a',7);
-    line([[23,-17],[27,2],[35,11]],'#b0a47c',1.5);
+    line([[14,-34],[25,-17],[28,3],[36,12]],'#171e19',13);line([[14,-34],[25,-17],[28,3],[36,12]],'#68745a',7);
     ctx.fillStyle='#222b25';ctx.beginPath();ctx.arc(25,-17,8,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#a6a17a';ctx.lineWidth=2;ctx.stroke();
-    ctx.fillStyle='#414b3c';ctx.fillRect(23,-20,5,7);
-    // Ankle actuator and paired gripper toes.
-    line([[29,1],[39,8]],'#a3a17b',3);line([[35,10],[47,12]],'#303b31',5);
-    polygon([[34,9],[44,7],[52,13],[47,17],[34,15]],'#252e28','#9a9b78',1.5);
-    line([[45,13],[55,17]],'#b5a77b',2);line([[39,14],[44,21]],'#b5a77b',2);
-    ctx.restore();
-    // The chassis floats slightly as the walker shifts its weight.
+    polygon([[34,9],[44,7],[52,13],[47,17],[34,15]],'#252e28','#9a9b78',1.5);line([[45,13],[55,17]],'#b5a77b',2);line([[39,14],[44,21]],'#b5a77b',2);ctx.restore();
     ctx.save();ctx.translate(0,bob);ctx.rotate(-action*.035);
-    // Exposed undercarriage: dark cast frame, cross members, piston and cable loom.
     polygon([[-24,-43],[-15,-53],[18,-51],[29,-40],[22,-23],[-17,-22]],'#171f1a','#77816a',2);
-    line([[-18,-38],[20,-37]],'#9a9a72',2);
-    line([[-12,-29],[15,-29]],'#444f40',4);
-    // Central component boxes and service access plates.
-    polygon([[-17,-48],[-6,-53],[3,-49],[0,-39],[-14,-38]],'#303a2f','#8b9270',1.5);
-    polygon([[3,-49],[17,-46],[19,-35],[5,-36]],'#242d26','#6e795e',1.5);
-    ctx.fillStyle='#0d1510';ctx.fillRect(-10,-47,8,6);ctx.fillStyle='#aaff55';ctx.fillRect(-8,-45,4,2);
-    // Coiled cable loop on the left flank.
-    ctx.strokeStyle='#0b100d';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-18,-48);ctx.bezierCurveTo(-34,-54,-33,-33,-21,-31);ctx.stroke();
-    ctx.strokeStyle='#6d7457';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-18,-48);ctx.bezierCurveTo(-34,-54,-33,-33,-21,-31);ctx.stroke();
-    // Main horizontal sage-green chassis. It is a low, elongated equipment housing.
-    polygon([[-31,-68],[-19,-80],[15,-78],[34,-65],[29,-39],[13,-31],[-23,-38],[-36,-51]],'#202a21','#111712',4);
+    line([[-18,-38],[20,-37]],'#9a9a72',2);line([[-12,-29],[15,-29]],'#444f40',4);
     polygon([[-31,-68],[-19,-80],[15,-78],[34,-65],[29,-39],[13,-31],[-23,-38],[-36,-51]],'#647052','#a4a783',2);
     polygon([[-31,-68],[-19,-80],[8,-77],[4,-48],[-23,-44],[-36,-51]],'#7d8768','#b1b28a',1.5);
     polygon([[4,-77],[15,-78],[34,-65],[29,-39],[13,-31],[4,-48]],'#394638','#899174',1.5);
-    // Worn edge highlights, chipped paint and stamped service markings.
-    line([[-27,-66],[-18,-76],[0,-75]],'#c0b88c',1.5);
-    line([[10,-74],[28,-63],[25,-48]],'#9b9c78',1.5);
-    for(const [x,y] of [[-24,-62],[-16,-73],[18,-68],[24,-48],[-22,-45]]){ctx.fillStyle='#252b22';ctx.fillRect(x,y,3,2);}
-    ctx.fillStyle='#d0c7a0';ctx.font='5px monospace';ctx.fillText('SRV-09',-22,-55);ctx.fillText('保守',7,-57);
-    // Hand-inked wear: chipped corners, shallow scratches and cross-hatched grime.
-    ctx.save();ctx.globalAlpha=.78;
-    for(let i=0;i<9;i++){const x=-27+i*6,y=-49-(i%3)*7;line([[x,y],[x+2,y-3],[x+5,y-4]],i%2?'#c0b58c':'#293127',.8);}
-    for(let i=0;i<6;i++){line([[-18+i*5,-42],[-15+i*5,-39]],'#b4a985',.7);}
-    for(let i=0;i<5;i++){line([[-13+i*4,-74],[-10+i*4,-70]],'#343a2d',1);}
-    ctx.restore();
-    // Small ribbed service conduits and a braided loom disappear into the chassis.
-    ctx.strokeStyle='#090f0d';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-24,-47);ctx.bezierCurveTo(-35,-43,-34,-31,-20,-26);ctx.stroke();
-    ctx.strokeStyle='#6b7258';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-24,-47);ctx.bezierCurveTo(-35,-43,-34,-31,-20,-26);ctx.stroke();
-    for(let i=0;i<5;i++){ctx.fillStyle=i%2?'#514634':'#252d27';ctx.fillRect(-31+i*2,-39+i*2,4,2);}
-    // Corroded fastener recesses and a tiny warning stencil.
-    ctx.fillStyle='#9a6b3e';ctx.fillRect(15,-51,7,2);ctx.fillStyle='#d1b477';ctx.font='4px monospace';ctx.fillText('!',17,-47);
-    // Small yellow/oxide hazard panel on the left rear corner.
-    ctx.save();ctx.translate(-26,-49);ctx.rotate(-.35);ctx.fillStyle='#20251e';ctx.fillRect(-5,-4,13,8);for(let i=0;i<4;i++){ctx.fillStyle=i%2?'#292c23':'#c08a3e';ctx.fillRect(-4+i*4,-3,2,6);}ctx.restore();
-    // Off-centre top-right sensor pod.
+    ctx.fillStyle='#d0c7a0';ctx.font='5px monospace';ctx.fillText('SRV-09',-22,-55);
     polygon([[9,-79],[17,-87],[27,-84],[30,-76],[20,-72],[11,-74]],'#303b30','#a1a582',2);
-    ctx.fillStyle='#111914';ctx.beginPath();ctx.arc(22,-80,4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#879174';ctx.lineWidth=1;ctx.stroke();
-    ctx.fillStyle='#8acb72';ctx.fillRect(21,-81,2,2);
-    // Forward nose: recessed multi-lens camera optic, not a face.
     polygon([[20,-65],[34,-62],[38,-54],[31,-44],[22,-48]],'#252e28','#a5a47e',2);
-    ctx.fillStyle='#0a100d';ctx.beginPath();ctx.arc(31,-55,7,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#8e9271';ctx.lineWidth=2;ctx.stroke();
-    ctx.fillStyle='#541e1b';ctx.beginPath();ctx.arc(31,-55,4,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#d55b45';ctx.shadowColor='#b83b2e';ctx.shadowBlur=8;ctx.beginPath();ctx.arc(32,-56,1.8,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-    // Small underside hydraulic lines and brackets.
-    line([[-7,-34],[-3,-23],[6,-20]],'#111813',5);line([[-7,-34],[-3,-23],[6,-20]],'#778064',2);
-    line([[17,-34],[12,-24],[17,-18]],'#111813',4);line([[17,-34],[12,-24],[17,-18]],'#9a9872',1.5);
-    // Fasteners and tiny exposed piston caps.
-    for(const [x,y] of [[-25,-57],[0,-70],[16,-43],[7,-35]]){ctx.fillStyle='#c0b88c';ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#333b2d';ctx.beginPath();ctx.arc(x,y,.6,0,Math.PI*2);ctx.fill();}
-    // Compact service manipulator unfolds from the chassis during an interaction.
+    ctx.fillStyle='#0a100d';ctx.beginPath();ctx.arc(31,-55,7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#d55b45';ctx.beginPath();ctx.arc(32,-56,1.8,0,Math.PI*2);ctx.fill();
     const elbow=[31+reach*.55,-42-reach*.28],tip=[38+reach,-34-reach*.52];
     line([[22,-48],elbow,tip],'#101712',7);line([[22,-48],elbow,tip],'#788365',3);
-    ctx.fillStyle='#252e27';ctx.beginPath();ctx.arc(elbow[0],elbow[1],3.2,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#b0a47c';ctx.lineWidth=1.2;ctx.stroke();
     line([tip,[tip[0]+5,-31-reach*.52]],'#a9a17b',2);line([tip,[tip[0]+5,-37-reach*.52]],'#a9a17b',2);
     ctx.restore();ctx.restore();
   }
