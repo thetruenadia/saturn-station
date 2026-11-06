@@ -43,7 +43,7 @@ const armMarker=new THREE.Mesh(new THREE.TorusGeometry(.72,.045,8,40),new THREE.
 armMarker.rotation.x=-Math.PI/2;armMarker.position.y=.035;arm.add(armMarker);
 const armBeacon=new THREE.Mesh(new THREE.CylinderGeometry(.018,.11,1.35,10,1,true),new THREE.MeshBasicMaterial({color:0xe0a34b,transparent:true,opacity:.22,side:THREE.DoubleSide}));
 armBeacon.position.set(0,.9,0);arm.add(armBeacon);
-const armBeaconTop=new THREE.Mesh(new THREE.OctahedronGeometry(.16,0),new THREE.MeshBasicMaterial({color:0xffc36b,emissive:0x9b4e12,emissiveIntensity:1.8}));
+const armBeaconTop=new THREE.Mesh(new THREE.OctahedronGeometry(.16,0),new THREE.MeshStandardMaterial({color:0xffc36b,emissive:0x9b4e12,emissiveIntensity:1.8,roughness:.32,metalness:.12}));
 armBeaconTop.position.set(0,1.65,0);arm.add(armBeaconTop);
 cylinder(arm,.23,.23,.18,edgeMat,0,.16,0,Math.PI/2,0);
 const armBase=box(arm,.42,.16,.38,greenMat,0,.25,0);armBase.rotation.z=-.2;
@@ -76,6 +76,7 @@ const sageDark= new THREE.MeshStandardMaterial({color:0x414d43,roughness:.82,met
 const gunmetal=new THREE.MeshStandardMaterial({color:0x242826,roughness:.4,metalness:.85});
 const jointMetal=new THREE.MeshStandardMaterial({color:0x181a19,roughness:.25,metalness:.9});
 const rawSteel=new THREE.MeshStandardMaterial({color:0x777c70,roughness:.48,metalness:.82});
+const steel=rawSteel; // shared steel finish for the foot toe plates
 const rubber=new THREE.MeshStandardMaterial({color:0x0f1010,roughness:.9,metalness:0});
 const rust=new THREE.MeshStandardMaterial({color:0x70412b,roughness:.94,metalness:.18});
 const brass=new THREE.MeshStandardMaterial({color:0x987344,roughness:.42,metalness:.78});
