@@ -37,7 +37,14 @@ function crate(x,z){const g=new THREE.Group();g.position.set(x,0,z);box(g,1,.8,1
 crate(-7,3);crate(7,4);crate(6,-5);
 // The lock-service manipulator: a loose, recognisable mechanical component on the deck.
 const interactables=[];
-const arm=new THREE.Group();arm.position.set(5,0,-3);
+const arm=new THREE.Group();arm.position.set(5,0,-3);arm.scale.setScalar(1.35);
+// A conspicuous recovery marker and a phosphor-lit component make the arm readable at a distance.
+const armMarker=new THREE.Mesh(new THREE.TorusGeometry(.72,.045,8,40),new THREE.MeshBasicMaterial({color:0xe0a34b}));
+armMarker.rotation.x=-Math.PI/2;armMarker.position.y=.035;arm.add(armMarker);
+const armBeacon=new THREE.Mesh(new THREE.CylinderGeometry(.018,.11,1.35,10,1,true),new THREE.MeshBasicMaterial({color:0xe0a34b,transparent:true,opacity:.22,side:THREE.DoubleSide}));
+armBeacon.position.set(0,.9,0);arm.add(armBeacon);
+const armBeaconTop=new THREE.Mesh(new THREE.OctahedronGeometry(.16,0),new THREE.MeshBasicMaterial({color:0xffc36b,emissive:0x9b4e12,emissiveIntensity:1.8}));
+armBeaconTop.position.set(0,1.65,0);arm.add(armBeaconTop);
 cylinder(arm,.23,.23,.18,edgeMat,0,.16,0,Math.PI/2,0);
 const armBase=box(arm,.42,.16,.38,greenMat,0,.25,0);armBase.rotation.z=-.2;
 const armJoint=cylinder(arm,.12,.12,.18,rustMat,.22,.3,0,Math.PI/2,0);
