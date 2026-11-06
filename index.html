@@ -3,23 +3,80 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#111923">
-  <title>Saturn Station</title>
+  <meta name="theme-color" content="#090b0b">
+  <title>Saturn Station // Deck B-7</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="game-shell">
-    <header class="game-header">
-      <div class="wordmark">SATURN <span>STATION</span></div>
-      <div class="header-note">MAINTENANCE DECK · 01</div>
+  <main class="shell">
+    <header class="topline">
+      <div class="brand"><span class="sigil">S</span><span>SATURN STATION</span><small>OUTER SYSTEMS AUTHORITY</small></div>
+      <div class="location"><span class="live-dot"></span> MAINTENANCE DECK B-7 <span class="divider">/</span> LOCAL TIME 03:17</div>
+      <div class="signal">HABITAT PRESSURE <b>STABLE</b></div>
     </header>
-    <section class="viewport" aria-label="Saturn Station game">
-      <canvas id="game" width="960" height="540" aria-label="A small robot in a maintenance room overlooking Saturn"></canvas>
-      <div class="loading" id="loading">Starting systems…</div>
+
+    <section class="game-layout">
+      <section class="viewport-panel">
+        <div class="panel-heading"><span>01 / DECK VIEW</span><span id="area-label">B-7 // SERVICE GANTRY</span></div>
+        <div class="viewport">
+          <canvas id="game" width="960" height="600" aria-label="Isometric view of a maintenance deck on Saturn Station"></canvas>
+          <div class="crosshair" aria-hidden="true">+</div>
+          <div class="view-caption"><span>CAM 04 / MANUAL FEED</span><span id="coords">GRID 04-04</span></div>
+          <div id="toast" class="toast" role="status"></div>
+        </div>
+        <div class="controls-hint"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE</span><span><kbd>E</kbd> INTERACT</span><span><kbd>CLICK</kbd> INSPECT</span></div>
+      </section>
+
+      <aside class="side-panel">
+        <section class="panel character-panel">
+          <div class="panel-heading"><span>02 / UNIT PROFILE</span><span>SRV-09</span></div>
+          <div class="unit-visual">
+            <div class="scanline"></div>
+            <div class="unit-silhouette" aria-label="Service robot schematic">
+              <div class="antenna"></div><div class="unit-head"><i></i></div>
+              <div class="unit-torso"><i class="core"></i><i class="warning"></i></div>
+              <div class="unit-arm left"></div><div class="unit-arm right"></div>
+              <div class="unit-leg left"></div><div class="unit-leg right"></div>
+              <div class="hose"></div>
+            </div>
+            <div class="unit-id">UTILITY FRAME<br>CLASS III / MODIFIED</div>
+          </div>
+          <div class="meters">
+            <div class="meter"><span>POWER</span><b>78%</b><i><em style="width:78%"></em></i></div>
+            <div class="meter"><span>INTEGRITY</span><b>92%</b><i><em style="width:92%"></em></i></div>
+            <div class="meter"><span>THERMAL</span><b>36.4°</b><i><em style="width:38%"></em></i></div>
+          </div>
+        </section>
+
+        <section class="panel terminal-panel">
+          <div class="panel-heading"><span>03 / SYSTEM LOG</span><span class="phosphor">● REC</span></div>
+          <div id="log" class="log" aria-live="polite">
+            <p>BOOT SEQUENCE COMPLETE</p><p>DECK B-7 / ACCESS GRANTED</p><p>3 UNREAD SERVICE NOTICES</p><p class="dim">AWAITING INPUT_</p>
+          </div>
+        </section>
+
+        <section class="panel inventory-panel">
+          <div class="panel-heading"><span>04 / CARRYING</span><span id="item-count">03 ITEMS</span></div>
+          <div class="inventory-grid">
+            <button class="item selected" data-item="spanner" aria-label="Spanner"><span>⚒</span><small>SPANNER</small></button>
+            <button class="item" data-item="cell" aria-label="Power cell"><span>▥</span><small>POWER CELL</small></button>
+            <button class="item" data-item="keycard" aria-label="Access card"><span>▰</span><small>ACCESS CARD</small></button>
+            <button class="item empty" aria-label="Empty slot"><span>·</span></button>
+            <button class="item empty" aria-label="Empty slot"><span>·</span></button>
+            <button class="item empty" aria-label="Empty slot"><span>·</span></button>
+          </div>
+          <div id="item-description" class="item-description">FIELD SPANNER / WORN / SERVICE TOOL</div>
+        </section>
+      </aside>
     </section>
-    <footer class="game-footer">
-      <span>MOVE <kbd>A</kbd> <kbd>D</kbd> / <kbd>←</kbd> <kbd>→</kbd></span>
-      <span class="status"><i></i> SYSTEM ONLINE</span>
+
+    <footer class="bottom-panel">
+      <div class="action-label"><span>05 / ACTIONS</span><small>MANUAL CONTROL</small></div>
+      <button class="action active" data-action="move"><b>✣</b><span>MOVE</span></button>
+      <button class="action" data-action="inspect"><b>⌕</b><span>INSPECT</span></button>
+      <button class="action" data-action="interact"><b>↯</b><span>USE</span></button>
+      <button class="action" data-action="terminal"><b>▤</b><span>LOG</span></button>
+      <div class="footer-status"><i></i> CONNECTION SECURE <span>BUILD 0.2.1 / LOCAL</span></div>
     </footer>
   </main>
   <script src="game.js"></script>
