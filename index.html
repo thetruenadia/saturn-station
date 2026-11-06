@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111923">
+  <title>Saturn Station</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game-shell">
+    <header class="game-header">
+      <div class="wordmark">SATURN <span>STATION</span></div>
+      <div class="header-note">MAINTENANCE DECK · 01</div>
+    </header>
+    <section class="viewport" aria-label="Saturn Station game">
+      <canvas id="game" width="960" height="540" aria-label="A small robot in a maintenance room overlooking Saturn"></canvas>
+      <div class="loading" id="loading">Starting systems…</div>
+    </section>
+    <footer class="game-footer">
+      <span>MOVE <kbd>A</kbd> <kbd>D</kbd> / <kbd>←</kbd> <kbd>→</kbd></span>
+      <span class="status"><i></i> SYSTEM ONLINE</span>
+    </footer>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
