@@ -164,7 +164,7 @@ for(const spec of [{side:-1,z:.34,hipX:-.53,thighX:-.24,thighZ:-.22,shinX:.13,sh
   cylAlongX(hip,.255,.22,jointMetal,0,0,0);cylAlongX(hip,.19,.24,gunmetal,.02,0,0);cylAlongX(hip,.105,.255,rawSteel,.035,0,0);
   bodyBox(hip,.23,.18,.24,sageDark,spec.side*.13,-.04,.02);
   hazardMark(hip,spec.side*.13,-.04,.145);
-  const thighEnd=[spec.thighX,-.53,spec.thighZ];
+  const thighEnd=[spec.thighX,-.45,spec.thighZ];
   rodBetween(hip,[0,-.08,0],thighEnd,.115,sageDark,.15);
   rodBetween(hip,[.06,-.12,.08],[thighEnd[0]+.05,thighEnd[1]+.04,thighEnd[2]+.04],.035,rawSteel,.045);
   // Double-clevis reverse knee, with exposed pin heads.
@@ -173,7 +173,7 @@ for(const spec of [{side:-1,z:.34,hipX:-.53,thighX:-.24,thighZ:-.22,shinX:.13,sh
   cylAlongX(knee,.115,.25,rawSteel,0,0,0);
   for(const side of [-1,1]){const pin=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.035,10),jointMetal);pin.rotation.z=Math.PI/2;pin.position.set(side*.145,0,0);knee.add(pin)}
   // Forward-slanted shin with removable green armour sleeve.
-  const shinEnd=[spec.shinX,-.83,spec.shinZ];
+  const shinEnd=[spec.shinX,-.41,spec.shinZ];
   rodBetween(knee,[0,-.04,0],shinEnd,.072,gunmetal,.09);
   const sleeve=bodyBox(knee,.22,.31,.19,sage,shinEnd[0]*.62,-.29,shinEnd[2]*.62);
   sleeve.rotation.z=-.18;
