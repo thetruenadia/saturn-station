@@ -83,7 +83,7 @@
     const swing=walking?Math.sin(phase)*.27:Math.sin(t*.0017)*.018;
     const bob=walking?Math.abs(Math.sin(phase*2))*1.8:Math.sin(t*.0021)*.85;
     const now=performance.now(),action=Math.max(0,1-Math.abs((now-(player.actionUntil-400))/400));
-    const reach=Math.sin(action*Math.PI)*15;
+    const reach=action*15;
     ctx.save();ctx.translate(p.x,p.y-5);
     // Ground shadow and a little oil-dark contact patch.
     ctx.fillStyle='rgba(0,0,0,.58)';ctx.beginPath();ctx.ellipse(1,15+bob*.35,34,12,-.08,0,Math.PI*2);ctx.fill();
