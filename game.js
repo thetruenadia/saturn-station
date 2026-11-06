@@ -1,14 +1,14 @@
 (() => {
   const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
   const W=960,H=600,TW=78,TH=39,OX=480,OY=205;
-  const held=new Set();let last=0,toastTimer=0,toastUntil=0,selectedItem='spanner',mode='move';
+  const held=new Set();let last=0,toastTimer=0,toastUntil=0,selectedItem=null,mode='move';
+  let started=false,charge=8,hasBattery=false,batteryUsed=false,powerOn=false,hasTool=false,doorOpen=false,gameEnded=false,inventory=[];
   const player={x:4.3,y:4.4,face:1,step:0,walkPhase:0,actionUntil:0};
   const objects=[
-    {id:'console',name:'AUXILIARY CONTROL CONSOLE',x:2,y:2,desc:'An old operations console. The display pulses with a weak green phosphor glow.',action:'The console rejects the service handshake. LOCAL AUTHORITY REQUIRED.'},
-    {id:'pump',name:'COOLANT TRANSFER PUMP',x:7,y:2,desc:'A heavy pump housing. Its casing vibrates, though the pressure gauge reads zero.',action:'The pump is locked out. A manual pressure release is needed.'},
-    {id:'locker',name:'PERSONAL STORAGE LOCKER',x:1,y:5,desc:'A dented locker with a faded name strip and several old inspection stamps.',action:'The locker is jammed. Something metallic rattles behind the door.'},
-    {id:'terminal',name:'MAINTENANCE TERMINAL',x:6,y:5,desc:'A maintenance terminal patched into a much older wall conduit.',action:'TERMINAL: 3 SERVICE NOTICES / 1 UNREAD MESSAGE.'},
-    {id:'hatch',name:'LOWER DECK HATCH',x:9,y:6,desc:'A circular access hatch set into the deck. Warm air leaks through its seal.',action:'HATCH SEALED. PRESSURE DIFFERENTIAL OUT OF RANGE.'}
+    {id:'battery',name:'PORTABLE POWER CELL',x:1,y:5,desc:'A portable reserve cell lies half-hidden beneath a maintenance trolley. Its casing is scratched, but the charge indicator still flickers.',action:'POWER CELL RECOVERED.'},
+    {id:'generator',name:'AUXILIARY POWER DISTRIBUTION',x:2,y:2,desc:'A manual distribution console. The room circuits are isolated. Its emergency start sequence requires a charged unit.',action:'AUXILIARY POWER RESTORED.'},
+    {id:'part',name:'LOCK-SERVICE MANIPULATOR',x:7,y:2,desc:'A compact mechanical attachment stored in a sealed service cradle. Its fine twin probes are designed to operate mechanical locks.',action:'LOCK-SERVICE MANIPULATOR RECOVERED.'},
+    {id:'hatch',name:'MAINTENANCE EXIT',x:9,y:6,desc:'A heavy pressure door. The mechanical lock has no power and no accessible manual release.',action:'EXIT LOCKED. A LOCK-SERVICE MANIPULATOR IS REQUIRED.'}
   ];
   const log=document.getElementById('log'),toast=document.getElementById('toast');
   const say=(message)=>{const p=document.createElement('p');p.textContent='> '+message;log.insertBefore(p,log.lastElementChild);while(log.children.length>5)log.removeChild(log.firstChild);};
@@ -87,12 +87,26 @@
   }
   function drawObject(o,t){
     const p=iso(o.x,o.y);
-    if(o.id==='console'){drawMachine(o.x,o.y,true);ctx.fillStyle='#aaff55';ctx.shadowColor='#aaff55';ctx.shadowBlur=13;ctx.fillRect(p.x-11,p.y+31,14,7);ctx.shadowBlur=0;}
-    if(o.id==='pump'){drawMachine(o.x,o.y,true);ctx.strokeStyle='#b15b32';ctx.lineWidth=4;ctx.beginPath();ctx.arc(p.x+5,p.y+45,14,0,Math.PI*2);ctx.stroke();}
-    if(o.id==='locker'){drawCrate(o.x,o.y,1.1);ctx.fillStyle='#b2a16b';ctx.fillRect(p.x-4,p.y+23,8,5);}
-    if(o.id==='terminal'){drawMachine(o.x,o.y,true);ctx.fillStyle='#aaff55';ctx.fillRect(p.x-8,p.y+30,16,9);}
-    if(o.id==='hatch'){ctx.strokeStyle='#7d8065';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(p.x,p.y+12,25,12,0,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#282e25';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(p.x,p.y+12,17,7,0,0,Math.PI*2);ctx.stroke();}
-    if(Math.hypot(player.x-o.x,player.y-o.y)<1.35){ctx.fillStyle='#baff65';ctx.font='11px Share Tech Mono';ctx.fillText('[E] '+o.name,p.x-65,p.y-52);}
+    if(o.id==='battery'&&!hasBattery){
+      drawCrate(o.x,o.y,.65);ctx.save();ctx.translate(p.x,p.y+1);ctx.rotate(-.2);
+      polygon([[-13,-10],[10,-10],[14,-5],[14,12],[-13,12]],'#242e28','#a49b73',1.5);
+      ctx.fillStyle='#77845e';ctx.fillRect(-9,-7,17,14);ctx.fillStyle='#111914';ctx.fillRect(-6,-4,11,7);ctx.fillStyle='#c4c98a';ctx.fillRect(-4,-2,7,3);
+      ctx.fillStyle='#9a6338';ctx.fillRect(10,-6,4,4);ctx.restore();
+    }
+    if(o.id==='generator'){
+      drawMachine(o.x,o.y,true);ctx.fillStyle=powerOn?'#b5e7a0':'#9b3328';ctx.shadowColor=powerOn?'#b5e7a0':'#9b3328';ctx.shadowBlur=12;ctx.fillRect(p.x-10,p.y+30,18,7);ctx.shadowBlur=0;
+      line([[p.x-22,p.y+58],[p.x-33,p.y+69],[p.x-33,p.y+83]],'#121a17',5);line([[p.x-22,p.y+58],[p.x-33,p.y+69],[p.x-33,p.y+83]],'#786344',2);
+    }
+    if(o.id==='part'&&!hasTool){
+      drawCrate(o.x,o.y,1);ctx.fillStyle='#8d9a79';ctx.fillRect(p.x-10,p.y+15,20,9);ctx.fillStyle='#1a211c';ctx.fillRect(p.x-7,p.y+17,14,5);
+      line([[p.x-7,p.y+22],[p.x-15,p.y+32],[p.x-20,p.y+34]],'#a3a17b',3);line([[p.x+7,p.y+22],[p.x+15,p.y+31],[p.x+20,p.y+33]],'#a3a17b',3);
+    }
+    if(o.id==='hatch'){
+      ctx.strokeStyle=doorOpen?'#8bbd83':'#7d8065';ctx.lineWidth=7;ctx.beginPath();ctx.ellipse(p.x,p.y+12,34,17,0,0,Math.PI*2);ctx.stroke();
+      ctx.strokeStyle='#171f1a';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(p.x,p.y+12,25,11,0,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle=doorOpen?'#a7df9a':'#9a3328';ctx.fillRect(p.x-5,p.y+7,10,4);
+    }
+    if(Math.hypot(player.x-o.x,player.y-o.y)<1.35){ctx.fillStyle='#baff9b';ctx.font='11px Share Tech Mono';ctx.fillText('[E] '+o.name,p.x-65,p.y-52);}
   }
   function drawRobot(t){
     const p=iso(player.x,player.y),walking=!!player.step,phase=player.walkPhase;
@@ -202,13 +216,62 @@
     const vg=ctx.createRadialGradient(480,300,180,480,300,590);vg.addColorStop(0,'transparent');vg.addColorStop(1,'rgba(0,0,0,.65)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
   }
   function nearest(){let best=null,d=99;for(const o of objects){const n=Math.hypot(player.x-o.x,player.y-o.y);if(n<d){d=n;best=o;}}return d<1.5?best:null;}
-  function interact(){player.actionUntil=performance.now()+800;const o=nearest();if(!o){notify('NO SERVICE POINT IN RANGE');say('No accessible equipment nearby.');return;}say(o.action);notify(o.name);if(o.id==='terminal'){say('NOTICE 01: PRESSURE SENSOR FAULT / LOWER DECK');say('NOTICE 02: CREW QUARTERS POWER INTERRUPTED');}}
+  function interact(){
+    player.actionUntil=performance.now()+800;const o=nearest();
+    if(!o){notify('NO SERVICE POINT IN RANGE');say('No accessible equipment nearby.');return;}
+    if(o.id==='battery'){
+      if(hasBattery){say('POWER CELL ALREADY RECOVERED.');return;}
+      hasBattery=true;inventory.push({id:'cell',name:'POWER CELL',desc:'PORTABLE POWER CELL / 55 UNITS'});renderInventory();say('PORTABLE POWER CELL RECOVERED. SELECT IT IN INVENTORY TO USE.');notify('POWER CELL ACQUIRED');return;
+    }
+    if(o.id==='generator'){
+      if(!hasBattery){say('START SEQUENCE BLOCKED. RECOVER A PORTABLE POWER CELL.');notify('POWER RESERVE REQUIRED');return;}
+      if(!batteryUsed){say('START SEQUENCE BLOCKED. CHARGE RESERVE TOO LOW. USE THE POWER CELL.');notify('CHARGE UNIT FIRST');return;}
+      if(!powerOn){powerOn=true;say('AUXILIARY DISTRIBUTION ONLINE. LIGHTING AND SERVICE CIRCUITS RESTORED.');say('LOCK-SERVICE STORAGE CRADLE RELEASED.');notify('ROOM POWER RESTORED');}
+      else say('AUXILIARY POWER IS ALREADY ONLINE.');
+      return;
+    }
+    if(o.id==='part'){
+      if(!powerOn){say('STORAGE CRADLE IS UNPOWERED. RESTORE AUXILIARY DISTRIBUTION FIRST.');notify('CRADLE OFFLINE');return;}
+      if(!hasTool){hasTool=true;say('LOCK-SERVICE MANIPULATOR RECOVERED AND INSTALLED.');notify('NEW PART INSTALLED');renderInventory();}
+      else say('LOCK-SERVICE MANIPULATOR ALREADY INSTALLED.');
+      return;
+    }
+    if(o.id==='hatch'){
+      if(!hasTool){say('MECHANICAL LOCK REQUIRES A LOCK-SERVICE MANIPULATOR.');notify('ACCESS DENIED');return;}
+      if(!powerOn){say('DOOR CONTROL CIRCUIT HAS NO POWER.');return;}
+      doorOpen=true;gameEnded=true;say('MECHANICAL LOCK RELEASED. EXIT OPEN.');notify('ACCESS GRANTED');document.getElementById('end-screen').classList.remove('hidden');return;
+    }
+  }
   function inspect(o){if(!o)o=nearest();if(!o){say('Nothing of interest in immediate range.');notify('NO OBJECT SELECTED');return;}say(o.desc);notify(o.name);}
-  function update(dt){let dx=0,dy=0;if(held.has('w')||held.has('arrowup'))dy-=1;if(held.has('s')||held.has('arrowdown'))dy+=1;if(held.has('a')||held.has('arrowleft'))dx-=1;if(held.has('d')||held.has('arrowright'))dx+=1;if(dx&&dy){dx*=.707;dy*=.707;}player.x=Math.max(.25,Math.min(9.4,player.x+dx*2.5*dt));player.y=Math.max(.25,Math.min(7.4,player.y+dy*2.5*dt));player.step=dx||dy;if(player.step)player.walkPhase+=dt*9;if(dx)player.face=dx;document.getElementById('coords').textContent='GRID '+String(Math.floor(player.x)).padStart(2,'0')+'-'+String(Math.floor(player.y)).padStart(2,'0');}
+  function update(dt){
+    if(!started||gameEnded)return;
+    let dx=0,dy=0;if(held.has('w')||held.has('arrowup'))dy-=1;if(held.has('s')||held.has('arrowdown'))dy+=1;if(held.has('a')||held.has('arrowleft'))dx-=1;if(held.has('d')||held.has('arrowright'))dx+=1;
+    if(dx&&dy){dx*=.707;dy*=.707;}
+    player.x=Math.max(.25,Math.min(9.4,player.x+dx*2.5*dt));player.y=Math.max(.25,Math.min(7.4,player.y+dy*2.5*dt));player.step=dx||dy;if(player.step)player.walkPhase+=dt*9;if(dx)player.face=dx;
+    charge=Math.max(0,charge-dt*.10);updateCharge();
+    if(charge<=0){say('CRITICAL: UNIT POWER DEPLETED.');notify('POWER DEPLETED');gameEnded=true;document.getElementById('end-screen').classList.remove('hidden');document.querySelector('#end-screen .boot-mark').innerHTML='POWER<span> FAILURE</span>';document.querySelector('#end-screen .boot-message').innerHTML='UNIT SHUTDOWN<br>POWER RESERVE DEPLETED<br>RESTART TO TRY AGAIN';}
+    document.getElementById('coords').textContent='GRID '+String(Math.floor(player.x)).padStart(2,'0')+'-'+String(Math.floor(player.y)).padStart(2,'0');
+  }
   function frame(t){const dt=Math.min((t-last)/1000||0,.04);last=t;update(dt);drawScene(t);if(t>toastUntil)toast.classList.remove('show');requestAnimationFrame(frame);}
   window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();held.add(k);if(k==='e')interact();if(k===' '){inspect();}});window.addEventListener('keyup',e=>held.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>held.clear());
   canvas.addEventListener('click',e=>{const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;let hit=null,dist=65;for(const o of objects){const p=iso(o.x,o.y),d=Math.hypot(x-p.x,y-(p.y+18));if(d<dist){dist=d;hit=o;}}inspect(hit);});
-  document.querySelectorAll('.item').forEach(b=>b.addEventListener('click',()=>{if(b.classList.contains('empty'))return;document.querySelectorAll('.item').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');selectedItem=b.dataset.item;const desc={spanner:'FIELD SPANNER / WORN / SERVICE TOOL',cell:'POWER CELL / 62% CHARGE / STANDARD FIT',keycard:'ACCESS CARD / CREW SERVICES / LEVEL 2'};document.getElementById('item-description').textContent=desc[selectedItem];say('Selected '+selectedItem.toUpperCase()+'.');}));
+  function updateCharge(){const v=document.getElementById('charge-value'),bar=document.getElementById('charge-bar');if(v)v.textContent=String(Math.ceil(charge)).padStart(2,'0')+'%';if(bar)bar.style.width=Math.max(0,charge)+'%';}
+  function renderInventory(){
+    const grid=document.getElementById('inventory-grid');grid.innerHTML='';
+    for(let i=0;i<6;i++){const item=inventory[i];const b=document.createElement('button');b.className='item'+(item&&selectedItem===item.id?' selected':'')+(!item?' empty':'');if(item){b.dataset.item=item.id;b.innerHTML='<span>'+(item.id==='cell'?'▥':'⌁')+'</span><small>'+item.name+'</small>';b.addEventListener('click',()=>{selectedItem=item.id;renderInventory();document.getElementById('item-description').textContent=item.desc;say('Selected '+item.name+'. Press E to use.');});}else b.innerHTML='<span>·</span>';grid.appendChild(b);}
+    document.getElementById('item-count').textContent=String(inventory.length).padStart(2,'0')+' ITEMS';
+    if(!inventory.length)document.getElementById('item-description').textContent='NO ITEMS STORED';
+    else if(!selectedItem)document.getElementById('item-description').textContent='SELECT AN ITEM TO INSPECT';
+  }
+  function useSelected(){
+    if(selectedItem==='cell'&&hasBattery&&!batteryUsed){batteryUsed=true;charge=Math.min(100,charge+55);inventory=inventory.filter(i=>i.id!=='cell');selectedItem=null;updateCharge();renderInventory();say('POWER CELL CONSUMED. INTERNAL CHARGE RESTORED.');notify('CHARGE +55');return;}
+    if(selectedItem==='tool'&&hasTool){say('LOCK-SERVICE MANIPULATOR READY.');return;}
+    say('NO USABLE ITEM SELECTED.');
+  }
+  document.querySelectorAll('.item').forEach(b=>b.addEventListener('click',()=>{}));
+  window.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='e'&&started&&!gameEnded&&selectedItem==='cell'){useSelected();}});
+  document.getElementById('boot-button').addEventListener('click',()=>{started=true;document.getElementById('boot-screen').classList.add('hidden');say('BOOT COMPLETE. POWER RESERVE CRITICAL.');say('TASK: LOCATE A PORTABLE POWER CELL.');notify('CHARGE CRITICAL / 08%');});
+  document.getElementById('reboot-button').addEventListener('click',()=>window.location.reload());
   document.querySelectorAll('.action').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.action').forEach(x=>x.classList.remove('active'));b.classList.add('active');mode=b.dataset.action;if(mode==='interact')interact();if(mode==='inspect')inspect();if(mode==='terminal'){say('LOCAL TERMINAL LINK ACTIVE.');say('3 SERVICE NOTICES AVAILABLE.');notify('TERMINAL LOG UPDATED');}if(mode==='move')notify('MOVEMENT CONTROL ACTIVE');}));
-  document.getElementById('loading')?.classList.add('hidden');say('SRV-09 ONLINE. AWAITING TASKING.');requestAnimationFrame(frame);
+  document.getElementById('loading')?.classList.add('hidden');renderInventory();updateCharge();requestAnimationFrame(frame);
 })();
