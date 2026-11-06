@@ -193,7 +193,7 @@ for(const spec of [{side:-1,z:.34,hipX:-.53,thighX:-.24,thighZ:-.22,shinX:.13,sh
   for(const s of [-1,1]){
     const toe=bodyBox(ankle,.085,.075,.39,steel,s*.095,-.17,.31);
     toe.rotation.x=-.12;
-    const tip=bodyBox(ankle,.095,.065,.13,s*.095,-.21,.53,sageDark);
+    const tip=bodyBox(ankle,.095,.065,.13,sageDark,s*.095,-.21,.53);
     tip.rotation.x=-.22;
   }
   bodyBox(ankle,.20,.08,.22,sageDark,0,-.16,-.17); // rear heel spur
