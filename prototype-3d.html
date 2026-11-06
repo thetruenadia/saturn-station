@@ -39,6 +39,35 @@
   </div>
 </main>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
-<script type="module" src="prototype-3d.js"></script>
+<script>
+(function () {
+  const panel = document.getElementById('loading');
+  function report(title, detail) {
+    if (!panel) return;
+    panel.classList.remove('hidden');
+    panel.style.display = 'grid';
+    panel.style.padding = '32px';
+    panel.style.textAlign = 'center';
+    panel.style.lineHeight = '1.8';
+    panel.style.whiteSpace = 'pre-wrap';
+    panel.textContent = title + '\n\n' + detail + '\n\nPlease send this message to the developer.';
+  }
+  window.addEventListener('error', function (event) {
+    report('SYSTEM STARTUP ERROR', event.message || 'A script failed to load.');
+  });
+  window.addEventListener('unhandledrejection', function (event) {
+    const reason = event.reason;
+    report('SYSTEM MODULE ERROR', reason && (reason.stack || reason.message) || String(reason));
+  });
+  window.addEventListener('DOMContentLoaded', function () {
+    window.setTimeout(function () {
+      if (panel && !panel.classList.contains('hidden')) {
+        report('STARTUP TIMEOUT', 'The 3D engine did not finish starting within 12 seconds. Check that WebGL is enabled and that the Three.js CDN is reachable.');
+      }
+    }, 12000);
+  });
+})();
+</script>
+<script type="module" src="prototype-3d.js" onerror="document.getElementById('loading').textContent='FAILED TO LOAD GAME MODULE. Check your connection and reload.'"></script>
 </body>
 </html>
