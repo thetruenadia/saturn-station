@@ -148,6 +148,18 @@
     line([[10,-74],[28,-63],[25,-48]],'#9b9c78',1.5);
     for(const [x,y] of [[-24,-62],[-16,-73],[18,-68],[24,-48],[-22,-45]]){ctx.fillStyle='#252b22';ctx.fillRect(x,y,3,2);}
     ctx.fillStyle='#d0c7a0';ctx.font='5px monospace';ctx.fillText('SRV-09',-22,-55);ctx.fillText('保守',7,-57);
+    // Hand-inked wear: chipped corners, shallow scratches and cross-hatched grime.
+    ctx.save();ctx.globalAlpha=.78;
+    for(let i=0;i<9;i++){const x=-27+i*6,y=-49-(i%3)*7;line([[x,y],[x+2,y-3],[x+5,y-4]],i%2?'#c0b58c':'#293127',.8);}
+    for(let i=0;i<6;i++){line([[-18+i*5,-42],[-15+i*5,-39]],'#b4a985',.7);}
+    for(let i=0;i<5;i++){line([[-13+i*4,-74],[-10+i*4,-70]],'#343a2d',1);}
+    ctx.restore();
+    // Small ribbed service conduits and a braided loom disappear into the chassis.
+    ctx.strokeStyle='#090f0d';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-24,-47);ctx.bezierCurveTo(-35,-43,-34,-31,-20,-26);ctx.stroke();
+    ctx.strokeStyle='#6b7258';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-24,-47);ctx.bezierCurveTo(-35,-43,-34,-31,-20,-26);ctx.stroke();
+    for(let i=0;i<5;i++){ctx.fillStyle=i%2?'#514634':'#252d27';ctx.fillRect(-31+i*2,-39+i*2,4,2);}
+    // Corroded fastener recesses and a tiny warning stencil.
+    ctx.fillStyle='#9a6b3e';ctx.fillRect(15,-51,7,2);ctx.fillStyle='#d1b477';ctx.font='4px monospace';ctx.fillText('!',17,-47);
     // Small yellow/oxide hazard panel on the left rear corner.
     ctx.save();ctx.translate(-26,-49);ctx.rotate(-.35);ctx.fillStyle='#20251e';ctx.fillRect(-5,-4,13,8);for(let i=0;i<4;i++){ctx.fillStyle=i%2?'#292c23':'#c08a3e';ctx.fillRect(-4+i*4,-3,2,6);}ctx.restore();
     // Off-centre top-right sensor pod.
