@@ -79,27 +79,69 @@
     if(Math.hypot(player.x-o.x,player.y-o.y)<1.35){ctx.fillStyle='#baff65';ctx.font='11px Share Tech Mono';ctx.fillText('[E] '+o.name,p.x-65,p.y-52);}
   }
   function drawRobot(t){
-    const p=iso(player.x,player.y),bob=player.step?Math.sin(t*.018)*2:Math.sin(t*.002)*1;
-    ctx.save();ctx.translate(p.x,p.y-4+bob);
-    ctx.fillStyle='#0009';ctx.beginPath();ctx.ellipse(0,13,20,9,0,0,Math.PI*2);ctx.fill();
-    // legs with offset feet
-    polygon([[-12,-6],[-3,-2],[-5,17],[-14,19]],'#424a39','#8b9470',1);
-    polygon([[3,-3],[12,-8],[15,15],[5,18]],'#30392e','#7b8666',1);
-    // torso, deliberately asymmetrical utility chassis
-    polygon([[-15,-42],[-8,-53],[9,-51],[16,-39],[12,-8],[-13,-7]],'#60684e','#a1a47b',2);
-    polygon([[-8,-50],[9,-51],[12,-9],[-9,-9]],'#343d31','#778263',1);
-    // external chest core and hazard panel
-    ctx.fillStyle='#152018';ctx.fillRect(-5,-39,12,13);ctx.fillStyle='#aaff55';ctx.shadowColor='#aaff55';ctx.shadowBlur=8;ctx.fillRect(-2,-35,6,5);ctx.shadowBlur=0;
-    polygon([[-15,-39],[-23,-35],[-20,-16],[-12,-18]],'#4c5541','#8b9470',1);
-    polygon([[13,-40],[23,-34],[21,-12],[12,-15]],'#30382d','#87906c',1);
-    // head and sensor slit
-    polygon([[-10,-66],[-4,-73],[9,-70],[13,-60],[8,-51],[-9,-53]],'#778168','#b0b78a',2);
-    ctx.fillStyle='#111b15';ctx.fillRect(-6,-64,14,5);ctx.fillStyle='#aaff55';ctx.shadowColor='#aaff55';ctx.shadowBlur=10;ctx.fillRect(-3,-63,8,2);ctx.shadowBlur=0;
-    // cable bundle on one shoulder
-    ctx.strokeStyle='#6b7654';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(11,-43);ctx.bezierCurveTo(29,-53,26,-23,18,-18);ctx.stroke();
-    // spanner arm
-    ctx.strokeStyle='#8b8d6c';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(-17,-37);ctx.lineTo(-24,-18);ctx.lineTo(-20,-7);ctx.stroke();
-    ctx.fillStyle='#a2a47b';ctx.fillRect(-24,-10,10,4);
+    const p=iso(player.x,player.y),walk=player.step?Math.sin(t*.014)*3:Math.sin(t*.0018)*.7;
+    ctx.save();ctx.translate(p.x,p.y-5);
+    // Ground shadow and a little oil-dark contact patch.
+    ctx.fillStyle='rgba(0,0,0,.58)';ctx.beginPath();ctx.ellipse(1,15,34,12,-.08,0,Math.PI*2);ctx.fill();
+    // Rear counterbalance leg: swept back, deliberately unlike a human thigh and shin.
+    ctx.save();ctx.translate(-1,walk);
+    line([[-15,-37],[-27,-21],[-36,1],[-47,11]],'#171e19',11);
+    line([[-15,-37],[-27,-21],[-36,1],[-47,11]],'#59634e',6);
+    line([[-28,-19],[-35,0],[-45,10]],'#a0a17a',1.5);
+    ctx.fillStyle='#242d26';ctx.beginPath();ctx.arc(-27,-22,7,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#9a9b74';ctx.lineWidth=2;ctx.stroke();
+    // Rear gripping foot, split into two narrow toes.
+    polygon([[-48,9],[-39,5],[-31,12],[-36,16],[-51,15]],'#252e28','#8b9271',1.5);
+    line([[-45,13],[-53,17]],'#b0a47c',2);line([[-36,12],[-41,19]],'#b0a47c',2);
+    ctx.restore();
+    // Forward load-bearing leg and articulated ankle.
+    ctx.save();ctx.translate(2,-walk);
+    line([[14,-34],[25,-17],[28,3],[36,12]],'#171e19',13);
+    line([[14,-34],[25,-17],[28,3],[36,12]],'#68745a',7);
+    line([[23,-17],[27,2],[35,11]],'#b0a47c',1.5);
+    ctx.fillStyle='#222b25';ctx.beginPath();ctx.arc(25,-17,8,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#a6a17a';ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle='#414b3c';ctx.fillRect(23,-20,5,7);
+    // Ankle actuator and paired gripper toes.
+    line([[29,1],[39,8]],'#a3a17b',3);line([[35,10],[47,12]],'#303b31',5);
+    polygon([[34,9],[44,7],[52,13],[47,17],[34,15]],'#252e28','#9a9b78',1.5);
+    line([[45,13],[55,17]],'#b5a77b',2);line([[39,14],[44,21]],'#b5a77b',2);
+    ctx.restore();
+    // Exposed undercarriage: dark cast frame, cross members, piston and cable loom.
+    polygon([[-24,-43],[-15,-53],[18,-51],[29,-40],[22,-23],[-17,-22]],'#171f1a','#77816a',2);
+    line([[-18,-38],[20,-37]],'#9a9a72',2);
+    line([[-12,-29],[15,-29]],'#444f40',4);
+    // Central component boxes and service access plates.
+    polygon([[-17,-48],[-6,-53],[3,-49],[0,-39],[-14,-38]],'#303a2f','#8b9270',1.5);
+    polygon([[3,-49],[17,-46],[19,-35],[5,-36]],'#242d26','#6e795e',1.5);
+    ctx.fillStyle='#0d1510';ctx.fillRect(-10,-47,8,6);ctx.fillStyle='#aaff55';ctx.fillRect(-8,-45,4,2);
+    // Coiled cable loop on the left flank.
+    ctx.strokeStyle='#0b100d';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-18,-48);ctx.bezierCurveTo(-34,-54,-33,-33,-21,-31);ctx.stroke();
+    ctx.strokeStyle='#6d7457';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-18,-48);ctx.bezierCurveTo(-34,-54,-33,-33,-21,-31);ctx.stroke();
+    // Main horizontal sage-green chassis. It is a low, elongated equipment housing.
+    polygon([[-31,-68],[-19,-80],[15,-78],[34,-65],[29,-39],[13,-31],[-23,-38],[-36,-51]],'#202a21','#111712',4);
+    polygon([[-31,-68],[-19,-80],[15,-78],[34,-65],[29,-39],[13,-31],[-23,-38],[-36,-51]],'#647052','#a4a783',2);
+    polygon([[-31,-68],[-19,-80],[8,-77],[4,-48],[-23,-44],[-36,-51]],'#7d8768','#b1b28a',1.5);
+    polygon([[4,-77],[15,-78],[34,-65],[29,-39],[13,-31],[4,-48]],'#394638','#899174',1.5);
+    // Worn edge highlights, chipped paint and stamped service markings.
+    line([[-27,-66],[-18,-76],[0,-75]],'#c0b88c',1.5);
+    line([[10,-74],[28,-63],[25,-48]],'#9b9c78',1.5);
+    for(const [x,y] of [[-24,-62],[-16,-73],[18,-68],[24,-48],[-22,-45]]){ctx.fillStyle='#252b22';ctx.fillRect(x,y,3,2);}
+    ctx.fillStyle='#d0c7a0';ctx.font='5px monospace';ctx.fillText('SRV-09',-22,-55);ctx.fillText('保守',7,-57);
+    // Small yellow/oxide hazard panel on the left rear corner.
+    ctx.save();ctx.translate(-26,-49);ctx.rotate(-.35);ctx.fillStyle='#20251e';ctx.fillRect(-5,-4,13,8);for(let i=0;i<4;i++){ctx.fillStyle=i%2?'#292c23':'#c08a3e';ctx.fillRect(-4+i*4,-3,2,6);}ctx.restore();
+    // Off-centre top-right sensor pod.
+    polygon([[9,-79],[17,-87],[27,-84],[30,-76],[20,-72],[11,-74]],'#303b30','#a1a582',2);
+    ctx.fillStyle='#111914';ctx.beginPath();ctx.arc(22,-80,4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#879174';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#8acb72';ctx.fillRect(21,-81,2,2);
+    // Forward nose: recessed multi-lens camera optic, not a face.
+    polygon([[20,-65],[34,-62],[38,-54],[31,-44],[22,-48]],'#252e28','#a5a47e',2);
+    ctx.fillStyle='#0a100d';ctx.beginPath();ctx.arc(31,-55,7,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#8e9271';ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle='#541e1b';ctx.beginPath();ctx.arc(31,-55,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#d55b45';ctx.shadowColor='#b83b2e';ctx.shadowBlur=8;ctx.beginPath();ctx.arc(32,-56,1.8,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    // Small underside hydraulic lines and brackets.
+    line([[-7,-34],[-3,-23],[6,-20]],'#111813',5);line([[-7,-34],[-3,-23],[6,-20]],'#778064',2);
+    line([[17,-34],[12,-24],[17,-18]],'#111813',4);line([[17,-34],[12,-24],[17,-18]],'#9a9872',1.5);
+    // Fasteners and tiny exposed piston caps.
+    for(const [x,y] of [[-25,-57],[0,-70],[16,-43],[7,-35]]){ctx.fillStyle='#c0b88c';ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#333b2d';ctx.beginPath();ctx.arc(x,y,.6,0,Math.PI*2);ctx.fill();}
     ctx.restore();
   }
   function drawScene(t){
