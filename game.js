@@ -211,7 +211,7 @@
     const actors=[...objects.map(o=>({y:o.x+o.y,draw:()=>drawObject(o,t)})),{y:player.x+player.y,draw:()=>drawRobot(t)}].sort((a,b)=>a.y-b.y);
     actors.forEach(a=>a.draw());
     // harsh pools of practical light
-    const l1=iso(2,2),l2=iso(8,3);glow(l1.x,l1.y,90,'rgba(87,255,102,.09)');glow(l2.x,l2.y,85,'rgba(183,54,24,.12)');
+    const l1=iso(2,2),l2=iso(8,3);if(powerOn){glow(l1.x,l1.y,125,'rgba(87,190,125,.16)');glow(l2.x,l2.y,105,'rgba(183,54,24,.10)');}else{glow(l1.x,l1.y,55,'rgba(87,255,102,.025)');glow(l2.x,l2.y,85,'rgba(183,54,24,.12)');}
     // edge shadow
     const vg=ctx.createRadialGradient(480,300,180,480,300,590);vg.addColorStop(0,'transparent');vg.addColorStop(1,'rgba(0,0,0,.65)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
   }
@@ -253,7 +253,7 @@
     document.getElementById('coords').textContent='GRID '+String(Math.floor(player.x)).padStart(2,'0')+'-'+String(Math.floor(player.y)).padStart(2,'0');
   }
   function frame(t){const dt=Math.min((t-last)/1000||0,.04);last=t;update(dt);drawScene(t);if(t>toastUntil)toast.classList.remove('show');requestAnimationFrame(frame);}
-  window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();held.add(k);if(k==='e')interact();if(k===' '){inspect();}});window.addEventListener('keyup',e=>held.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>held.clear());
+  window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();held.add(k);if(k==='e'){if(started&&!gameEnded){if(selectedItem==='cell')useSelected();else interact();}}if(k===' '&&started){inspect();}});window.addEventListener('keyup',e=>held.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>held.clear());
   canvas.addEventListener('click',e=>{const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;let hit=null,dist=65;for(const o of objects){const p=iso(o.x,o.y),d=Math.hypot(x-p.x,y-(p.y+18));if(d<dist){dist=d;hit=o;}}inspect(hit);});
   function updateCharge(){const v=document.getElementById('charge-value'),bar=document.getElementById('charge-bar');if(v)v.textContent=String(Math.ceil(charge)).padStart(2,'0')+'%';if(bar)bar.style.width=Math.max(0,charge)+'%';}
   function renderInventory(){
@@ -269,7 +269,6 @@
     say('NO USABLE ITEM SELECTED.');
   }
   document.querySelectorAll('.item').forEach(b=>b.addEventListener('click',()=>{}));
-  window.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='e'&&started&&!gameEnded&&selectedItem==='cell'){useSelected();}});
   document.getElementById('boot-button').addEventListener('click',()=>{started=true;document.getElementById('boot-screen').classList.add('hidden');say('BOOT COMPLETE. POWER RESERVE CRITICAL.');say('TASK: LOCATE A PORTABLE POWER CELL.');notify('CHARGE CRITICAL / 08%');});
   document.getElementById('reboot-button').addEventListener('click',()=>window.location.reload());
   document.querySelectorAll('.action').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.action').forEach(x=>x.classList.remove('active'));b.classList.add('active');mode=b.dataset.action;if(mode==='interact')interact();if(mode==='inspect')inspect();if(mode==='terminal'){say('LOCAL TERMINAL LINK ACTIVE.');say('3 SERVICE NOTICES AVAILABLE.');notify('TERMINAL LOG UPDATED');}if(mode==='move')notify('MOVEMENT CONTROL ACTIVE');}));
