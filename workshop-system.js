@@ -27,7 +27,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   const ctx=canvas.getContext('2d');ctx.clearRect(0,0,256,128);ctx.fillStyle='#913e35';ctx.font='bold 74px Georgia,serif';ctx.textAlign='center';ctx.fillText(String(n),128,86);
   const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
   const plate=new THREE.Mesh(new THREE.PlaneGeometry(.37,.19),new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide}));
-  plate.position.set(.42,1.49,.075);root.add(plate);
+  plate.position.set(0,1.49,.075);root.add(plate);
  }
  function makeLocker(index,x,z){
   const root=new THREE.Group();root.position.set(x,0,z);scene.add(root);
