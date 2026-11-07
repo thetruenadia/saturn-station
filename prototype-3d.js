@@ -2,12 +2,12 @@ import {createMainMenu} from './main-menu.js?v=menu1';
 import {consumeLaunch} from './menu-saves.js?v=menu1';
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
-import {createTerminalBrowser,createDemoEnding} from './terminal-browser.js?v=workshop1';
+import {createTerminalBrowser,createDemoEnding} from './terminal-browser.js?v=access1';
 import {installReferenceAssets} from './reference-assets.js?v=etna1';
 import { applyArtDirection } from './station-art.js?v=etna1';
 
 import {createMakerOpening} from './maker-opening.js?v=menu1';
-import {createWorkshopSystem} from './workshop-system.js?v=workshop1';
+import {createWorkshopSystem} from './workshop-system.js?v=access1';
 
 let opening,mainMenu;
 let menuLaunch=null;try{menuLaunch=consumeLaunch(sessionStorage)}catch{}
