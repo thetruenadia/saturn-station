@@ -3,10 +3,10 @@ import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/exampl
 
 const viewport=document.querySelector('#viewport');
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x050a0b);
-scene.fog=new THREE.FogExp2(0x050a0b,.035);
+scene.background=new THREE.Color(0x242923);
+scene.fog=new THREE.FogExp2(0x242923,.012);
 const camera=new THREE.OrthographicCamera(-11,11,8,-8,.1,100);
-camera.position.set(12,14,12);
+camera.position.set(12,15,12);
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -14,19 +14,23 @@ renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFi
 viewport.appendChild(renderer.domElement);
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.target.set(0,0,0);controls.enableDamping=true;controls.dampingFactor=.07;controls.enablePan=false;
-controls.minPolarAngle=.55;controls.maxPolarAngle=1.25;controls.minZoom=.65;controls.maxZoom=2;
-camera.zoom=1.05;camera.updateProjectionMatrix();
-scene.add(new THREE.HemisphereLight(0x829b9a,0x15100c,1.25));
-const keyLight=new THREE.DirectionalLight(0xb7c6b0,2.1);keyLight.position.set(-5,12,7);keyLight.castShadow=true;keyLight.shadow.mapSize.set(2048,2048);keyLight.shadow.camera.left=-12;keyLight.shadow.camera.right=12;keyLight.shadow.camera.top=12;keyLight.shadow.camera.bottom=-12;scene.add(keyLight);
-const emergency=new THREE.PointLight(0xc33d24,32,11,2);emergency.position.set(4,4,-3);scene.add(emergency);
-const phosphor=new THREE.PointLight(0x6bff8b,13,7,2);phosphor.position.set(-4,2,2);scene.add(phosphor);
+controls.minPolarAngle=.55;controls.maxPolarAngle=1.25;controls.minZoom=.65;controls.maxZoom=5.5;
+camera.zoom=1.8;camera.updateProjectionMatrix();
+scene.add(new THREE.HemisphereLight(0xc9c4aa,0x453c30,2.15));
+const keyLight=new THREE.DirectionalLight(0xf1d9b1,2.5);keyLight.position.set(-5,12,7);keyLight.castShadow=true;keyLight.shadow.mapSize.set(2048,2048);keyLight.shadow.camera.left=-12;keyLight.shadow.camera.right=12;keyLight.shadow.camera.top=12;keyLight.shadow.camera.bottom=-12;scene.add(keyLight);
+const emergency=new THREE.PointLight(0xc87937,19,15,2);emergency.position.set(4,4,-3);scene.add(emergency);
+const phosphor=new THREE.PointLight(0xd4b56d,12,11,2);phosphor.position.set(-4,2,2);scene.add(phosphor);
 const mat=(c,r=.8,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
-const floorMat=mat(0x202723,.96,.25),wallMat=mat(0x171f1d,.9,.3),edgeMat=mat(0x4a4a38,.8,.35),rustMat=mat(0x70412a,.95,.1),darkMat=mat(0x080e0d,.7,.3),greenMat=mat(0x68765b,.72,.35),screenMat=new THREE.MeshStandardMaterial({color:0x72ff92,emissive:0x35d85c,emissiveIntensity:2});
+const floorMat=mat(0x555346,.96,.25),wallMat=mat(0x171f1d,.9,.3),edgeMat=mat(0x4a4a38,.8,.35),rustMat=mat(0x70412a,.95,.1),darkMat=mat(0x080e0d,.7,.3),greenMat=mat(0x68765b,.72,.35),screenMat=new THREE.MeshStandardMaterial({color:0x72ff92,emissive:0x35d85c,emissiveIntensity:2});
 function box(parent,w,h,d,material,x,y,z,cast=true){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);o.castShadow=cast;o.receiveShadow=true;parent.add(o);return o}
 function cylinder(parent,r1,r2,h,material,x,y,z,rx=0,rz=0){const o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,12),material);o.position.set(x,y,z);o.rotation.x=rx;o.rotation.z=rz;o.castShadow=true;parent.add(o);return o}
 const floor=box(scene,28,.35,22,floorMat,0,-.2,0,false);
 // No prototype grid: a practical metal maintenance deck replaces it.
-box(scene,28,8,.55,wallMat,0,3.8,-11,false);box(scene,.55,8,22,wallMat,-14,3.8,0,false);box(scene,.55,8,22,wallMat,14,3.8,0,false);box(scene,28,8,.55,wallMat,0,3.8,11,false);
+// Dollhouse cutaway: north and west are solid; south/east walls are open to the camera.
+box(scene,28,8,.55,wallMat,0,3.8,-11,false);
+box(scene,.55,8,22,wallMat,-14,3.8,0,false);
+for(let x=-12;x<=12;x+=4)box(scene,.38,.85,.38,wallMat,x,.45,10.9,false);
+for(let z=-9;z<=9;z+=4)box(scene,.38,.85,.38,wallMat,13.9,.45,z,false);
 for(let x=-8;x<=8;x+=2){box(scene,.18,4.8,.22,edgeMat,x,2.2,-6.72);box(scene,.16,4.6,.18,darkMat,x,2.2,-6.55)}
 for(let z=-5;z<=4;z+=2){cylinder(scene,.16,.16,17,edgeMat,0,4.35,z,0,Math.PI/2);for(let x=-7;x<=7;x+=3)cylinder(scene,.22,.22,.13,rustMat,x,4.35,z,Math.PI/2,0)}
 for(let i=0;i<8;i++){const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-8+i*2,4.7,-6),new THREE.Vector3(-7+i*2,3.7,-3),new THREE.Vector3(-8+i*2,3.1,0),new THREE.Vector3(-6+i*2,2.7,4)]);scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve,28,.045,6,false),darkMat))}
@@ -182,9 +186,9 @@ for(let i=0;i<5;i++){const t=cylinder(scrap,.055,.055,.7,deckCream,-1.2+i*.52,.5
 for(let i=0;i<6;i++){const x=-12+i*4.5;box(scene,.23,7,.3,deckSteel,x,7.1,-8);box(scene,.45,.28,17,deckRust,x,7.3,0)}
 for(let i=0;i<5;i++){const z=-8+i*4;box(scene,1.6,2.4,1.3,deckSteel,12.1,1.2,z);box(scene,1.2,.65,.09,deckRust,11.24,1.8,z)}
 // A deep overhead service bridge and wall-mounted pressure tanks establish scale.
-for(let x=-12;x<=12;x+=2){box(scene,1.72,.18,2.3,deckSteel,x,6.15,7.8);box(scene,.14,.95,.15,deckCream,x,6.7,6.7)}
-box(scene,25,.13,.12,deckRust,0,7.16,6.7);
-for(const x of [-12.2,12.2])for(const z of [-7,-2,3,8]){
+for(let x=-12;x<=12;x+=2){box(scene,1.72,.18,2.3,deckSteel,x,6.15,-8.8);box(scene,.14,.95,.15,deckCream,x,6.7,-7.7)}
+box(scene,25,.13,.12,deckRust,0,7.16,-7.7);
+for(const x of [-12.2])for(const z of [-7,-2,3,8]){
  const tank=cylinder(scene,.85,.85,3.4,deckSteel,x,3.8,z);
  for(const y of [2.5,4.9])cylinder(scene,.92,.92,.13,deckRust,x,y,z);
  box(scene,1.95,.17,1.95,deckRust,x,1.9,z);
@@ -194,6 +198,23 @@ for(let i=0;i<8;i++){
  industrialTube([[x,7.7,-10],[x,7.9,-5],[x,7.4,0],[x,7.6,5]],.085+(i%3)*.045,i%3===0?oxidised:conduit);
 }
 for(let i=0;i<10;i++){const z=-9+i*2;box(scene,.8,.04,1.3,deckRust,0,.09,z);box(scene,.58,.04,.06,deckCream,0,.12,z-.4)}
+// Repainted bulkhead skins, warning panels, and riveted service cladding.
+const olivePaint=mat(0x777a61,.94,.12),sandPaint=mat(0xa69a7a,.98,.08),inkBlack=mat(0x282b25,.92,.12),hazardPaint=mat(0xb17943,.94,.08);
+for(let x=-12;x<=12;x+=3.5){
+ box(scene,3.12,3.2,.11,x%2===0?olivePaint:sandPaint,x,3.1,-10.65);
+ box(scene,3.1,.11,.18,inkBlack,x,1.48,-10.53);
+ for(const y of [1.7,4.5])for(const dx of [-1.38,1.38])cylinder(scene,.055,.055,.06,inkBlack,x+dx,y,-10.52,Math.PI/2);
+}
+for(let z=-9;z<=9;z+=3.6){
+ box(scene,.12,3.15,3.2,olivePaint,-13.63,3.1,z);
+ box(scene,.22,.13,3.1,inkBlack,-13.5,1.5,z);
+}
+for(let i=0;i<7;i++){
+ const x=-11+i*3.5;
+ box(scene,1.35,.06,.8,hazardPaint,x,.095,-2);
+ box(scene,.15,.07,.82,inkBlack,x-.48,.13,-2);
+ box(scene,.15,.07,.82,inkBlack,x+.48,.13,-2);
+}
 // Terminal is physically separated from the generator and exit.
 const terminal=new THREE.Group();terminal.position.set(5,0,-7);scene.add(terminal);
 box(terminal,1.8,1.2,1.05,deckRust,0,.6,0);box(terminal,1.5,1.65,.6,deckSteel,0,1.9,-.15);
@@ -436,7 +457,21 @@ for(const side of [-1,1])for(let i=0;i<3;i++){
   const rivet=new THREE.Mesh(new THREE.SphereGeometry(.025,8,6),rawSteel);
   rivet.position.set(side*.84,-.20,-.34+i*.28);shell.add(rivet);
 }
-robot.position.set(-9,0,6);robot.rotation.y=Math.PI*.18;
+robot.position.set(-9,0,6);controls.target.set(-9,1.3,6);camera.position.set(3,16,18);controls.update();robot.rotation.y=Math.PI*.18;
+// Selective ink outlines: hard structural silhouettes, not a black wireframe on every triangle.
+const inkMaterial=new THREE.LineBasicMaterial({color:0x171c19,transparent:true,opacity:.42,depthWrite:false});
+const inkMeshes=[];
+function addTechnicalInk(root){
+ root.traverse(o=>{
+  if(!o.isMesh||o.geometry.type==='TubeGeometry'||o.geometry.type==='SphereGeometry'||o.geometry.type==='TorusGeometry'||o.geometry.type==='CircleGeometry')return;
+  if(o.material?.transparent||o.material?.emissiveIntensity>1)return;
+  const geo=o.geometry;
+  if(!geo.attributes?.position||geo.attributes.position.count>1800)return;
+  const edge=new THREE.LineSegments(new THREE.EdgesGeometry(geo,38),inkMaterial);
+  edge.renderOrder=1;edge.scale.setScalar(1.003);o.add(edge);inkMeshes.push(edge);
+ });
+}
+addTechnicalInk(scene);
 const shadow=new THREE.Mesh(new THREE.CircleGeometry(.92,32),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.56}));
 shadow.rotation.x=-Math.PI/2;shadow.position.y=.018;robot.add(shadow);
 
@@ -627,7 +662,11 @@ function animateGait(dt,moving){
    solveLegIK(l,gaitLocalTarget,dt);
  }
 }
-function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');controls.update();if(inventory.classList.contains('open'))renderInventoryPreview();if(!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);const wantsMove=len>0;
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
+const desiredFocus=new THREE.Vector3(robot.position.x,1.25,robot.position.z);
+const followDelta=desiredFocus.sub(controls.target).multiplyScalar(1-Math.exp(-dt*4));
+controls.target.add(followDelta);camera.position.add(followDelta);
+controls.update();if(inventory.classList.contains('open'))renderInventoryPreview();if(!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);const wantsMove=len>0;
 const targetSpeed=wantsMove?.75:0;
 // Inertial acceleration and braking make the chassis feel mechanically heavy.
 gaitVelocity=THREE.MathUtils.damp(gaitVelocity,targetSpeed,wantsMove?3.3:5.2,dt);
