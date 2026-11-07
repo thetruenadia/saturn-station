@@ -24,6 +24,16 @@ const mat=(c,r=.8,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,meta
 const floorMat=mat(0x555346,.96,.25),wallMat=mat(0x171f1d,.9,.3),edgeMat=mat(0x4a4a38,.8,.35),rustMat=mat(0x70412a,.95,.1),darkMat=mat(0x080e0d,.7,.3),greenMat=mat(0x68765b,.72,.35),screenMat=new THREE.MeshStandardMaterial({color:0x72ff92,emissive:0x35d85c,emissiveIntensity:2});
 function box(parent,w,h,d,material,x,y,z,cast=true){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);o.castShadow=cast;o.receiveShadow=true;parent.add(o);return o}
 function cylinder(parent,r1,r2,h,material,x,y,z,rx=0,rz=0){const o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,12),material);o.position.set(x,y,z);o.rotation.x=rx;o.rotation.z=rz;o.castShadow=true;parent.add(o);return o}
+function wornPaint(hex,seed){
+ const c=document.createElement('canvas');c.width=c.height=256;const ctx=c.getContext('2d');
+ ctx.fillStyle='#'+new THREE.Color(hex).getHexString();ctx.fillRect(0,0,256,256);
+ let n=seed;const rnd=()=>{n=(1664525*n+1013904223)>>>0;return n/4294967296};
+ for(let i=0;i<4400;i++){ctx.fillStyle=rnd()>.5?'#f0e5be10':'#191b1820';ctx.fillRect(rnd()*256,rnd()*256,2+rnd()*18,.5+rnd()*2)}
+ for(let i=0;i<130;i++){const x=rnd()*256,y=rnd()*256;ctx.strokeStyle=rnd()>.5?'#272c2780':'#a9774b70';ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+2+rnd()*12,y-rnd()*5);ctx.stroke()}
+ const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+ return new THREE.MeshStandardMaterial({map:tex,roughness:.92,metalness:.16});
+}
+const wornOliveMat=wornPaint(0x707661,11),wornSandMat=wornPaint(0xa3987b,22),wornRustMat=wornPaint(0x655347,33),wornSteelMat=wornPaint(0x505a53,44);
 const floor=box(scene,28,.35,22,floorMat,0,-.2,0,false);
 // No prototype grid: a practical metal maintenance deck replaces it.
 // Dollhouse cutaway: north and west are solid; south/east walls are open to the camera.
@@ -210,7 +220,7 @@ for(const [leaf,side] of [[leftLeaf,-1],[rightLeaf,1]]){
 }
 hatch.userData={name:'MAINTENANCE EXIT',x:11.4,z:-10.6};interactables.push(hatch);
 // Expanded maintenance chamber: functional repair bay and terminal alcove.
-const deckSteel=mat(0x3c443e,.94,.14),deckRust=mat(0x625142,.95,.12),deckCream=mat(0x9b9477,.88,.09);
+const deckSteel=wornSteelMat,deckRust=wornRustMat,deckCream=wornSandMat;
 for(let z=-10;z<=10;z+=2){box(scene,27,.07,.16,deckSteel,0,.035,z);for(let x=-13;x<=13;x+=3.3)box(scene,.22,.045,1.8,deckRust,x,.052,z+.85)}
 for(const x of [-13.5,13.5])for(let z=-9;z<=9;z+=3){box(scene,.35,7,.42,deckSteel,x,3.5,z);box(scene,.7,.16,.7,deckRust,x,6.7,z)}
 for(const z of [-10.6,10.6])for(let x=-12;x<=12;x+=3){if(z<0&&x>9)continue;box(scene,.35,7,.4,deckSteel,x,3.5,z)}
@@ -235,7 +245,7 @@ for(let i=0;i<8;i++){
 }
 for(let i=0;i<10;i++){const z=-9+i*2;box(scene,.8,.04,1.3,deckRust,0,.09,z);box(scene,.58,.04,.06,deckCream,0,.12,z-.4)}
 // Repainted bulkhead skins, warning panels, and riveted service cladding.
-const olivePaint=mat(0x777a61,.94,.12),sandPaint=mat(0xa69a7a,.98,.08),inkBlack=mat(0x282b25,.92,.12),hazardPaint=mat(0xb17943,.94,.08);
+const olivePaint=wornOliveMat,sandPaint=wornSandMat,inkBlack=mat(0x282b25,.92,.12),hazardPaint=mat(0xb17943,.94,.08);
 for(let x=-12;x<=7.5;x+=3.5){
  box(scene,3.12,3.2,.11,x%2===0?olivePaint:sandPaint,x,3.1,-10.65);
  box(scene,3.1,.11,.18,inkBlack,x,1.48,-10.53);
@@ -253,7 +263,7 @@ for(let i=0;i<7;i++){
 }
 // Illustrated industrial set piece: enormous serviced heat-exchanger, catwalk and Saturn observation port.
 const exchanger=new THREE.Group();exchanger.position.set(-5.5,0,-8.5);scene.add(exchanger);
-const wornOlive=mat(0x646d56,.94,.2),oxidisedCopper=mat(0x785b44,.94,.25),ivory=mat(0xa7a18b,.96,.13);
+const wornOlive=wornOliveMat,oxidisedCopper=wornRustMat,ivory=wornSandMat;
 cylinder(exchanger,1.75,1.75,6.5,wornOlive,0,4.25,0,0,Math.PI/2);
 for(let x=-2.7;x<=2.7;x+=1.35)cylinder(exchanger,1.83,1.83,.22,oxidisedCopper,x,4.25,0,0,Math.PI/2);
 for(let x=-2.4;x<=2.4;x+=.8)box(exchanger,.16,.19,2.9,ivory,x,5.1,0);
@@ -278,6 +288,23 @@ const saturnPanel=new THREE.Mesh(new THREE.PlaneGeometry(7,4.4),new THREE.MeshBa
 for(const x of [1.2,8.8])box(scene,.35,5.2,.4,doorFrame,x,4.35,-10.38);
 for(const y of [1.95,6.75])box(scene,8,.34,.45,doorFrame,5,y,-10.38);
 for(let i=0;i<9;i++){const x=1.3+i*.92;box(scene,.09,4.5,.1,oxidisedCopper,x,4.35,-10.25)}
+// Workshop zones: scrap/wake, fabrication, generator and command, with clear central circulation.
+const worktop=wornPaint(0x948669,81),toolMetal=mat(0x292e2b,.78,.4);
+function workshopBench(x,z,rotation=0){
+ const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);
+ box(g,3.1,.17,1.15,worktop,0,1.1,0);
+ for(const xx of [-1.35,1.35])for(const zz of [-.46,.46])box(g,.15,1.05,.16,toolMetal,xx,.55,zz);
+ box(g,2.9,.72,.12,wornOliveMat,0,1.52,-.5);
+ for(let i=0;i<8;i++)box(g,.07,.22,.08,toolMetal,-1.1+i*.3,1.55,-.38);
+ box(g,.9,.18,.65,wornRustMat,-.65,1.3,.05);
+}
+workshopBench(-9,2.2);workshopBench(1.5,7,Math.PI);
+const pathPaint=mat(0xb1a16e,.98,.05);
+for(let z=-7;z<=8;z+=1.25)for(const x of [3.8,8.2])box(scene,.12,.024,.75,pathPaint,x,.1,z);
+for(let x=-11;x<=-4;x+=1.2)box(scene,.7,.024,.12,pathPaint,x,.1,3.6);
+for(let i=0;i<4;i++){const x=-10+i*.68;box(scene,.38,2.8,.48,wornOliveMat,x,1.4,-5.8);box(scene,.48,.13,.56,wornRustMat,x,2.8,-5.8)}
+const generatorLight=new THREE.PointLight(0xffc17b,18,10,2);generatorLight.position.set(-7,4,-4);scene.add(generatorLight);
+const benchLight=new THREE.PointLight(0xffd99b,12,10,2);benchLight.position.set(-9,3.5,4);scene.add(benchLight);
 // Terminal is physically separated from the generator and exit.
 const terminal=new THREE.Group();terminal.position.set(5,0,-7);scene.add(terminal);
 box(terminal,1.8,1.2,1.05,deckRust,0,.6,0);
@@ -300,7 +327,7 @@ terminal.userData={name:'CONTROL TERMINAL',x:5,z:-7};interactables.push(terminal
 // Forward is +Z. This block is deliberately self-contained.
 const robot=new THREE.Group();scene.add(robot);
 const body=new THREE.Group();robot.add(body);
-const sage=new THREE.MeshStandardMaterial({color:0x667865,roughness:.65,metalness:.15});
+const sage=wornPaint(0x667865,61);
 const sageLight=new THREE.MeshStandardMaterial({color:0x82917a,roughness:.72,metalness:.18});
 const sageDark=new THREE.MeshStandardMaterial({color:0x414d43,roughness:.82,metalness:.25});
 const gunmetal=new THREE.MeshStandardMaterial({color:0x242826,roughness:.4,metalness:.85});
@@ -372,7 +399,7 @@ const originalFore=box(originalArm,.17,.55,.18,originalGreen,-.27,-.94,.05);orig
 box(originalArm,.25,.17,.2,originalDark,-.3,-1.24,.06);
 for(const side of [-1,1])box(originalArm,.07,.24,.09,originalDark,-.3+side*.1,-1.4,.06);
 const mountedArm=new THREE.Group();mountedArm.name='mounted-service-arm';mountedArm.position.set(.91,-.13,.33);shell.add(mountedArm);
-const factoryYellow=mat(0xc69a3d,.76,.23),factoryBlack=mat(0x222521,.7,.55),factorySteel=mat(0x77796c,.6,.68);
+const factoryYellow=wornPaint(0xc69a3d,73),factoryBlack=mat(0x222521,.7,.55),factorySteel=mat(0x77796c,.6,.68);
 cylinder(mountedArm,.23,.23,.35,factoryBlack,0,0,0,Math.PI/2);
 box(mountedArm,.31,.18,.31,factoryYellow,0,-.1,0);
 const factoryUpper=box(mountedArm,.26,.55,.3,factoryYellow,.12,-.38,.02);factoryUpper.rotation.z=.28;
@@ -381,6 +408,14 @@ const factoryFore=box(mountedArm,.3,.58,.27,factoryYellow,.3,-.98,.1);factoryFor
 for(let i=0;i<4;i++){const stripe=box(mountedArm,.32,.075,.3,factoryBlack,.3,-.78-i*.13,.1);stripe.rotation.z=-.12}
 box(mountedArm,.38,.2,.31,factoryBlack,.34,-1.33,.13);
 for(const side of [-1,1]){const jaw=box(mountedArm,.085,.33,.12,factorySteel,.34+side*.17,-1.55,.13);jaw.rotation.z=side*.19}
+// Exposed actuator housings and cable runs on both mechanical arms.
+for(const rig of [originalArm,mountedArm]){
+ const colour=rig===originalArm?originalGreen:factoryYellow;
+ for(const y of [-.35,-.92]){cylinder(rig,.11,.11,.11,factorySteel,.2,y,.24,Math.PI/2);cylinder(rig,.06,.06,.13,factoryBlack,.2,y,.33,Math.PI/2)}
+ const cable=new THREE.CatmullRomCurve3([new THREE.Vector3(0,-.05,-.1),new THREE.Vector3(-.15,-.5,-.26),new THREE.Vector3(.15,-.9,-.24),new THREE.Vector3(.3,-1.24,-.08)]);
+ rig.add(new THREE.Mesh(new THREE.TubeGeometry(cable,18,.045,8,false),factoryBlack));
+ for(let i=0;i<3;i++)box(rig,.16,.05,.25,colour,.13,-.47-i*.16,.07);
+}
 mountedArm.visible=false;
 
 // Main load-bearing chassis is narrow in height and extended along the travel axis.
@@ -596,13 +631,13 @@ function updateInventory(){
   const properties=document.createElement('p');properties.className='item-stats';properties.textContent=stats;
   info.append(heading,detail,properties);node.append(picture,info);
   if(draggable)node.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain','lock-arm');e.dataTransfer.effectAllowed='move'});
-  list.append(node);
+  node.addEventListener('click',()=>chooseInspection(type));list.append(node);
  }
  if(hasArm)item('arm','INDUSTRIAL MANIPULATOR','Yellow-and-black interchangeable factory arm. Heavy-duty gripper for physical switches and mechanical releases.','CLASS  TOOL ARM  /  MOUNT  RIGHT  /  GRIP  85 N  /  STATUS  '+(armEquipped?'EQUIPPED':'STOWED'),!armEquipped);
  if(hasCell)item('cell','PORTABLE POWER PACK','Sealed auxiliary energy cartridge. Restores MU-1 internal charge when consumed with Q.','CLASS  CONSUMABLE  /  CHARGE  +55%  /  USE  Q',false);
  if(!hasArm&&!hasCell)list.innerHTML='<p class="empty-inventory">No components recovered.</p>';
 }
-function openInventory(){inventory.classList.add('open');inventory.setAttribute('aria-hidden','false');updateInventory();target=null}
+function openInventory(){inventory.classList.add('open');inventory.setAttribute('aria-hidden','false');updateInventory();chooseInspection(hasArm?'arm':hasCell?'cell':'arm');target=null}
 function closeInventory(){inventory.classList.remove('open');inventory.setAttribute('aria-hidden','true')}
 const armSlot=document.querySelector('[data-slot="arm"]');armSlot.addEventListener('dragover',e=>{e.preventDefault();armSlot.classList.add('drag-over')});armSlot.addEventListener('dragleave',()=>armSlot.classList.remove('drag-over'));armSlot.addEventListener('drop',e=>{e.preventDefault();armSlot.classList.remove('drag-over');if(e.dataTransfer.getData('text/plain')==='lock-arm'&&hasArm){armEquipped=true;mountedArm.visible=true;previewMountedArm.visible=true;updateInventory();say('LOCK-SERVICE ARM INSTALLED.');notify('COMPONENT INSTALLED');task.textContent='Activate the generator switch.'}});
 document.querySelector('#close-inventory').addEventListener('click',closeInventory);
@@ -700,6 +735,29 @@ previewRobot.position.set(0,0,0);previewRobot.rotation.set(0,-.3,0);
 previewScene.add(previewRobot);
 const previewMountedArm=previewRobot.getObjectByName('mounted-service-arm');
 
+// Rotatable 3D equipment inspection uses clones of the actual game models.
+const itemHost=document.querySelector('#item-model-preview'),itemScene=new THREE.Scene();
+itemScene.add(new THREE.HemisphereLight(0xf0e5c9,0x39453d,2.5));
+const itemLight=new THREE.DirectionalLight(0xffe0ae,3);itemLight.position.set(-3,6,6);itemScene.add(itemLight);
+const itemCamera=new THREE.PerspectiveCamera(32,1,.1,30);itemCamera.position.set(3,2.6,4.2);itemCamera.lookAt(0,.7,0);
+const itemRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true});itemRenderer.setPixelRatio(Math.min(devicePixelRatio,2));itemRenderer.outputColorSpace=THREE.SRGBColorSpace;itemHost.appendChild(itemRenderer.domElement);
+const itemModel=new THREE.Group();itemScene.add(itemModel);
+let itemType='arm',itemYaw=.4,itemDragging=false,itemLastX=0;
+function chooseInspection(type){
+ itemType=type;itemYaw=.4;itemModel.clear();
+ const model=(type==='arm'?mountedArm:cell).clone(true);model.visible=true;
+ model.position.set(0,type==='arm'?1.7:.75,0);model.scale.setScalar(type==='arm'?1.2:2.1);itemModel.add(model);
+ document.querySelector('#inspection-title').textContent=type==='arm'?'INDUSTRIAL MANIPULATOR':'PORTABLE POWER PACK';
+ document.querySelector('#inspection-specs').textContent=type==='arm'?'RIGHT MOUNT · MECHANICAL GRIPPER · 85 N · '+(armEquipped?'INSTALLED':'STOWED'):'ENERGY CARTRIDGE · +55% CHARGE · '+(hasCell?'READY':'USED');
+}
+itemHost.addEventListener('pointerdown',e=>{itemDragging=true;itemLastX=e.clientX;itemHost.setPointerCapture(e.pointerId)});
+itemHost.addEventListener('pointermove',e=>{if(itemDragging){itemYaw+=(e.clientX-itemLastX)*.012;itemLastX=e.clientX}});
+itemHost.addEventListener('pointerup',()=>itemDragging=false);itemHost.addEventListener('pointercancel',()=>itemDragging=false);
+function renderItemInspection(dt){
+ if(!itemDragging)itemYaw+=dt*.35;itemModel.rotation.y=itemYaw;
+ const w=itemHost.clientWidth,h=itemHost.clientHeight;if(!w||!h)return;
+ itemRenderer.setSize(w,h,false);itemCamera.aspect=w/h;itemCamera.updateProjectionMatrix();itemRenderer.render(itemScene,itemCamera);
+}
 const previewRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
 previewRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
 previewRenderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -773,23 +831,28 @@ function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDel
 const desiredFocus=new THREE.Vector3(robot.position.x,1.25,robot.position.z);
 const followDelta=desiredFocus.sub(controls.target).multiplyScalar(1-Math.exp(-dt*4));
 controls.target.add(followDelta);camera.position.add(followDelta);
-controls.update();if(inventory.classList.contains('open'))renderInventoryPreview();if(!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);const wantsMove=len>0;
+controls.update();if(inventory.classList.contains('open')){renderInventoryPreview();renderItemInspection(dt)}if(!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);const wantsMove=len>0;
 const targetSpeed=wantsMove?2.25:0;
 // Inertial acceleration and braking make the chassis feel mechanically heavy.
-gaitVelocity=THREE.MathUtils.damp(gaitVelocity,targetSpeed,wantsMove?3.3:5.2,dt);
+gaitVelocity=THREE.MathUtils.damp(gaitVelocity,targetSpeed,wantsMove?6.2:8.5,dt);
 gaitWeight=THREE.MathUtils.damp(gaitWeight,wantsMove?1:0,wantsMove?3.0:5.0,dt);
 if(wantsMove){
  robot.position.x=THREE.MathUtils.clamp(robot.position.x+mx/len*gaitVelocity*dt,-12.5,12.5);
  robot.position.z=THREE.MathUtils.clamp(robot.position.z+mz/len*gaitVelocity*dt,-9.5,9.5);
  const desiredHeading=Math.atan2(mx,mz);
- robot.rotation.y+=Math.atan2(Math.sin(desiredHeading-robot.rotation.y),Math.cos(desiredHeading-robot.rotation.y))*Math.min(1,dt*6);
+ robot.rotation.y+=Math.atan2(Math.sin(desiredHeading-robot.rotation.y),Math.cos(desiredHeading-robot.rotation.y))*Math.min(1,dt*9);
 }
 walkTime+=dt*4.8*(gaitVelocity/1.5);
 animateGait(dt,gaitWeight>.06);
 interactionPulse=Math.max(0,interactionPulse-dt*2.7);
-const reach=Math.sin((1-interactionPulse)*Math.PI)*interactionPulse;
-originalArm.rotation.x=-reach*.85;originalArm.rotation.z=-reach*.26;
-mountedArm.rotation.x=-reach*1.1;mountedArm.rotation.z=reach*.3;
+const reach=Math.sin((1-interactionPulse)*Math.PI)*Math.min(1,interactionPulse*2);
+const working=armEquipped?mountedArm:originalArm;
+originalArm.rotation.x=THREE.MathUtils.damp(originalArm.rotation.x,working===originalArm?-reach*.9:0,11,dt);
+originalArm.rotation.z=THREE.MathUtils.damp(originalArm.rotation.z,working===originalArm?-reach*.3:0,11,dt);
+mountedArm.rotation.x=THREE.MathUtils.damp(mountedArm.rotation.x,working===mountedArm?-reach*1.1:0,11,dt);
+mountedArm.rotation.z=THREE.MathUtils.damp(mountedArm.rotation.z,working===mountedArm?reach*.3:0,11,dt);
+originalFore.rotation.z=.12+(working===originalArm?reach*.2:0);
+factoryFore.rotation.z=-.12-(working===mountedArm?reach*.24:0);
 const transfer=Math.sin(walkTime);
 const load=Math.abs(transfer);
 // A slight dip at each footfall and sideways roll onto the supporting leg.
