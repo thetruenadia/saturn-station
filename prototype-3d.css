@@ -56,3 +56,15 @@
 .hot-item-art svg{width:100%;height:100%;filter:drop-shadow(0 2px 2px #000a)}
 .hot-slot small{font-size:6px}
 @media(max-width:600px){.inventory-content{grid-template-columns:1fr}.item-column{max-height:38vh}.item-illustration{flex-basis:75px;height:67px}.inventory-window{max-height:90vh;overflow-y:auto}.hot-item-art{width:35px}}
+
+/* 0.2 component turntable, embedded in the inventory's technical catalogue. */
+.inspection-panel{margin-top:17px;padding:12px;background:linear-gradient(155deg,#1a251e,#0b120e);border:1px solid #7a84644d}
+#item-model-preview{height:174px;position:relative;overflow:hidden;touch-action:none;cursor:grab;background:radial-gradient(ellipse at center,#5b63443d,transparent 72%)}
+#item-model-preview:active{cursor:grabbing}
+#item-model-preview canvas{width:100%;height:100%;display:block}
+#inspection-title{display:block;font-size:10px;color:#dcd9c3;letter-spacing:.08em}
+#inspection-specs{font-size:8px;line-height:1.7;color:#c2a56d;margin:6px 0 0}
+.item-column{max-height:min(70vh,610px)}
+.unit-silhouette:before,.unit-silhouette:after{display:none}
+.unit-silhouette canvas{position:relative;z-index:2}
+@media(max-width:600px){#item-model-preview{height:125px}.item-column{max-height:45vh}}
