@@ -165,6 +165,10 @@ for(const [leaf,side] of [[leftLeaf,-1],[rightLeaf,1]]){
  box(leaf,.16,.95,.45,doorWarning,side*.14,1.65,.12);
 }
 hatch.userData={name:'MAINTENANCE EXIT',x:11.4,z:-10.6};interactables.push(hatch);
+// Local override socket, with two narrow keyed contact channels.
+box(hatch,.38,.43,.13,doorFrame,-1.4,1.48,.48);
+box(hatch,.20,.28,.08,doorPaint,-1.4,1.48,.56);
+for(const side of [-1,1])box(hatch,.035,.14,.035,doorWarning,-1.4+side*.065,1.48,.62);
 // Expanded maintenance chamber: functional repair bay and terminal alcove.
 const deckSteel=wornSteelMat,deckRust=wornRustMat,deckCream=wornSandMat;
 for(let z=-10;z<=10;z+=2){box(scene,27,.07,.16,deckSteel,0,.035,z);for(let x=-13;x<=13;x+=3.3)box(scene,.22,.045,1.8,deckRust,x,.052,z+.85)}
@@ -351,7 +355,7 @@ box(originalArm,.25,.17,.2,originalDark,-.3,-1.24,.06);
 const originalJaws=[];
 for(const side of [-1,1]){const jaw=box(originalArm,.07,.24,.09,originalDark,-.3+side*.1,-1.4,.06);originalJaws.push({jaw,side})}
 // Standard manipulator retrofit: a short keyed probe fitted between its existing fingers.
-const doorAccessProbe=new THREE.Group();doorAccessProbe.position.set(-.3,-1.53,.08);originalArm.add(doorAccessProbe);
+const doorAccessProbe=new THREE.Group();doorAccessProbe.name='door-access-probe';doorAccessProbe.position.set(-.3,-1.53,.08);originalArm.add(doorAccessProbe);
 box(doorAccessProbe,.15,.21,.14,originalGreen,0,-.02,0);
 for(const side of [-1,1])box(doorAccessProbe,.035,.17,.035,originalDark,side*.05,-.17,.01);
 doorAccessProbe.visible=false;
@@ -576,9 +580,8 @@ function terminalCommand(k){
  if(!terminalUI.session.state.authenticated)return 'AUTHENTICATION REQUIRED';
  if(k==='1'){
   if(!powerOn)return 'ERROR: AUXILIARY GRID OFFLINE';
-   if(!workshop.hasProbe)return 'DOOR LINK ISOLATED · FIT ACCESS PROBE AND USE LOCAL SOCKET';
-  if(doorOpen||doorOpening)return doorOpen?'DOOR ALREADY OPEN':'ACTUATOR IN MOTION';
-  doorOpening=true;hatch.userData.openStarted=performance.now();task.textContent='Door opening. Approach the exit to finish the demo.';updateTerminalStatus();return 'COMMAND 01 ACCEPTED / OPENING BULKHEAD';
+  return 'AUTOMATIC DOOR LINK ISOLATED · USE LOCAL EXIT SOCKET WITH ACCESS PROBE';
+
  }
  if(k==='2'){doorOpening=false;doorOpen=false;leftLeaf.position.x=rightLeaf.position.x=0;task.textContent='Exit door sealed. Use the terminal to reopen it.';updateTerminalStatus();saveProgress();return 'COMMAND 02 / DOOR SEALED'}
  if(k==='3'){setStationPower(false);task.textContent='Restore generator power to use the terminal.';notify('GENERATOR POWER OFF');return 'AUXILIARY POWER OFF'}
