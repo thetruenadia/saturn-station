@@ -39,62 +39,8 @@ export function applyArtDirection({THREE,scene,robot,terminal,terminalScreen,ter
  gauge(cabinet,.2,1.38,.6,.15);plate(cabinet,'FIELD SERVICE',0,2.15,.46,1.1);
  pipe(cabinet,[[.6,1.6,0],[.95,1.7,0],[1.05,.65,.1],[.85,.2,.8]],.055,rubber);
  rivets(cabinet,1.0,.88,.57);
- // Reference-led instrument bank: enamel castings, circular scopes and dense analogue controls.
- // Retain the live display and indicator objects used by the station's power logic.
- terminal.clear();terminal.add(terminalScreen,terminalLamp);
- const enamel=wornPaint(0xa7ad63,411),replacement=wornPaint(0x858e57,419);
- function roundPanel(parent,w,h,d,material,x,y,z,r=.12){
-  const shape=new THREE.Shape(),l=-w/2,b=-h/2;
-  shape.moveTo(l+r,b);shape.lineTo(l+w-r,b);shape.quadraticCurveTo(l+w,b,l+w,b+r);shape.lineTo(l+w,b+h-r);shape.quadraticCurveTo(l+w,b+h,l+w-r,b+h);shape.lineTo(l+r,b+h);shape.quadraticCurveTo(l,b+h,l,b+h-r);shape.lineTo(l,b+r);shape.quadraticCurveTo(l,b,l+r,b);
-  const geo=new THREE.ExtrudeGeometry(shape,{depth:d,bevelEnabled:true,bevelSize:.025,bevelThickness:.025,bevelSegments:2,steps:1,curveSegments:5});
-  const mesh=new THREE.Mesh(geo,material);mesh.position.set(x,y,z);mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);return mesh;
- }
- function knob(parent,x,y,z,r=.045){return cylinder(parent,r,r*.9,.065,ink,x,y,z,Math.PI/2)}
- function instrument(parent,x,y,z,r=.22){
-  gauge(parent,x,y,z,r);
-  for(let i=0;i<4;i++){const a=i*Math.PI/2+Math.PI/4;knob(parent,x+Math.sin(a)*(r+.06),y+Math.cos(a)*(r+.06),z,.025)}
- }
- function switchBank(parent,x,y,z,cols,rows){
-  roundPanel(parent,cols*.13+.08,rows*.13+.08,.035,ink,x+(cols-1)*.065,y-(rows-1)*.065,z);
-  const geometry=new THREE.BoxGeometry(.09,.09,.035),keys=new THREE.InstancedMesh(geometry,ceramic,cols*rows),matrix=new THREE.Matrix4();
-  for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){matrix.makeTranslation(x+col*.13,y-row*.13,z+.06);keys.setMatrixAt(row*cols+col,matrix)}parent.add(keys);
- }
- roundPanel(terminal,1.8,3.15,.5,enamel,-.74,1.78,-.38);
- roundPanel(terminal,1.45,3.0,.42,enamel,.94,1.7,-.3);
- roundPanel(terminal,1.45,.8,.08,replacement,.94,2.86,.17);
- plate(terminal,'LOCAL CONTROL / B-7',-.1,3.55,.16,2.4);
- switchBank(terminal,-1.38,2.95,.18,3,5);switchBank(terminal,-.43,2.95,.18,3,5);
- // A black removable meter module contrasts with the aged yellow enamel.
- roundPanel(terminal,.63,.96,.14,ink,-.78,2.62,.25,.045);instrument(terminal,-.78,2.86,.42,.18);
- for(let i=0;i<3;i++){knob(terminal,-.95+i*.17,2.38,.43,.045);label(terminal,String(i+1),-.95+i*.17,2.25,.43,0,.04,0xb9bc99)}
- const desk=new THREE.Group();desk.position.set(-.74,1.24,.48);desk.rotation.x=-.3;terminal.add(desk);
- roundPanel(desk,1.8,1.43,.13,enamel,0,0,0);
- for(const [x,y,r] of [[-.43,.38,.22],[.35,.38,.22],[-.08,-.04,.2],[-.46,-.42,.17],[.38,-.42,.17]])instrument(desk,x,y,.18,r);
- for(let i=0;i<7;i++)knob(desk,-.65+i*.21,-.65,.2,.035);
- roundPanel(terminal,1.67,.48,.5,enamel,-.74,.38,.14);
- for(let i=0;i<9;i++)box(terminal,.1,.018,.025,ink,-1.35+i*.145,.42,.68);
- // Large amber circular scope, with its own bolted bezel and surrounding controls.
- terminalScreen.geometry.dispose();terminalScreen.geometry=new THREE.CircleGeometry(.49,48);terminalScreen.position.set(.94,1.37,.38);terminalScreen.rotation.set(0,0,0);
- const scopeRing=new THREE.Mesh(new THREE.TorusGeometry(.55,.085,8,48),enamel);scopeRing.position.set(.94,1.37,.34);terminal.add(scopeRing);
- const radar=document.createElement('canvas');radar.width=radar.height=512;const rc=radar.getContext('2d');
- rc.fillStyle='#b79837';rc.fillRect(0,0,512,512);rc.strokeStyle='#504c2680';rc.lineWidth=2;
- for(const r of [65,130,195,245]){rc.beginPath();rc.arc(256,256,r,0,Math.PI*2);rc.stroke()}
- rc.beginPath();rc.moveTo(0,256);rc.lineTo(512,256);rc.moveTo(256,0);rc.lineTo(256,512);rc.stroke();
- rc.strokeStyle='#343c2c';rc.lineWidth=4;rc.beginPath();rc.moveTo(70,375);rc.lineTo(256,256);rc.lineTo(415,180);rc.stroke();
- for(const [x,y] of [[185,300],[340,216],[300,141]]){rc.fillStyle='#f0d774';rc.fillRect(x,y,8,8)}
- const radarMap=new THREE.CanvasTexture(radar);radarMap.colorSpace=THREE.SRGBColorSpace;terminalLit.map=radarMap;terminalLit.color.set(0xffedba);terminalLit.emissive.set(0x9d761f);terminalLit.emissiveMap=radarMap;terminalLit.needsUpdate=true;
- for(let i=0;i<12;i++){const a=i*Math.PI/6;knob(terminal,.94+Math.sin(a)*.69,1.37+Math.cos(a)*.69,.37,.035)}
- instrument(terminal,.92,2.86,.32,.2);instrument(terminal,.56,.48,.25,.13);
- for(let i=0;i<5;i++)knob(terminal,.49+i*.21,2.34,.29,.045);
- for(let i=0;i<7;i++)box(terminal,.58,.022,.03,ink,1.08,.62-i*.055,.23);
- terminalLamp.position.set(1.4,2.85,.32);
- plate(terminal,'PRESSURE',-.7,1.98,.2,.65);plate(terminal,'SCAN / 07',.94,.74,.25,.8);
- // Two exposed conduits and one replacement module give the bank a service history.
- for(let i=0;i<3;i++)pipe(terminal,[[1.45,2.5-i*.14,.1],[1.85,2.35-i*.12,.05],[1.87,.55,.05],[1.6,.15,.3+i*.1]],.035,rubber);
- roundPanel(terminal,.31,.52,.08,replacement,-1.51,1.94,.23,.03);knob(terminal,-1.51,1.97,.36,.06);
- // Low plinth and standing mat define the alcove without blocking its approach.
- box(terminal,3.65,.13,1.25,ink,0,.065,.1);
- box(terminal,2.8,.035,1.1,rubber,0,.09,1.4,false);
+ // Preserve the blue CRT and cream rack built by prototype-3d.js.
+ // The terminal's live display and lamp remain connected to station power.
  // The exchanger's bolted end cap and patchwork insulation read as one authored machine.
  const cap=new THREE.Mesh(new THREE.CylinderGeometry(1.62,1.62,.16,24),cream);cap.rotation.z=Math.PI/2;cap.position.set(3.3,4.25,0);exchanger.add(cap);
  for(let i=0;i<12;i++){const a=i*Math.PI/6;drum(exchanger,.065,.12,ink,3.42,4.25+1.4*Math.sin(a),1.4*Math.cos(a)).rotation.z=Math.PI/2}
