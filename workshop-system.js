@@ -1,15 +1,17 @@
 // Workshop prototype: seeded salvage, lockers, loose pickups and physical specification recovery.
-export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,notify,sound,save,cellCount,setCellCount,onCraftArm,onDismantle,armModel}){
+export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,notify,sound,save,cellCount,setCellCount,onCraftProbe,onAccessCard,armModel}){
  const catalogue={
   motor:{name:'SERVO MOTOR',mass:2.4,value:48,color:0x8c987f},
   gear:{name:'REDUCTION GEARS',mass:1.1,value:20,color:0xa8a797},
   chip:{name:'CONTROL CHIP',mass:.2,value:90,color:0x4d9c8b},
   plate:{name:'ARMOUR PLATES',mass:1.8,value:30,color:0x9d956d},
-  wire:{name:'WIRING LOOM',mass:.5,value:16,color:0xb47856}
+  wire:{name:'WIRING LOOM',mass:.5,value:16,color:0xb47856},
+  card:{name:'STAFF ACCESS CARD',mass:.1,value:0,color:0xc7b174},
+  camera:{name:'BROKEN CAMERA',mass:.6,value:0,color:0x515d62},
+  tin:{name:'RATION TIN',mass:.25,value:0,color:0xa9a78b}
  };
- const rarities=[{name:'COMMON',chance:.62,multiplier:1},{name:'UNCOMMON',chance:.27,multiplier:1.6},{name:'RARE',chance:.095,multiplier:2.7},{name:'EXCEPTIONAL',chance:.015,multiplier:4.5}];
- const recipe={motor:1,gear:2,chip:1,plate:2,wire:2};
- let seed=0,inventory=[],lockerContents=[[],[],[],[]],opened=[false,false,false,false],specReleased=false,specUnlocked=false,loose=[],activeLocker=-1,screenOpen=false,mode='craft',craftingUntil=0;
+ const recipe={motor:1,gear:2,chip:1,plate:1,wire:2};
+ let seed=0,inventory=[],lockerContents=[[],[],[],[]],opened=[false,false,false,false],specReleased=false,specUnlocked=false,probeInstalled=false,clawSalvaged=false,loose=[],activeLocker=-1,screenOpen=false,mode='craft',craftingUntil=0;
  const worldLoot=[];
  const shell=new THREE.MeshStandardMaterial({color:0x767f70,metalness:.55,roughness:.65});
  const steel=new THREE.MeshStandardMaterial({color:0x313c3b,metalness:.68,roughness:.55});
@@ -73,20 +75,15 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  terminalShard.userData={name:'FABRICATION SPEC SHARD',x:-6.8,z:-2.45,workshopType:'shard'};
  function setShardVisible(){if(specReleased&&!specUnlocked){scene.add(terminalShard);if(!interactables.includes(terminalShard))interactables.push(terminalShard)}else{scene.remove(terminalShard);const i=interactables.indexOf(terminalShard);if(i>=0)interactables.splice(i,1)}}
  function next(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}
- function rarity(){const n=next();let total=0;for(const r of rarities){total+=r.chance;if(n<total)return r.name}return 'COMMON'}
- function generate(){
-  const keys=Object.keys(catalogue);const type=keys[Math.floor(next()*keys.length)];
-  return {id:Math.floor(next()*1000000000).toString(36),type,rarity:rarity()};
- }
+ function generate(type){const keys=['motor','gear','chip','plate','wire'];return {id:Math.floor(next()*1000000000).toString(36),type:type||keys[Math.floor(next()*keys.length)]};}
  function startFresh(){
   seed=(Math.floor(Math.random()*4294967295)>>>0)||12345;
-  inventory=[];opened=[false,false,false,false];specReleased=false;specUnlocked=false;for(const loot of [...worldLoot])removeWorldLoot(loot);loose=[];
-  lockerContents=[Array.from({length:3},generate),Array.from({length:2},generate),Array.from({length:3},generate),Array.from({length:2},generate)];
+  inventory=[];opened=[false,false,false,false];specReleased=false;specUnlocked=false;probeInstalled=false;clawSalvaged=false;for(const loot of [...worldLoot])removeWorldLoot(loot);loose=[];
+  lockerContents=[[generate('card'),generate('camera'),generate('tin')],[generate('motor'),generate('plate'),generate('wire')],[generate('gear'),generate('wire')],[generate(),generate()]];
   refreshLockerModels();setShardVisible();updateUI();
  }
  function describe(item){
-  const base=catalogue[item.type],rarity=rarities.find(x=>x.name===item.rarity)||rarities[0];
-  return base.name+' · '+item.rarity+' · '+base.mass.toFixed(1)+' KG · '+Math.round(base.value*rarity.multiplier)+' CR';
+  const base=catalogue[item.type];return base.name+' · '+(item.type==='card'?'PERSONAL / ACCESS':item.type==='camera'||item.type==='tin'?'PERSONAL / JUNK':'MECHANICAL / COMPONENT')+' · '+base.mass.toFixed(1)+' KG'+(item.type==='card'?' · Note on reverse: ETNA':item.type==='camera'?' · Cracked lens; someone treasured its photographs.':item.type==='tin'?' · Empty, thankfully.':'');
  }
  function mass(){return inventory.reduce((n,p)=>n+catalogue[p.type].mass,0)}
  // Reuse the same recognisable mechanical silhouettes for stored and dropped salvage.
@@ -211,7 +208,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   if(type==='arm'&&armModel){const model=armModel.clone(true);model.visible=true;model.scale.setScalar(.75);model.position.set(0,.8,0);previewModel.add(model)}else if(type&&catalogue[type])makePartModel(previewModel,type,1.65);
   panel.querySelector('#workshop-preview-label').textContent=type==='arm'?'INDUSTRIAL MANIPULATOR':type?catalogue[type].name:'SELECT A COMPONENT';
  }
- function stacked(items){const groups=new Map();for(const item of items){const key=item.type+'|'+item.rarity;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item)}return [...groups.values()]}
+ function stacked(items){const groups=new Map();for(const item of items){const key=item.type;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item)}return [...groups.values()]}
  function craftAvailable(){return specUnlocked&&Object.entries(recipe).every(([type,n])=>inventory.filter(x=>x.type===type).length>=n)}
  function fabricate(){
   if(!craftAvailable())return;
