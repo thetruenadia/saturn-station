@@ -604,7 +604,7 @@ function updateInventory(){
  mountedArm.visible=hasArm&&armEquipped;
  previewMountedArm.visible=hasArm&&armEquipped;
  const entries=[];
- if(hasNote)entries.push({type:'note',name:'MAINTENANCE NOTE',draggable:false});
+ if(hasNote)entries.push({type:'note',name:'WORKER ACCESS CARD',draggable:false});
  if(hasArm)entries.push({type:'arm',name:'INDUSTRIAL MANIPULATOR',description:'Olive articulated industrial service arm. Heavy-duty gripper for physical switches and mechanical releases.',stats:'CLASS  TOOL ARM  /  MOUNT  RIGHT  /  GRIP  85 N  /  STATUS  '+(armEquipped?'EQUIPPED':'STOWED'),draggable:!armEquipped});
  if(cellCount>0)entries.push({type:'cell',name:'PORTABLE POWER PACK',description:'Sealed auxiliary energy cartridge. Restores MU-1 internal charge when consumed with Q.',stats:'CLASS  CONSUMABLE  /  CHARGE  +55%  /  USE  Q',draggable:false});
  document.querySelector('#item-count').textContent=String(entries.length).padStart(2,'0')+' / 20';
@@ -785,7 +785,7 @@ function chooseInspection(type){
   document.querySelector('#inspection-specs').textContent='';
   return;
  }
- if(type==='note'){document.querySelector('#inspection-title').textContent='MAINTENANCE NOTE';document.querySelector('#inspection-description').textContent='The password is ETNA.';document.querySelector('#inspection-specs').textContent='RECOVERED BELOW THE OBSERVATION WINDOW';return;}
+ if(type==='note'){document.querySelector('#inspection-title').textContent='WORKER ACCESS CARD';document.querySelector('#inspection-description').textContent='B-7 service staff identification. The battered yellow sticky note on the reverse reads ETNA.';document.querySelector('#inspection-specs').textContent='PERSONAL / ACCESS ITEM · RECOVERED FROM LOCKER 106';return;}
  const model=(type==='arm'?mountedArm:cell).clone(true);model.visible=true;
  if(type==='cell')model.rotation.x=0;
  model.position.set(0,type==='arm'?1.7:.75,0);model.scale.setScalar(type==='arm'?1.2:2.1);itemModel.add(model);
