@@ -350,6 +350,11 @@ const originalFore=box(originalArm,.17,.55,.18,originalGreen,-.27,-.94,.05);orig
 box(originalArm,.25,.17,.2,originalDark,-.3,-1.24,.06);
 const originalJaws=[];
 for(const side of [-1,1]){const jaw=box(originalArm,.07,.24,.09,originalDark,-.3+side*.1,-1.4,.06);originalJaws.push({jaw,side})}
+// Standard manipulator retrofit: a short keyed probe fitted between its existing fingers.
+const doorAccessProbe=new THREE.Group();doorAccessProbe.position.set(-.3,-1.53,.08);originalArm.add(doorAccessProbe);
+box(doorAccessProbe,.15,.21,.14,originalGreen,0,-.02,0);
+for(const side of [-1,1])box(doorAccessProbe,.035,.17,.035,originalDark,side*.05,-.17,.01);
+doorAccessProbe.visible=false;
 const mountedArm=new THREE.Group();mountedArm.name='mounted-service-arm';mountedArm.position.set(.91,-.13,.33);shell.add(mountedArm);
 const factoryYellow=wornPaint(0xc69a3d,73),factoryBlack=mat(0x222521,.7,.55),factorySteel=mat(0x77796c,.6,.68);
 cylinder(mountedArm,.23,.23,.35,factoryBlack,0,0,0,Math.PI/2);
@@ -1095,7 +1100,7 @@ body.rotation.x=THREE.MathUtils.damp(body.rotation.x,chassisPitch,7,dt);
 if(!paused&&!ended&&!workshop.isOpen&&!godMode&&charge>0){charge=Math.max(0,charge-dt*.1);updateCharge();if(charge===0){notify('POWER DEPLETED');triggerDeath()}}
 if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);leftLeaf.position.x=-1.85*t;rightLeaf.position.x=1.85*t;if(t>=1){doorOpening=false;doorOpen=true;updateTerminalStatus();task.textContent='Exit door open. Terminal remains available.';notify('DOOR OPEN')}}
 if(firstPerson){firstPersonCamera.position.set(robot.position.x,2.15,robot.position.z);firstPersonCamera.lookAt(robot.position.x+Math.sin(lookHeading)*Math.cos(lookPitch),2.15+Math.sin(lookPitch),robot.position.z+Math.cos(lookHeading)*Math.cos(lookPitch));}
-workshop.update(dt);updateStationSystems(dt);renderer.render(scene,activeCamera());updateNearbyUI()}
+doorAccessProbe.visible=workshop.hasProbe;workshop.update(dt);updateStationSystems(dt);renderer.render(scene,activeCamera());updateNearbyUI()}
 opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();if(menuLaunch?.mode!=='resume'){doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;}updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
 mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound});
 const returnMenuButton=document.createElement('button');returnMenuButton.textContent='MAIN MENU';returnMenuButton.addEventListener('click',()=>{hideTerminal();closeInventory();saveProgress();setPaused(true);mainMenu.show()});document.querySelector('#pause-restart').after(returnMenuButton);
