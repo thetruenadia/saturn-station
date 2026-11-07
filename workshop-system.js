@@ -1,5 +1,5 @@
 // Workshop prototype: seeded salvage, lockers, loose pickups and physical specification recovery.
-export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,notify,sound,save,cellCount,setCellCount,onCraftArm,onDismantle}){
+export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,notify,sound,save,cellCount,setCellCount,onCraftArm,onDismantle,armModel}){
  const catalogue={
   motor:{name:'SERVO MOTOR',mass:2.4,value:48,color:0x8c987f},
   gear:{name:'REDUCTION GEARS',mass:1.1,value:20,color:0xa8a797},
@@ -33,8 +33,11 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  function makeLocker(index,x,z){
   const root=new THREE.Group();root.position.set(x,0,z);scene.add(root);
   // Doors face +Z; each frame stands on short legs, clear of the floor.
-  cube(root,.96,2.12,.66,agedCream,0,1.13,0);
-  cube(root,.82,1.88,.08,agedDark,0,1.16,.30);
+  // Hollow housing: four walls and a dark back, so the real parts sit on open shelves.
+  cube(root,.96,2.12,.055,agedCream,0,1.13,-.34);
+  for(const side of [-1,1])cube(root,.07,2.12,.68,agedCream,side*.46,1.13,0);
+  cube(root,.94,.085,.70,agedCream,0,2.17,0);
+  cube(root,.86,.065,.65,agedDark,0,.32,0);
   cube(root,.79,.06,.59,agedCream,0,.29,0);
   for(const y of [.65,1.22,1.78])cube(root,.75,.035,.47,agedCream,0,y,-.02);
   for(const side of [-1,1])cube(root,.095,.28,.64,agedDark,side*.39,.17,0);
@@ -205,8 +208,8 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  function showPreview(type){
   if(previewType===type)return;
   previewType=type;previewModel.clear();
-  if(type&&catalogue[type])makePartModel(previewModel,type,1.65);
-  panel.querySelector('#workshop-preview-label').textContent=type?catalogue[type].name:'SELECT A COMPONENT';
+  if(type==='arm'&&armModel){const model=armModel.clone(true);model.visible=true;model.scale.setScalar(.75);model.position.set(0,.8,0);previewModel.add(model)}else if(type&&catalogue[type])makePartModel(previewModel,type,1.65);
+  panel.querySelector('#workshop-preview-label').textContent=type==='arm'?'INDUSTRIAL MANIPULATOR':type?catalogue[type].name:'SELECT A COMPONENT';
  }
  function stacked(items){const groups=new Map();for(const item of items){const key=item.type+'|'+item.rarity;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item)}return [...groups.values()]}
  function craftAvailable(){return specUnlocked&&Object.entries(recipe).every(([type,n])=>inventory.filter(x=>x.type===type).length>=n)}
@@ -250,7 +253,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   const status=document.createElement('small');status.textContent=craftAvailable()?'READY TO CRAFT · HOLD OR SELECT + ENTER':specUnlocked?'INSUFFICIENT COMPONENTS':'SPEC LOCKED';
   const hold=document.createElement('span');hold.className='workshop-hold';const bar=document.createElement('i');hold.append(bar);
   card.append(name,detail,status,hold);
-  card.onclick=()=>{selectedSpec=true;showPreview('motor');card.classList.add('selected')};
+  card.onclick=()=>{selectedSpec=true;showPreview('arm');card.classList.add('selected')};
   card.onkeydown=e=>{if(e.key==='Enter'&&craftAvailable()){e.preventDefault();fabricate()}};
   card.onpointerdown=()=>{if(craftAvailable()){craftHolding=true;craftProgress=0}};
   card.onpointerup=()=>{if(craftProgress<1.25)releaseHold()};card.onpointerleave=releaseHold;
