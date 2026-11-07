@@ -1,9 +1,14 @@
-export const ROOM_COLLIDERS=[[-5,2,1,.73],[5,-7,.5,.4],[-7,-4,1.1,.6],[-9,2.2,1.05,.9],[9.8,4.8,1.05,.9],[10,-3.5,.95,.85],[-10.5,-6.6,.9,.8]];
+export const ROOM_COLLIDERS=[[-5,2,1,.73],[5,-7,1.15,.55],[-7,-4,1.1,.6],[-9,2.2,1.05,.9],[9.8,4.8,1.05,.9],[10,-3.5,.95,.85],[-10.5,-6.6,.9,.8]];
 // Reference-led procedural assets for prototype 0.2. Gameplay groups remain stable.
-export function installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatch,hatchDoor,leftLeaf,rightLeaf,mountedArm,arm,box,cylinder,wornPaint,stationArt}){
+export function stepFloorBody(body,dt){
+ const step=Math.min(Math.max(dt,0),.04);if(body.sleeping)return;
+ body.velocity-=12*step;body.height+=body.velocity*step;
+ if(body.height<=body.floor){body.height=body.floor;body.velocity=-body.velocity*.08;if(Math.abs(body.velocity)<.12){body.velocity=0;body.sleeping=true}}
+}
+export function installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatch,hatchDoor,leftLeaf,rightLeaf,mountedArm,arm,box,cylinder,wornPaint,stationArt,generator,generatorLever}){
  const makeMat=(color,roughness=.8,metalness=.25)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
  const olive=wornPaint(0x84917d,617),cream=wornPaint(0xb7b59d,619),steel=makeMat(0x59656a,.55,.7),black=makeMat(0x20292a,.7,.5),copper=makeMat(0xac6031,.5,.7),yellow=wornPaint(0xc4ab49,623),blue=wornPaint(0x597c7b,629);
- const indicators=[],rotors=[],reciprocators=[],workLights=[];
+ const indicators=[],rotors=[],reciprocators=[],workLights=[],powerDisplays=[];
  const group=(name,x=0,y=0,z=0,parent=scene)=>{const g=new THREE.Group();g.name=name;g.position.set(x,y,z);parent.add(g);return g};
  const B=(p,w,h,d,m,x=0,y=0,z=0)=>box(p,w,h,d,m,x,y,z);
  const C=(p,r,h,m,x=0,y=0,z=0,rx=0,rz=0)=>cylinder(p,r,r,h,m,x,y,z,rx,rz);
@@ -38,6 +43,19 @@ export function installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatc
  for(const y of [.28,.53])C(caseGroup,.074,.07,black,-.96,y,.27,0,Math.PI/2);
  rounded(lidPivot,1.91,.15,1.38,.04,casePaint,0,.06,.58);for(const x of [-.80,.80])B(lidPivot,.08,.19,1.37,steel,x,.06,.58);
  plaque(lidPivot,'SERVICE CARTRIDGE / 55',0,.065,1.29,.95,.09);cell.position.set(0,.93,0);
+ // Power distribution: yellow-green analogue instrumentation, mechanical lever and amber scope.
+ if(generator&&generatorLever){
+  generator.clear();generator.add(generatorLever);generatorLever.position.set(-.70,1.40,.64);
+  const enamel=wornPaint(0x9caa61,701);B(generator,2.30,.18,1.04,black,0,.12,0);rounded(generator,2.17,3.24,.76,.13,enamel,0,1.82,0);
+  B(generator,2.04,.06,.06,steel,0,2.08,.42);B(generator,.065,3.06,.06,steel,.08,1.82,.43);
+  for(const x of [-.78,-.37]){rounded(generator,.29,.72,.035,.025,black,x,2.82,.43);for(let row=0;row<5;row++)for(let col=0;col<3;col++)B(generator,.055,.065,.025,cream,x-.08+col*.08,2.55+row*.12,.47);}
+  gauge(generator,-.67,1.02,.47,.19);gauge(generator,-.25,1.02,.47,.16);gauge(generator,-.44,.58,.47,.14);
+  for(const x of [.35,.67]){gauge(generator,x,2.92,.47,.11);C(generator,.045,.055,black,x,2.55,.48,Math.PI/2);}
+  const scopeMat=new THREE.MeshStandardMaterial({color:0x4b3d1b,emissive:0xe4a82c,emissiveIntensity:0,roughness:.25});C(generator,.41,.08,scopeMat,.57,1.72,.47,Math.PI/2);ring(generator,.45,.065,enamel,.57,1.72,.52);powerDisplays.push(scopeMat);
+  for(let i=0;i<12;i++){const a=i*Math.PI/6;C(generator,.025,.04,black,.57+Math.sin(a)*.52,1.72+Math.cos(a)*.52,.50,Math.PI/2);}
+  for(let i=0;i<5;i++)B(generator,.65,.025,.04,black,.57,.50+i*.075,.45);
+  plaque(generator,'AUXILIARY GRID / CONTROL',0,3.32,.44,1.50,.12);plaque(generator,'MECHANICAL ISOLATOR',-.52,1.87,.45,.74,.085);lamp(generator,.88,2.53,.46);
+ }
  // 03: pressure bulkhead. Leaves retain their original slide transforms and opening controls.
  hatch.clear();hatch.add(hatchDoor);leftLeaf.clear();rightLeaf.clear();
  const doorPaint=wornPaint(0xb3b59e,641),doorMetal=wornPaint(0x67716c,643);
@@ -57,13 +75,20 @@ export function installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatc
  const fore=group('work-arm-fore',0,0,0,elbow);rounded(fore,.35,1.50,.38,.10,olive,0,.75,0);beam(fore,[-.24,.10,0],[-.24,1.30,0],.045,steel);
  const wrist=group('work-arm-tool',0,1.50,0,fore);C(wrist,.20,.34,black,0,.1,0);for(const side of [-1,1]){B(wrist,.07,.30,.09,steel,side*.14,.38,0);B(wrist,.13,.05,.10,steel,side*.10,.52,0);}
  cable(upper,[[.32,0,-.28],[.45,.6,-.35],[.35,1.5,-.25]],.035);cable(fore,[[.22,0,-.2],[.35,.8,-.3],[.20,1.5,-.15]],.027);plaque(workArm,'ROBOTIC SERVICE / 04',0,.43,.51,.75,.12);lamp(workArm,.32,.56,.52);
- shoulder.rotation.z=-.62;elbow.rotation.z=1.50;wrist.rotation.z=.4;
+ shoulder.rotation.z=-1.061;elbow.rotation.z=-1.839;wrist.rotation.z=.8;
  // Recoverable arm follows the preceding olive industrial reference, without its ceiling rail.
  mountedArm.clear();rounded(mountedArm,.36,.32,.40,.06,olive,0,-.08,0);C(mountedArm,.23,.42,steel,0,-.23,0,Math.PI/2);
  rounded(mountedArm,.24,.56,.25,.06,olive,.12,-.57,0);C(mountedArm,.18,.33,steel,.22,-.84,0,Math.PI/2);rounded(mountedArm,.21,.39,.22,.05,olive,.26,-1.08,0);
  for(const side of [-1,1]){B(mountedArm,.06,.25,.09,steel,.26+side*.11,-1.40,.02);B(mountedArm,.11,.05,.10,black,.26+side*.08,-1.52,.02);}
  beam(mountedArm,[-.09,-.32,-.08],[.10,-.81,-.08],.035,steel);cable(mountedArm,[[-.13,-.14,-.2],[-.21,-.65,-.25],[.14,-1.1,-.2],[.25,-1.33,-.16]],.025);
  const markers=arm.children.slice(0,3);arm.clear();if(markers.length)arm.add(...markers);const recovered=mountedArm.clone(true);recovered.visible=true;recovered.position.set(-.42,.33,0);recovered.rotation.z=Math.PI/2;recovered.scale.setScalar(.72);arm.add(recovered);
+ // The claw rests the heavy attachment on the deck; no invisible pedestal or hovering pickup.
+ scene.updateMatrixWorld(true);const heldPoint=wrist.localToWorld(new THREE.Vector3(0,.34,0));arm.position.copy(heldPoint);arm.rotation.set(0,0,0);arm.updateMatrixWorld(true);
+ const pickupBounds=new THREE.Box3().setFromObject(recovered);arm.position.y+=.09-pickupBounds.min.y;arm.updateMatrixWorld(true);
+ arm.userData.x=arm.position.x;arm.userData.z=arm.position.z;
+ let armHeld=true;const armBody={height:arm.position.y,velocity:0,floor:arm.position.y,sleeping:true};
+ function releaseArm(){armHeld=false;armBody.height=arm.position.y+.035;armBody.velocity=-.12;armBody.sleeping=false;}
+
  // 05/06: chamfered ship viewport and the user's Enceladus photograph.
  const windowGroup=group('enceladus-observation-window',5,4.35,-10.52);const w=7.7,h=3.9,ch=.58;
  function octagon(width,height,c){return [[-width/2+c,-height/2],[width/2-c,-height/2],[width/2,-height/2+c],[width/2,height/2-c],[width/2-c,height/2],[-width/2+c,height/2],[-width/2,height/2-c],[-width/2,-height/2+c]];}
@@ -91,13 +116,15 @@ export function installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatc
  for(const machine of [workArm,turbine,press,engine]){const light=new THREE.PointLight(0xd6dfc1,0,5,2);light.position.set(.4,2.7,1.1);machine.add(light);workLights.push(light);}
  const colliders=ROOM_COLLIDERS;
  let phase=0,speed=0;
- function update(dt,powered,reducedMotion=false){
+ function update(dt,powered,reducedMotion=false,beingPickedUp=false){
   // A smooth start/stop; zero power eventually means no mechanical movement.
   speed=THREE.MathUtils.damp(speed,powered?1:0,3,dt);if(speed<.001&&!powered)speed=0;
   if(!reducedMotion)phase+=dt*speed;
-  if(!reducedMotion){rotors.forEach((r,i)=>r.rotation.z=phase*(i?1.4:1.9));reciprocators.forEach(r=>r.node.position.y=r.base+Math.sin(phase*1.8)*r.amplitude);swivel.rotation.y=Math.sin(phase*.35)*.22;shoulder.rotation.z=-.62+Math.sin(phase*.45)*.10;elbow.rotation.z=1.50+Math.sin(phase*.45+.6)*.15;}
+  if(!armHeld&&arm.parent&&!beingPickedUp){stepFloorBody(armBody,dt);arm.position.y=armBody.height;}
+  if(!reducedMotion){rotors.forEach((r,i)=>r.rotation.z=phase*(i?1.4:1.9));reciprocators.forEach(r=>r.node.position.y=r.base+Math.sin(phase*1.8)*r.amplitude);if(!armHeld){swivel.rotation.y=Math.sin(phase*.35)*.16;shoulder.rotation.z=-1.061+Math.sin(phase*.45)*.07;elbow.rotation.z=-1.839+Math.sin(phase*.45+.6)*.10;}}
+  powerDisplays.forEach(m=>m.emissiveIntensity=powered?1.6:0);
   workLights.forEach(l=>l.intensity=powered?9:0);
   indicators.forEach((m,i)=>{if(m.needle){m.needle.rotation.z=powered?-.6+Math.sin(phase*.7+i)*.08:.85;}else{m.emissiveIntensity=powered?1.8:0;m.color.set(powered?0x80b79b:0x25362d);}});
  }
- return {update,colliders,workArm,windowGroup,turbine,press,engine,rotors,reciprocators};
+ return {update,releaseArm,armBody,colliders,workArm,windowGroup,turbine,press,engine,rotors,reciprocators};
 }

@@ -55,7 +55,7 @@ export function applyArtDirection({THREE,scene,robot,terminal,terminalScreen,ter
   const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
   const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.82,1.03),new THREE.MeshStandardMaterial({map:texture,transparent:true,roughness:1,side:THREE.DoubleSide}));mesh.position.set(x,y,z);mesh.rotation.z=-.06;scene.add(mesh);
  }
- notice(-9,2.9,-10.3,'SHIFT  /  07',17);notice(7.8,1.3,-10.2,'CAUTION',29);
+ notice(-9,2.9,-10.3,'SHIFT  /  07',17);
  // Floor: a broad quiet ground plane with localized stains and etched plate seams.
  const floorCanvas=document.createElement('canvas');floorCanvas.width=floorCanvas.height=1024;const c=floorCanvas.getContext('2d');c.fillStyle='#69695b';c.fillRect(0,0,1024,1024);
  let seed=41;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
@@ -113,3 +113,4 @@ export function applyArtDirection({THREE,scene,robot,terminal,terminalScreen,ter
  }
  return {compressor,cabinet,updateOcclusion};
 }
+

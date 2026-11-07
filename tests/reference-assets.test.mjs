@@ -7,8 +7,8 @@ const context=new Proxy({},{get:(o,k)=>o[k]||(()=>{})});
 globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>context})};
 const THREE={...Real,TextureLoader:class{load(){return new Real.Texture()}}};
 function setup(){
- const scene=new THREE.Scene(),objects={};for(const k of ['cell','caseGroup','lidPivot','hatch','hatchDoor','leftLeaf','rightLeaf','mountedArm','arm'])objects[k]=new THREE.Group();
- scene.add(objects.caseGroup,objects.hatch,objects.arm);objects.caseGroup.add(objects.cell,objects.lidPivot);objects.hatch.add(objects.hatchDoor);objects.hatchDoor.add(objects.leftLeaf,objects.rightLeaf);
+ const scene=new THREE.Scene(),objects={};for(const k of ['cell','caseGroup','lidPivot','hatch','hatchDoor','leftLeaf','rightLeaf','mountedArm','arm','generator','generatorLever'])objects[k]=new THREE.Group();
+ objects.mountedArm.name='mounted-service-arm';scene.add(objects.caseGroup,objects.hatch,objects.arm,objects.generator);objects.generator.add(objects.generatorLever);objects.caseGroup.add(objects.cell,objects.lidPivot);objects.hatch.add(objects.hatchDoor);objects.hatchDoor.add(objects.leftLeaf,objects.rightLeaf);
  const stationArt={compressor:new THREE.Group(),cabinet:new THREE.Group()};scene.add(stationArt.compressor,stationArt.cabinet);
  const box=(p,w,h,d,m,x=0,y=0,z=0)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);p.add(o);return o};
  const cylinder=(p,r1,r2,h,m,x=0,y=0,z=0,rx=0,rz=0)=>{const o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,12),m);o.position.set(x,y,z);o.rotation.set(rx,0,rz);p.add(o);return o};
@@ -20,3 +20,5 @@ test('mechanisms are stationary when unpowered and animate when powered',()=>{co
 test('power-off winds machinery down to a complete stop',()=>{const {result:r}=setup();r.update(1,true);for(let i=0;i<600;i++)r.update(1/60,false);const a=r.rotors[0].rotation.z;r.update(1,false);assert.equal(r.rotors[0].rotation.z,a);});
 test('reduced motion leaves mechanisms static while power indicators still respond',()=>{const {result:r}=setup();r.update(1,true,true);assert.equal(r.rotors[0].rotation.z,0);assert.equal(r.reciprocators[0].node.position.y,r.reciprocators[0].base);});
 test('collision footprints describe the authored machines rather than deleted props',()=>{const {result:r}=setup();for(const g of [r.workArm,r.turbine,r.press,r.engine])assert(r.colliders.some(([x,z])=>x===g.position.x&&z===g.position.z));assert(!r.colliders.some(([x,z])=>x===-5&&z===-3));});
+
+test('the collectible geometry rests on the deck inside the lowered work claw',()=>{const {scene,objects:o}=setup();scene.updateMatrixWorld(true);const body=o.arm.getObjectByName('mounted-service-arm');const bounds=new THREE.Box3().setFromObject(body);assert(Math.abs(bounds.min.y-.09)<.001);assert(Math.hypot(o.arm.position.x+9,o.arm.position.z-2.2)<3);});

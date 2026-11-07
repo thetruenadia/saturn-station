@@ -11,6 +11,7 @@ jobs:
       - run: node --check prototype-3d.js
       - run: node --check maker-opening.js
       - run: node --check reference-assets.js
+      - run: node --check terminal-browser.js
       - name: Load the game renderer for geometry regression tests
         run: curl --fail --silent --show-error --location https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js --output /tmp/saturn-three.mjs
       - run: node --test tests/*.test.mjs
