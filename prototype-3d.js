@@ -714,7 +714,7 @@ else if(cmd==='kill'){charge=0;updateCharge();triggerDeath()}
 else if(cmd==='clear')consoleOutput.textContent='SATURN STATION // 0.2 DEV CONSOLE';
 else consoleLog('UNKNOWN COMMAND. Type help.')}
 let godMode=false;document.querySelector('#console-form').addEventListener('submit',e=>{e.preventDefault();const value=consoleInput.value;consoleLog('> '+value);runCommand(value);consoleInput.value=''});
-window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(terminalOpen){e.preventDefault();terminalKey(k);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
+window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){e.preventDefault();terminalKey(k);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
 if(k==='f2'){e.preventDefault();devConsole.classList.add('open');devConsole.setAttribute('aria-hidden','false');consoleInput.focus();return}
 if(k==='escape'){if(inventory.classList.contains('open')){closeInventory();return}if(deathScreen.classList.contains('open'))return;setPaused(!paused);return}
 if(paused||ended||inventory.classList.contains('open'))return;
@@ -949,12 +949,38 @@ function updateLighting(dt){
 }
 
 // Synthesised quiet mechanical sounds; audio starts only after a user gesture.
-let audio=null,audioMaster=null,hum=null,humGain=null,soundEnabled=true;
+let audio=null,audioMaster=null,hum=null,humGain=null,musicGain=null,musicVoices=[],soundEnabled=true;
+const SETTINGS_KEY='saturn-station-0.2-settings-v1';
+let musicVolume=35,brightness=100,settingsWasPaused=false;
+try{const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY));if(saved){if(Number.isFinite(saved.music))musicVolume=THREE.MathUtils.clamp(saved.music,0,100);if(Number.isFinite(saved.brightness))brightness=THREE.MathUtils.clamp(saved.brightness,50,180)}}catch{}
+const settingsPanel=document.createElement('dialog');settingsPanel.id='game-settings';settingsPanel.setAttribute('aria-labelledby','settings-title');
+settingsPanel.innerHTML='<form method="dialog"><header><div><small>MU-1 / PREFERENCES</small><h1 id="settings-title">SETTINGS</h1></div><button aria-label="Close settings" value="close">×</button></header><label for="music-volume">MUSIC <output id="music-value" for="music-volume"></output></label><input id="music-volume" type="range" min="0" max="100" step="1"><p>Ambient station score. Set to zero to mute music.</p><label for="game-brightness">BRIGHTNESS <output id="brightness-value" for="game-brightness"></output></label><input id="game-brightness" type="range" min="50" max="180" step="5"><p>Adjusts the scene while keeping emergency and working lights distinct.</p><footer><span>Saved automatically on this device.</span><button value="done">DONE</button></footer></form>';
+document.body.append(settingsPanel);
+const musicSlider=settingsPanel.querySelector('#music-volume'),brightnessSlider=settingsPanel.querySelector('#game-brightness');
+function applySettings(){
+ renderer.toneMappingExposure=1.15*brightness/100;
+ musicSlider.value=String(musicVolume);brightnessSlider.value=String(brightness);
+ settingsPanel.querySelector('#music-value').textContent=musicVolume+'%';settingsPanel.querySelector('#brightness-value').textContent=brightness+'%';
+ if(musicGain&&audio)musicGain.gain.setTargetAtTime(musicVolume/100*.12,audio.currentTime,.08);
+}
+function persistSettings(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify({music:musicVolume,brightness}))}catch{}}
+musicSlider.addEventListener('input',()=>{musicVolume=Number(musicSlider.value);unlockAudio();applySettings();persistSettings()});
+brightnessSlider.addEventListener('input',()=>{brightness=Number(brightnessSlider.value);applySettings();persistSettings()});
+function openSettings(){settingsWasPaused=paused;setPaused(true);settingsPanel.showModal();musicSlider.focus()}
+settingsPanel.addEventListener('close',()=>{setPaused(settingsWasPaused)});
+settingsPanel.addEventListener('cancel',e=>{e.preventDefault();settingsPanel.close()});
+const settingsButton=document.createElement('button');settingsButton.id='settings-button';settingsButton.textContent='SETTINGS';settingsButton.addEventListener('click',openSettings);document.querySelector('.top-right').append(settingsButton);
+const pauseSettings=document.createElement('button');pauseSettings.textContent='SETTINGS';pauseSettings.addEventListener('click',openSettings);document.querySelector('#resume-game').after(pauseSettings);
+applySettings();
 const soundButton=document.createElement('button');soundButton.id='sound-toggle';soundButton.textContent='SOUND ON';soundButton.setAttribute('aria-pressed','true');
 document.querySelector('.top-right').append(soundButton);
 function unlockAudio(){
  if(!soundEnabled)return;
- try{if(!audio){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;audio=new Audio();audioMaster=audio.createGain();audioMaster.gain.value=.13;audioMaster.connect(audio.destination);hum=audio.createOscillator();hum.type='sine';hum.frequency.value=55;humGain=audio.createGain();humGain.gain.value=.035;hum.connect(humGain).connect(audioMaster);hum.start()}if(audio.state==='suspended')audio.resume().catch(()=>{})}catch{}
+ try{if(!audio){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;audio=new Audio();audioMaster=audio.createGain();audioMaster.gain.value=.13;audioMaster.connect(audio.destination);hum=audio.createOscillator();hum.type='sine';hum.frequency.value=55;humGain=audio.createGain();humGain.gain.value=.035;hum.connect(humGain).connect(audioMaster);hum.start();
+ // A quiet generative ambient score has its own volume bus, separate from machinery and effects.
+ musicGain=audio.createGain();musicGain.gain.value=musicVolume/100*.12;musicGain.connect(audioMaster);
+ for(const [i,f] of [110,164.81,220].entries()){const voice=audio.createOscillator(),gain=audio.createGain();voice.type='sine';voice.frequency.value=f;voice.detune.value=i*3-3;gain.gain.value=.5;voice.connect(gain).connect(musicGain);voice.start();musicVoices.push(voice)}
+ }if(audio.state==='suspended')audio.resume().catch(()=>{})}catch{}
 }
 window.addEventListener('pointerdown',unlockAudio);window.addEventListener('keydown',unlockAudio);
 soundButton.addEventListener('click',()=>{soundEnabled=!soundEnabled;soundButton.textContent=soundEnabled?'SOUND ON':'SOUND OFF';soundButton.setAttribute('aria-pressed',String(soundEnabled));if(soundEnabled)unlockAudio();if(audioMaster)audioMaster.gain.setTargetAtTime(soundEnabled?.13:0,audio.currentTime,.05)});
@@ -989,6 +1015,7 @@ function updateStationSystems(dt){
  updateLighting(dt);animatePickup(dt);
  if(active){systemTime+=dt;saveElapsed+=dt;stepElapsed+=dt;if(gaitVelocity>.35&&!pickup&&stepElapsed>.56){playSound('step');stepElapsed=0}if(saveElapsed>2){saveElapsed=0;saveProgress()}}
  if(humGain&&audio)humGain.gain.setTargetAtTime(active?(powerOn?.16:.035):0,audio.currentTime,.25);
+ if(musicGain&&audio){const audible=!document.hidden&&(!paused||settingsPanel.open)&&!ended;musicGain.gain.setTargetAtTime(audible?musicVolume/100*.12:0,audio.currentTime,.15);const chords=[[110,164.81,220],[98,146.83,196],[87.31,130.81,174.61],[98,146.83,220]],chord=chords[Math.floor(audio.currentTime/12)%chords.length];musicVoices.forEach((voice,i)=>voice.frequency.setTargetAtTime(chord[i],audio.currentTime,2))}
 }
 
 function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
