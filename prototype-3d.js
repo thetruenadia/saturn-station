@@ -848,10 +848,14 @@ function setArmEquipped(value){
 }
 function refreshDirective(){task.textContent=powerOn?'Access the powered terminal.':!hasArm?'Recover the missing manipulator from the repair bay.':!armEquipped?'Inspect and equip the recovered manipulator.':'Activate auxiliary power at the generator.'}
 function interactionHint(o){
+ if(o.userData.workshopType==='locker')return 'OPEN SALVAGE LOCKER';
+ if(o.userData.workshopType==='bench')return 'OPEN WORKSHOP';
+ if(o.userData.workshopType==='shard')return 'RECOVER SPEC SHARD';
+ if(o.userData.workshopType==='loose')return 'PICK UP ITEM';
  const id=o.userData.name;
  if(id==='MAINTENANCE NOTE')return 'READ MAINTENANCE NOTE';
  if(id==='LOCK-SERVICE MANIPULATOR')return pickup?'RECOVERING':'RECOVER ARM';
- if(id==='SEALED SERVICE CASE')return !armEquipped?'MANIPULATOR REQUIRED':!caseOpen?'RELEASE CASE':!hasCell?'TAKE POWER CELL':'CASE EMPTY';
+ if(id==='SEALED SERVICE CASE')return !armEquipped?'MANIPULATOR REQUIRED':!caseOpen?'RELEASE CASE':!caseCellTaken?'TAKE POWER CELL':'CASE EMPTY';
  if(id==='AUXILIARY POWER DISTRIBUTION')return !armEquipped?'MANIPULATOR REQUIRED':powerOn?'POWER ONLINE':'RESTORE POWER';
  if(id==='CONTROL TERMINAL')return powerOn?'ACCESS TERMINAL':'POWER REQUIRED';
  return doorOpen?'FINISH DEMO':'TERMINAL REQUIRED';
