@@ -543,7 +543,7 @@ function addTechnicalInk(root){
 }
 const maintenanceNote=new THREE.Group();maintenanceNote.position.set(5,1.25,-10.15);scene.add(maintenanceNote);
 assetLabel(maintenanceNote,'STAFF LOCKERS\nB-7 / 106',.65,.44,0,0,0,'#c2b68e','#353a2d');
-maintenanceNote.userData={name:'MAINTENANCE NOTE',x:5,z:-10.15};interactables.push(maintenanceNote);
+maintenanceNote.userData={name:'LOCKER DIRECTION SIGN',x:5,z:-10.15};
 const stationArt=applyArtDirection({THREE,scene,robot,terminal,terminalScreen,terminalLamp,terminalLit,exchanger,box,cylinder,pipeBetween,wornPaint,label});
 const referenceAssets=installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatch,hatchDoor,leftLeaf,rightLeaf,mountedArm,arm,box,cylinder,wornPaint,stationArt,generator,generatorLever});
 addTechnicalInk(scene);
@@ -646,7 +646,7 @@ function nearest(){let best=null,d=Infinity;for(const o of interactables){const 
 function interact(){if(opening?.active)return;if(ended||pickup||inventory.classList.contains('open'))return;const o=(selected&&interactables.includes(selected)&&Math.hypot(robot.position.x-selected.userData.x,robot.position.z-selected.userData.z)<1.8?selected:null)||nearest();if(!o){notify('NO SERVICE OBJECT IN REACH');return}const dist=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(dist>1.8){target=new THREE.Vector3(o.userData.x,0,o.userData.z);notify('MOVING TO '+o.userData.name);return}
 const id=o.userData.name;interactionPulse=1;
 if(o.userData.workshopType){workshop.handle(o);return;}
-if(id==='MAINTENANCE NOTE'){hasNote=true;removeObject(o);updateInventory();saveProgress();notify('NOTE RECOVERED · THE PASSWORD IS ETNA');showNote();}
+if(id==='MAINTENANCE NOTE'){notify('SEARCH LOCKER 106 FOR THE STAFF CARD')}
 else if(id==='LOCK-SERVICE MANIPULATOR'){notify('PART REPLACEMENT REQUIRES A SERVICE BAY')}
 else if(id==='SEALED SERVICE CASE'){if(!caseOpen){caseOpen=true;lidPivot.rotation.x=-1.35;cell.visible=true;say('SERVICE CASE RELEASED.');task.textContent='Recover the portable power cell from the open case.';notify('LOCK RELEASED')}else if(!caseCellTaken){caseCellTaken=true;setCellCount(cellCount+1);cell.visible=false;say('PORTABLE POWER CELL RECOVERED.');task.textContent='Use the power cell to restore internal charge.';updateInventory();notify('POWER CELL ACQUIRED')}}
 else if(id==='AUXILIARY POWER DISTRIBUTION'){setStationPower(true);say('GENERATOR SWITCH ENGAGED. TERMINAL POWER AVAILABLE.');task.textContent='Access the powered terminal.';notify('GENERATOR ONLINE')}
@@ -886,7 +886,7 @@ function interactionHint(o){
  const id=o.userData.name;
  if(id==='MAINTENANCE NOTE')return 'READ MAINTENANCE NOTE';
  if(id==='LOCK-SERVICE MANIPULATOR')return pickup?'RECOVERING':'RECOVER ARM';
- if(id==='SEALED SERVICE CASE')return !armEquipped?'MANIPULATOR REQUIRED':!caseOpen?'RELEASE CASE':!caseCellTaken?'TAKE POWER CELL':'CASE EMPTY';
+ if(id==='SEALED SERVICE CASE')return !caseOpen?'RELEASE CASE':!caseCellTaken?'TAKE POWER CELL':'CASE EMPTY';
  if(id==='AUXILIARY POWER DISTRIBUTION')return powerOn?'POWER ONLINE':'RESTORE POWER';
  if(id==='CONTROL TERMINAL')return powerOn?'ACCESS TERMINAL':'POWER REQUIRED';
  return doorOpen?'FINISH DEMO':workshop.hasProbe?'USE ACCESS PROBE':'ACCESS PROBE REQUIRED';
