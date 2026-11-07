@@ -1,0 +1,46 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Saturn Station · Visual Study 01</title><style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#111714;color:#d8d4bb;font-family:monospace;overflow:hidden}canvas{display:block}#caption{position:absolute;top:22px;left:25px;pointer-events:none;text-shadow:0 2px 5px #000}#caption strong{font-size:13px;letter-spacing:.22em}#caption p{font-size:10px;letter-spacing:.13em;color:#aaa78e}#bottom{position:absolute;bottom:20px;left:25px;font-size:10px;color:#c4b99b;background:#101713c9;padding:11px 15px;border-left:2px solid #aa9b6c;max-width:430px;line-height:1.65}#back{position:absolute;right:22px;top:22px;color:#d8d4bb;font-size:11px;text-decoration:none;border:1px solid #747a68;padding:10px 13px;background:#141a17cf}#buttons{position:absolute;right:22px;bottom:20px;display:flex;gap:6px}button{background:#19231e;color:#ddd5b6;border:1px solid #626f60;padding:10px;cursor:pointer;font-family:monospace}button.active{background:#52634c} @media(max-width:650px){#bottom{max-width:65vw;font-size:9px}#buttons{bottom:125px}}</style></head><body><div id="caption"><strong>SATURN STATION / ART STUDY 01</strong><p>ILLUSTRATED INDUSTRIAL INTERIOR · MATERIAL / LIGHT / INK</p></div><a id="back" href="prototype-3d.html">RETURN TO 0.2</a><div id="bottom">Visual direction test, separate from gameplay. Drag to inspect. Scroll to zoom. Study the painted metal, ink edges, scale and lighting.</div><div id="buttons"><button id="ink" class="active">INK ON</button><button id="lights" class="active">LAMP ON</button></div><script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
+const scene=new THREE.Scene();scene.background=new THREE.Color('#1a211e');scene.fog=new THREE.FogExp2('#1a211e',.028);
+const camera=new THREE.PerspectiveCamera(46,innerWidth/innerHeight,.1,140);camera.position.set(12,9,17);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;document.body.append(renderer.domElement);
+const orbit=new OrbitControls(camera,renderer.domElement);orbit.target.set(0,3,-1);orbit.enableDamping=true;orbit.minDistance=5;orbit.maxDistance=38;orbit.maxPolarAngle=1.48;
+scene.add(new THREE.HemisphereLight(0xb3b6a3,0x28231d,2));
+const sun=new THREE.DirectionalLight(0xe5d7b3,3);sun.position.set(-8,13,5);scene.add(sun);
+const lamp=new THREE.PointLight(0xffb873,65,19,2);lamp.position.set(1,7,0);scene.add(lamp);
+const cold=new THREE.PointLight(0x7f9a8b,22,14,2);cold.position.set(-7,4,-8);scene.add(cold);
+const inkMat=new THREE.LineBasicMaterial({color:0x121a17,transparent:true,opacity:.73,depthWrite:false});const outlines=[];let ink=true;
+function texture(base,seed){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle=base;x.fillRect(0,0,256,256);let n=seed;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};for(let i=0;i<4000;i++){let v=rand()>.48?255:0;x.fillStyle='rgba('+v+','+v+','+v+','+(rand()*.055)+')';x.fillRect(rand()*256,rand()*256,rand()*9+1,rand()*2+1)}for(let i=0;i<65;i++){x.strokeStyle='rgba(12,17,14,'+(rand()*.18)+')';x.lineWidth=rand()*2;x.beginPath();const a=rand()*256,b=rand()*256;x.moveTo(a,b);x.lineTo(a+rand()*70,b+rand()*5);x.stroke()}const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;return t}
+const steel=new THREE.MeshStandardMaterial({map:texture('#58645a',1),roughness:.92,metalness:.13}),olive=new THREE.MeshStandardMaterial({map:texture('#68715c',2),roughness:.94,metalness:.07}),rust=new THREE.MeshStandardMaterial({map:texture('#69513e',3),roughness:.96,metalness:.04}),dark=new THREE.MeshStandardMaterial({map:texture('#313a34',4),roughness:.92,metalness:.1}),cream=new THREE.MeshStandardMaterial({map:texture('#b5ac8c',5),roughness:.9,metalness:.04}),black=new THREE.MeshStandardMaterial({color:0x1c2521,roughness:.92}),lit=new THREE.MeshBasicMaterial({color:0xe8c68b});
+function mesh(g,m,x,y,z,parent=scene){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);if(g.type==='BoxGeometry'||g.type==='CylinderGeometry'){const edge=new THREE.LineSegments(new THREE.EdgesGeometry(g,24),inkMat);o.add(edge);outlines.push(edge)}return o}
+function box(w,h,d,m,x,y,z,p){return mesh(new THREE.BoxGeometry(w,h,d),m,x,y,z,p)}
+function cyl(r,h,m,x,y,z,rotation=0,p){const o=mesh(new THREE.CylinderGeometry(r,r,h,12),m,x,y,z,p);o.rotation.z=rotation;return o}
+function pipe(points,r,m){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const o=mesh(new THREE.TubeGeometry(curve,36,r,7,false),m,0,0,0);return o}
+box(24,.5,19,dark,0,-.3,0);box(24,11,.6,steel,0,5.2,-9.5);box(.6,11,19,steel,-12,5.2,0);box(.6,11,19,steel,12,5.2,0);
+for(let x=-11;x<=11;x+=2.2){box(.28,10.5,.6,dark,x,5,-9.05);box(2,.17,.5,rust,x,8.3,-8.7)}
+for(let z=-8;z<9;z+=1.4){box(22,.15,.2,dark,0,10.2,z);for(const x of [-10,-5,0,5,10])box(.13,1.1,.14,steel,x,9.6,z)}
+// A huge industrial vessel dominates the left side.
+const vessel=new THREE.Group();vessel.position.set(-7.1,5.9,-2.6);scene.add(vessel);cyl(2.4,12,olive,0,0,0,Math.PI/2,vessel);
+for(let x=-5.5;x<6;x+=1.25)cyl(2.52,.19,rust,x,0,0,Math.PI/2,vessel);
+for(let x=-5;x<6;x+=1.9){box(.28,2.8,.4,dark,x,-3.2,0,vessel);cyl(.42,.5,steel,x,-2.4,0,0,vessel)}
+for(let i=0;i<13;i++){const x=-11+i*1.65;pipe([[x,10,-7.8],[x,9.1,-7.7],[x+.2,7.7,-8.5],[x+.2,3.4,-8.7]],.065+(i%4)*.045,i%4===0?rust:dark)}
+for(let i=0;i<9;i++){let x=-10+i*2.3;pipe([[x,10,-2],[x+.3,9.1,-1],[x+.2,8.8,2],[x,9.9,5]],.07,i%3?dark:steel)}
+// Right-side compressor and inspection manifolds.
+for(let i=0;i<4;i++){let z=-6+i*3.7;const g=new THREE.Group();g.position.set(9,0,z);scene.add(g);box(3,1.2,2.4,rust,0,.6,0,g);cyl(.82,3.8,olive,0,3,0,0,g);cyl(1,.26,dark,0,1.3,0,0,g);cyl(1,.26,dark,0,4.5,0,0,g);for(let a of [-1,1])pipe([[a*.6,4,z],[a*.9,5,z],[a*1.5,5.2,z-.8]],.12,dark)}
+// Grating and rail with a central clear navigation path.
+for(let x=-10;x<11;x+=.37){box(.055,.04,17,steel,x,.015,0)}
+for(let z=-8;z<9;z+=.38){box(21,.045,.06,dark,0,.035,z)}
+for(let z=-8;z<=8;z+=1.7){box(.09,1.25,.09,cream,5.8,.65,z)}
+box(.07,.07,17,cream,5.8,1.28,0);
+// Hanging lamps and small labels.
+for(let x of [-5,1,6]){box(1.7,.24,.7,dark,x,8.3,2);box(1.4,.06,.48,lit,x,8.12,2);pipe([[x,10,2],[x,8.4,2]],.035,black)}
+for(let z=-7;z<8;z+=2.4){box(1.2,.8,.12,olive,11.55,2,z);box(.85,.09,.14,cream,11.47,2.2,z)}
+// A tiny simplified robot silhouette gives a scale reference; it is not the playable model.
+const bot=new THREE.Group();bot.position.set(1.8,0,2.3);scene.add(bot);box(1.05,.62,.7,olive,0,1.6,0,bot);box(.45,.25,.6,steel,-.15,1.99,0,bot);cyl(.19,.18,dark,.45,1.62,.39,Math.PI/2,bot);
+for(const x of [-.37,.37]){cyl(.22,.3,dark,x,1.2,0,Math.PI/2,bot);box(.18,.85,.2,steel,x,.76,-.1,bot);box(.25,.16,.5,dark,x,.13,.12,bot)}
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}addEventListener('resize',resize);
+document.querySelector('#ink').onclick=e=>{ink=!ink;outlines.forEach(o=>o.visible=ink);e.currentTarget.textContent=ink?'INK ON':'INK OFF';e.currentTarget.classList.toggle('active',ink)};
+document.querySelector('#lights').onclick=e=>{lamp.visible=!lamp.visible;e.currentTarget.classList.toggle('active',lamp.visible);e.currentTarget.textContent=lamp.visible?'LAMP ON':'LAMP OFF'};
+function loop(){requestAnimationFrame(loop);orbit.update();renderer.render(scene,camera)}loop();
+</script></body></html>
