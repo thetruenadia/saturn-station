@@ -160,8 +160,8 @@ wedge(shell,'Short left front cheek',[
  [.69,.13,-.21,.19,-.43],[1.02,.09,-.12,.10,-.39]
 ],sage);
 // Dark inset top access panel and thin raised surrounding lip.
-const hatch=bodyBox(shell,.69,.018,.74,gunmetal,.03,.401,.16);
-hatch.rotation.x=-.10;
+const chassisHatch=bodyBox(shell,.69,.018,.74,gunmetal,.03,.401,.16);
+chassisHatch.rotation.x=-.10;
 const hatchInset=bodyBox(shell,.61,.019,.64,sageDark,.03,.420,.16);
 hatchInset.rotation.x=-.10;
 // Rear mechanical vent and raised service identification panel.
