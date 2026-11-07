@@ -413,7 +413,7 @@ const chassisPitch=gaitWeight*(.027+.013*Math.cos(walkTime*2));
 body.position.y=THREE.MathUtils.damp(body.position.y,chassisY,8,dt);
 body.rotation.z=THREE.MathUtils.damp(body.rotation.z,chassisRoll,7,dt);
 body.rotation.x=THREE.MathUtils.damp(body.rotation.x,chassisPitch,7,dt);
-}}
+}
 if(!paused&&!ended&&!godMode&&charge>0){charge=Math.max(0,charge-dt*.1);updateCharge();if(charge===0){notify('POWER DEPLETED');triggerDeath()}}
 if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);hatchDoor.rotation.z=-1.65*t;if(t>=1){doorOpening=false;doorOpen=true;ended=true;task.textContent='Demo complete.';notify('DEMO COMPLETE')}}
 renderer.render(scene,camera)}
