@@ -614,30 +614,35 @@ function itemIcon(type){
  return base+'<g stroke="#262d2b" stroke-width="3"><rect x="15" y="20" width="66" height="35" rx="6" fill="#b5ad8d"/><rect x="15" y="20" width="12" height="35" fill="#333c39"/><rect x="69" y="20" width="12" height="35" fill="#333c39"/><path d="M32 25v24m9-24v24m9-24v24m9-24v24" stroke="#b7803b" stroke-width="5"/><rect x="40" y="14" width="16" height="8" rx="2" fill="#a9773c"/></g></svg>';
 }
 function updateInventory(){
- document.querySelector('#item-count').textContent=String(Number(hasArm)+Number(hasCell)).padStart(2,'0');
+ const entries=[];
+ if(hasArm)entries.push({type:'arm',name:'INDUSTRIAL MANIPULATOR',description:'Yellow-and-black interchangeable factory arm. Heavy-duty gripper for physical switches and mechanical releases.',stats:'CLASS  TOOL ARM  /  MOUNT  RIGHT  /  GRIP  85 N  /  STATUS  '+(armEquipped?'EQUIPPED':'STOWED'),draggable:!armEquipped});
+ if(hasCell)entries.push({type:'cell',name:'PORTABLE POWER PACK',description:'Sealed auxiliary energy cartridge. Restores MU-1 internal charge when consumed with Q.',stats:'CLASS  CONSUMABLE  /  CHARGE  +55%  /  USE  Q',draggable:false});
+ document.querySelector('#item-count').textContent=String(entries.length).padStart(2,'0')+' / 20';
  document.querySelector('#cell-hot').textContent=hasCell?'READY':usedCell?'USED':'EMPTY';
  document.querySelector('#cell-hot').classList.toggle('filled',hasCell||usedCell);
  document.querySelector('#arm-slot').textContent=armEquipped?'FACTORY MANIPULATOR':'EMPTY';
  document.querySelector('#arm-slot').nextElementSibling.textContent=armEquipped?'COMPONENT INSTALLED':'DRAG COMPONENT HERE';
  document.querySelector('#arm-hot').innerHTML=armEquipped?itemIcon('arm'):'';
  document.querySelector('#cell-icon').innerHTML=hasCell||usedCell?itemIcon('cell'):'';
- const list=document.querySelector('#inventory-items');list.replaceChildren();
- function item(type,name,description,stats,draggable){
-  const node=document.createElement('div');node.className='inventory-item';node.draggable=draggable;
-  const picture=document.createElement('div');picture.className='item-illustration';picture.innerHTML=itemIcon(type);
-  const info=document.createElement('div');info.className='item-info';
-  const heading=document.createElement('strong');heading.textContent=name;
-  const detail=document.createElement('small');detail.textContent=description;
-  const properties=document.createElement('p');properties.className='item-stats';properties.textContent=stats;
-  info.append(heading,detail,properties);node.append(picture,info);
-  if(draggable)node.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain','lock-arm');e.dataTransfer.effectAllowed='move'});
-  node.addEventListener('click',()=>chooseInspection(type));list.append(node);
+ const grid=document.querySelector('#inventory-items');grid.replaceChildren();
+ for(let i=0;i<20;i++){
+  const entry=entries[i],slot=document.createElement('div');
+  slot.className='inventory-grid-slot'+(entry?' occupied':'');
+  slot.setAttribute('aria-label',entry?entry.name:'Empty inventory slot '+(i+1));
+  if(entry){
+   slot.tabIndex=0;slot.setAttribute('role','button');slot.draggable=entry.draggable;
+   const model=document.createElement('span');model.className='slot-object';model.innerHTML=itemIcon(entry.type);
+   slot.append(model);
+   const number=document.createElement('small');number.textContent=String(i+1).padStart(2,'0');slot.append(number);
+   const inspect=()=>chooseInspection(entry.type);
+   slot.addEventListener('click',inspect);
+   slot.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inspect()}});
+   if(entry.draggable)slot.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain','lock-arm');e.dataTransfer.effectAllowed='move'});
+  }else{const number=document.createElement('small');number.textContent=String(i+1).padStart(2,'0');slot.append(number)}
+  grid.append(slot);
  }
- if(hasArm)item('arm','INDUSTRIAL MANIPULATOR','Yellow-and-black interchangeable factory arm. Heavy-duty gripper for physical switches and mechanical releases.','CLASS  TOOL ARM  /  MOUNT  RIGHT  /  GRIP  85 N  /  STATUS  '+(armEquipped?'EQUIPPED':'STOWED'),!armEquipped);
- if(hasCell)item('cell','PORTABLE POWER PACK','Sealed auxiliary energy cartridge. Restores MU-1 internal charge when consumed with Q.','CLASS  CONSUMABLE  /  CHARGE  +55%  /  USE  Q',false);
- if(!hasArm&&!hasCell)list.innerHTML='<p class="empty-inventory">No components recovered.</p>';
 }
-function openInventory(){inventory.classList.add('open');inventory.setAttribute('aria-hidden','false');updateInventory();chooseInspection(hasArm?'arm':hasCell?'cell':'arm');target=null}
+function openInventory(){inventory.classList.add('open');inventory.setAttribute('aria-hidden','false');updateInventory();if(hasArm||hasCell)chooseInspection(hasArm?'arm':'cell');else{document.querySelector('#inspection-title').textContent='NO ITEM SELECTED';document.querySelector('#inspection-description').textContent='Select an occupied slot to inspect its equipment.';document.querySelector('#inspection-specs').textContent='';itemModel.clear()}target=null}
 function closeInventory(){inventory.classList.remove('open');inventory.setAttribute('aria-hidden','true')}
 const armSlot=document.querySelector('[data-slot="arm"]');armSlot.addEventListener('dragover',e=>{e.preventDefault();armSlot.classList.add('drag-over')});armSlot.addEventListener('dragleave',()=>armSlot.classList.remove('drag-over'));armSlot.addEventListener('drop',e=>{e.preventDefault();armSlot.classList.remove('drag-over');if(e.dataTransfer.getData('text/plain')==='lock-arm'&&hasArm){armEquipped=true;mountedArm.visible=true;previewMountedArm.visible=true;updateInventory();say('LOCK-SERVICE ARM INSTALLED.');notify('COMPONENT INSTALLED');task.textContent='Activate the generator switch.'}});
 document.querySelector('#close-inventory').addEventListener('click',closeInventory);
@@ -748,6 +753,7 @@ function chooseInspection(type){
  const model=(type==='arm'?mountedArm:cell).clone(true);model.visible=true;
  model.position.set(0,type==='arm'?1.7:.75,0);model.scale.setScalar(type==='arm'?1.2:2.1);itemModel.add(model);
  document.querySelector('#inspection-title').textContent=type==='arm'?'INDUSTRIAL MANIPULATOR':'PORTABLE POWER PACK';
+ document.querySelector('#inspection-description').textContent=type==='arm'?'Interchangeable yellow-and-black industrial gripper. Used for heavy mechanical releases and service switches.':'Sealed auxiliary energy cartridge for MU-1. Consume with Q to restore internal charge.';
  document.querySelector('#inspection-specs').textContent=type==='arm'?'RIGHT MOUNT · MECHANICAL GRIPPER · 85 N · '+(armEquipped?'INSTALLED':'STOWED'):'ENERGY CARTRIDGE · +55% CHARGE · '+(hasCell?'READY':'USED');
 }
 itemHost.addEventListener('pointerdown',e=>{itemDragging=true;itemLastX=e.clientX;itemHost.setPointerCapture(e.pointerId)});
