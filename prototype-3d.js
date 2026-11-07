@@ -1,5 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
+import {installReferenceAssets} from './reference-assets.js?v=reference1';
 import { applyArtDirection } from './station-art.js?v=blue-crt3';
 
 import {createMakerOpening} from './maker-opening.js?v=skip-y';
@@ -51,20 +52,8 @@ box(scene,4.1,4.4,.65,wallMat,11.8,5.8,-11,false);
 box(scene,.55,8,22,wallMat,-14,3.8,0,false);
 for(let x=-12;x<=12;x+=4)box(scene,.38,.85,.38,wallMat,x,.45,10.9,false);
 for(let z=-9;z<=9;z+=4)box(scene,.38,.85,.38,wallMat,13.9,.45,z,false);
-for(let x=-8;x<=8;x+=2){box(scene,.18,4.8,.22,edgeMat,x,2.2,-6.72);box(scene,.16,4.6,.18,darkMat,x,2.2,-6.55)}
-for(let z=-5;z<=4;z+=2){cylinder(scene,.16,.16,17,edgeMat,0,4.35,z,0,Math.PI/2);for(let x=-7;x<=7;x+=3)cylinder(scene,.22,.22,.13,rustMat,x,4.35,z,Math.PI/2,0)}
-for(let i=0;i<8;i++){const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-8+i*2,4.7,-6),new THREE.Vector3(-7+i*2,3.7,-3),new THREE.Vector3(-8+i*2,3.1,0),new THREE.Vector3(-6+i*2,2.7,4)]);scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve,28,.045,6,false),darkMat))}
-for(let i=0;i<20;i++){const x=((i*37)%160)/10-8,z=((i*61)%120)/10-6;const stain=new THREE.Mesh(new THREE.CircleGeometry(.25+(i%4)*.12,16),mat(0x080d0b,.25,.35));stain.rotation.x=-Math.PI/2;stain.position.set(x,.002,z);scene.add(stain)}
-function machine(x,z,colour=greenMat){const g=new THREE.Group();g.position.set(x,0,z);box(g,1.2,.5,1,edgeMat,0,.25,0);box(g,.85,1.7,.75,wallMat,0,1.25,0);box(g,.65,.65,.08,colour,0,1.6,.4);box(g,.4,.18,.04,screenMat,0,1.65,.46);for(let i=-1;i<=1;i++)cylinder(g,.045,.045,1.3,darkMat,i*.38,.8,-.35);scene.add(g);return g}
-machine(-5,-3);machine(5,-2, rustMat);
-function crate(x,z){const g=new THREE.Group();g.position.set(x,0,z);box(g,1,.8,1,mat(0x3d392d,.95,.15),0,.4,0);for(let i=-1;i<=1;i++)box(g,.08,.84,.08,edgeMat,i*.4,.4,.51);box(g,1.04,.08,1.04,rustMat,0,.82,0);scene.add(g)}
-crate(-7,3);crate(7,4);crate(6,-5);
-// Maintenance deck B-7: dense, abandoned industrial infrastructure.
-// Massive machinery is kept to the walls and high ceiling to preserve navigation.
-const industrial=new THREE.Group();industrial.position.set(0,0,-3.3);scene.add(industrial);
-const iron=mat(0x343a35,.9,.48),oxidised=mat(0x514638,.97,.3);
-const conduit=mat(0x252d2a,.83,.58),insulation=mat(0x171d1b,.98,.1);
-const fadedSage=mat(0x465449,.91,.28),warning=mat(0x8a7748,.87,.2);
+// Quiet perimeter infrastructure; the authored machinery defines the room.
+const industrial=new THREE.Group();scene.add(industrial);
 function pipeBetween(parent,a,b,r,material,segments=10){
  const av=new THREE.Vector3(...a),bv=new THREE.Vector3(...b),delta=bv.clone().sub(av);
  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),segments),material);
@@ -77,95 +66,10 @@ function industrialTube(points,r,material){
  const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,30,r,7,false),material);
  mesh.castShadow=true;industrial.add(mesh);
 }
-// Tall wall frames, cross-bracing and layered service panels.
-for(const x of [-8.3,-5.6,-2.9,-.2,2.5,5.2,7.9]){
- box(industrial,.26,6.4,.34,iron,x,3.25,-6.47);
- box(industrial,.56,.18,.5,oxidised,x,1.05,-6.25);
- box(industrial,.56,.18,.5,oxidised,x,4.65,-6.25);
- box(industrial,2.4,.12,.25,iron,x+1.15,3.7,-6.35);
- for(let k=0;k<3;k++)box(industrial,1.85,.65,.12,k===1?fadedSage:wallMat,x+1.05,1.65+k*.85,-6.31);
-}
-for(const x of [-8.65,8.65]){
- for(let z=-5.4;z<=5.5;z+=2.25){
-  box(industrial,.4,6.1,.38,iron,x,3.1,z);
-  box(industrial,.52,.16,1.85,oxidised,x,4.5,z+.75);
- }
-}
-// Heavy overhead cylindrical processing vessels along the rear of the room.
-for(const x of [-4.4,3.8]){
- const vessel=new THREE.Group();vessel.position.set(x,5.35,-5.25);industrial.add(vessel);
- const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.94,.94,6.3,16),oxidised);
- barrel.rotation.z=Math.PI/2;barrel.castShadow=true;vessel.add(barrel);
- for(const offset of [-2.7,-1.5,0,1.5,2.7]){
-  const band=new THREE.Mesh(new THREE.CylinderGeometry(1.015,1.015,.16,16),iron);
-  band.rotation.z=Math.PI/2;band.position.x=offset;vessel.add(band);
- }
- for(let k=0;k<7;k++){
-  const x0=-2.6+k*.85;
-  industrialTube([[x+x0,5.96,-5.95],[x+x0+.12,5.6,-6.18],[x+x0+.3,4.8,-6.28]],.035,conduit);
- }
-}
-// Banks of large pipes turn down the rear wall, with couplings and collars.
-for(let i=0;i<11;i++){
- const x=-7.5+i*1.45;
- const r=i%3===0?.21:.115;
- industrialTube([[x,6.2,-5.55],[x,5.3,-5.45],[x+.15,4.8,-6.03],[x+.18,3.15,-6.08],[x+.18,1.4,-6.12]],r,i%4===0?oxidised:conduit);
- for(const y of [2.05,3.85])pipeBetween(industrial,[x+.18,y-.08,-6.08],[x+.18,y+.08,-6.08],r*1.3,iron);
-}
-// Long pipe racks and hanging cable bundles under the roof.
-for(let i=0;i<12;i++){
- const x=-7.6+i*1.32;
- industrialTube([[x,6.15,-6.1],[x-.15,5.7,-4.9],[x+.12,5.65,-3.25],[x+.05,5.9,-1.1]],.065+(i%3)*.023,i%4===0?oxidised:conduit);
- if(i%2===0)industrialTube([[x,5.65,-3.3],[x+.3,5.1,-3.0],[x+.55,4.65,-3.35],[x+.6,4.95,-4.05]],.025,insulation);
-}
-for(const z of [-5.9,-3.8,-1.6,1.1,3.6]){
- box(industrial,17.4,.22,.2,iron,0,6.3,z);
- for(const x of [-7,-3.5,0,3.5,7])box(industrial,.16,.9,.16,iron,x,5.8,z);
-}
-// Perimeter grated service walkways, edge rails, and narrow access channels.
-for(const side of [-1,1]){
- const x=side*7.65;
- box(industrial,1.55,.13,11.6,iron,x,.085,-.1,false);
- for(let z=-5.65;z<5.6;z+=.29)box(industrial,1.45,.018,.055,edgeMat,x,.17,z,false);
- for(let z=-5.5;z<=5.5;z+=1.8){
-  pipeBetween(industrial,[side*6.8,.17,z],[side*6.8,1.1,z],.035,warning);
- }
- pipeBetween(industrial,[side*6.8,1.1,-5.5],[side*6.8,1.1,5.5],.035,warning);
-}
-// Wall-mounted service machinery and readable low-level silhouettes.
-for(const x of [-6.5,-3.3,.1,3.25,6.5]){
- const g=new THREE.Group();g.position.set(x,0,-6.05);industrial.add(g);
- box(g,1.35,1.8,.62,iron,0,1.5,0);
- box(g,1.1,1.3,.09,fadedSage,0,1.55,.38);
- for(const dx of [-.42,.42]){
-  pipeBetween(g,[dx,.55,.45],[dx,2.3,.45],.08,oxidised);
-  const valve=new THREE.Mesh(new THREE.TorusGeometry(.19,.035,6,12),warning);
-  valve.position.set(dx,1.05,.55);g.add(valve);
- }
- for(let k=0;k<5;k++)box(g,.12,.18,.05,insulation,-.43+k*.22,2.12,.46);
-}
-// Oil-stained access plates and exposed drainage slots across the deck.
-for(let i=0;i<28;i++){
- const x=-6.9+(i*2.37)%13.8,z=-5.4+(i*3.19)%10.8;
- box(industrial,.78,.015,.5,i%4===0?oxidised:iron,x,.014,z,false);
- for(const dx of [-.32,.32])for(const dz of [-.19,.19])
-  cylinder(industrial,.023,.023,.012,insulation,x+dx,.03,z+dz);
-}
-for(const z of [-4.3,-1.8,1.1,3.7]){
- box(industrial,11.5,.024,.3,insulation,0,.022,z,false);
- for(let x=-5.4;x<5.5;x+=.32)box(industrial,.035,.03,.26,iron,x,.044,z,false);
-}
-// Restrained, uneven practical lights; the room remains shadowy.
-for(const x of [-6,0,6]){
- box(industrial,1.4,.11,.42,iron,x,5.75,-3.8);
- const lamp=box(industrial,1.13,.035,.28,screenMat,x,5.67,-3.8,false);
- lamp.material=new THREE.MeshStandardMaterial({color:0xb2ba91,emissive:0x758263,emissiveIntensity:1.3});
- const glow=new THREE.PointLight(0xb5b18a,4.2,7,2);glow.position.set(x,5.3,-3.7);industrial.add(glow);
-}
 
 // The lock-service manipulator: a loose, recognisable mechanical component on the deck.
 const interactables=[];
-const arm=new THREE.Group();arm.position.set(6,0,5);arm.scale.setScalar(1.35);
+const arm=new THREE.Group();arm.position.set(-7.2,0,3);arm.scale.setScalar(1.35);
 // A conspicuous recovery marker and a phosphor-lit component make the arm readable at a distance.
 const armMarker=new THREE.Mesh(new THREE.TorusGeometry(.72,.045,8,40),new THREE.MeshBasicMaterial({color:0xe0a34b}));
 armMarker.rotation.x=-Math.PI/2;armMarker.position.y=.035;arm.add(armMarker);
@@ -180,7 +84,7 @@ const armRod=cylinder(arm,.075,.09,.72,edgeMat,.52,.31,0,0,0);armRod.rotation.z=
 const claw=new THREE.Group();claw.position.set(.83,.34,0);arm.add(claw);
 for(const s of [-1,1]){const finger=cylinder(claw,.035,.045,.28,greenMat,s*.07,0,0,0,0);finger.rotation.z=s*.38}
 const armGlow=new THREE.PointLight(0x8dff7a,1.3,1.8);armGlow.position.set(.45,.55,0);arm.add(armGlow);scene.add(arm);
-arm.userData={name:'LOCK-SERVICE MANIPULATOR',x:6,z:5};interactables.push(arm);
+arm.userData={name:'LOCK-SERVICE MANIPULATOR',x:-7.2,z:3};interactables.push(arm);
 // A sealed service case. The power cell is visible only after its lid is released.
 // Ribbed field-service chest with hinged heavy lid and separate removable power pack.
 const caseGroup=new THREE.Group();caseGroup.position.set(-5,0,2);
@@ -261,23 +165,8 @@ for(const z of [-10.6,10.6])for(let x=-12;x<=12;x+=3){if(z<0&&x>9)continue;box(s
 // Scrap and tools surrounding MU-1's waking area.
 const scrap=new THREE.Group();scrap.position.set(-10,0,7);scene.add(scrap);
 box(scrap,3.6,.22,2.8,deckRust,0,.12,0);
-for(let i=0;i<19;i++){const x=Math.sin(i*2.17)*1.5,z=Math.cos(i*3.71)*1.05;const piece=box(scrap,.22+(i%4)*.16,.12+(i%3)*.14,.35+(i%5)*.12,i%3?deckSteel:deckRust,x,.35+(i%4)*.13,z);piece.rotation.y=i*.72;piece.rotation.z=(i%3-1)*.18}
-for(let i=0;i<5;i++){const t=cylinder(scrap,.055,.055,.7,deckCream,-1.2+i*.52,.5,-.7,0,Math.PI/2);t.rotation.y=i*.2}
-for(let i=0;i<6;i++){const x=-12+i*4.5;box(scene,.23,7,.3,deckSteel,x,7.1,-8);box(scene,.45,.28,17,deckRust,x,7.3,0)}
-for(let i=0;i<5;i++){const z=-8+i*4;box(scene,1.6,2.4,1.3,deckSteel,12.1,1.2,z);box(scene,1.2,.65,.09,deckRust,11.24,1.8,z)}
-// A deep overhead service bridge and wall-mounted pressure tanks establish scale.
-for(let x=-12;x<=12;x+=2){box(scene,1.72,.18,2.3,deckSteel,x,6.15,-8.8);box(scene,.14,.95,.15,deckCream,x,6.7,-7.7)}
-box(scene,25,.13,.12,deckRust,0,7.16,-7.7);
-for(const x of [-12.2])for(const z of [-7,-2,3,8]){
- const tank=cylinder(scene,.85,.85,3.4,deckSteel,x,3.8,z);
- for(const y of [2.5,4.9])cylinder(scene,.92,.92,.13,deckRust,x,y,z);
- box(scene,1.95,.17,1.95,deckRust,x,1.9,z);
-}
-for(let i=0;i<8;i++){
- const x=-11.5+i*3.2;
- industrialTube([[x,7.7,-10],[x,7.9,-5],[x,7.4,0],[x,7.6,5]],.085+(i%3)*.045,i%3===0?oxidised:conduit);
-}
-for(let i=0;i<10;i++){const z=-9+i*2;box(scene,.8,.04,1.3,deckRust,0,.09,z);box(scene,.58,.04,.06,deckCream,0,.12,z-.4)}
+for(let i=0;i<6;i++){const x=Math.sin(i*2.17)*1.5,z=Math.cos(i*3.71)*1.05;const piece=box(scrap,.22+(i%4)*.16,.12+(i%3)*.14,.35+(i%5)*.12,i%3?deckSteel:deckRust,x,.35+(i%4)*.13,z);piece.rotation.y=i*.72;piece.rotation.z=(i%3-1)*.18}
+for(let i=0;i<2;i++){const t=cylinder(scrap,.055,.055,.7,deckCream,-1.2+i*.52,.5,-.7,0,Math.PI/2);t.rotation.y=i*.2}
 // Repainted bulkhead skins, warning panels, and riveted service cladding.
 const olivePaint=wornOliveMat,sandPaint=wornSandMat,inkBlack=mat(0x282b25,.92,.12),hazardPaint=mat(0xb17943,.94,.08);
 for(let x=-12;x<=7.5;x+=3.5){
@@ -305,38 +194,11 @@ for(let i=0;i<10;i++){const a=i*Math.PI*2/10;cylinder(exchanger,.07,.07,.14,door
 box(exchanger,8.6,.28,2.5,doorFrame,0,2.15,1.4);
 for(let x=-3.9;x<=3.9;x+=.8){box(exchanger,.1,1.2,.11,ivory,x,2.9,2.65);box(exchanger,.75,.05,2.3,oxidisedCopper,x,2.32,1.4)}
 box(exchanger,8.2,.09,.12,ivory,0,3.5,2.65);
-// Painted Saturn backdrop inside a reinforced observation viewport on the north bulkhead.
-const saturnCanvas=document.createElement('canvas');saturnCanvas.width=512;saturnCanvas.height=320;
-const sc=saturnCanvas.getContext('2d');
-const sky=sc.createLinearGradient(0,0,0,320);sky.addColorStop(0,'#111b21');sky.addColorStop(1,'#3a4039');sc.fillStyle=sky;sc.fillRect(0,0,512,320);
-for(let i=0;i<160;i++){const x=(i*173.13)%512,y=(i*91.79)%320;sc.fillStyle=i%7===0?'#e4d6b0':'#899aa0';sc.fillRect(x,y,i%11===0?2:1,1)}
-sc.save();sc.translate(256,165);sc.rotate(-.28);
-sc.strokeStyle='#b7a98b';sc.lineWidth=18;sc.beginPath();sc.ellipse(0,0,170,40,0,0,Math.PI*2);sc.stroke();
-sc.strokeStyle='#605e56';sc.lineWidth=5;sc.beginPath();sc.ellipse(0,0,194,49,0,0,Math.PI*2);sc.stroke();
-const planet=sc.createLinearGradient(-80,-80,90,90);planet.addColorStop(0,'#c8bda1');planet.addColorStop(.55,'#8d826d');planet.addColorStop(1,'#3e4645');
-sc.fillStyle=planet;sc.beginPath();sc.arc(0,0,87,0,Math.PI*2);sc.fill();
-for(let j=-65;j<=65;j+=15){sc.strokeStyle='#8a7b63';sc.globalAlpha=.18;sc.lineWidth=5;sc.beginPath();sc.moveTo(-65,j);sc.lineTo(65,j+8);sc.stroke()}sc.globalAlpha=1;
-sc.strokeStyle='#e0cba1';sc.lineWidth=12;sc.beginPath();sc.ellipse(0,0,170,40,0,0,Math.PI);sc.stroke();sc.restore();
-const saturnTexture=new THREE.CanvasTexture(saturnCanvas);saturnTexture.colorSpace=THREE.SRGBColorSpace;
-const saturnPanel=new THREE.Mesh(new THREE.PlaneGeometry(7,4.4),new THREE.MeshBasicMaterial({map:saturnTexture,side:THREE.DoubleSide}));saturnPanel.position.set(5,4.35,-10.55);scene.add(saturnPanel);
-for(const x of [1.2,8.8])box(scene,.35,5.2,.4,doorFrame,x,4.35,-10.38);
-for(const y of [1.95,6.75])box(scene,8,.34,.45,doorFrame,5,y,-10.38);
-for(let i=0;i<9;i++){const x=1.3+i*.92;box(scene,.09,4.5,.1,oxidisedCopper,x,4.35,-10.25)}
+// Observation window and Enceladus view are constructed by reference-assets.js.
 // Workshop zones: scrap/wake, fabrication, generator and command, with clear central circulation.
-const worktop=wornPaint(0x948669,81),toolMetal=mat(0x292e2b,.78,.4);
-function workshopBench(x,z,rotation=0){
- const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);
- box(g,3.1,.17,1.15,worktop,0,1.1,0);
- for(const xx of [-1.35,1.35])for(const zz of [-.46,.46])box(g,.15,1.05,.16,toolMetal,xx,.55,zz);
- box(g,2.9,.72,.12,wornOliveMat,0,1.52,-.5);
- for(let i=0;i<8;i++)box(g,.07,.22,.08,toolMetal,-1.1+i*.3,1.55,-.38);
- box(g,.9,.18,.65,wornRustMat,-.65,1.3,.05);
-}
-workshopBench(-9,2.2);workshopBench(1.5,7,Math.PI);
 const pathPaint=mat(0xb1a16e,.98,.05);
 for(let z=-7;z<=8;z+=1.25)for(const x of [3.8,8.2])box(scene,.12,.024,.75,pathPaint,x,.1,z);
 for(let x=-11;x<=-4;x+=1.2)box(scene,.7,.024,.12,pathPaint,x,.1,3.6);
-for(let i=0;i<4;i++){const x=-10+i*.68;box(scene,.38,2.8,.48,wornOliveMat,x,1.4,-5.8);box(scene,.48,.13,.56,wornRustMat,x,2.8,-5.8)}
 const generatorLight=new THREE.PointLight(0xffc17b,18,10,2);generatorLight.position.set(5,4,-7);scene.add(generatorLight);
 const benchLight=new THREE.PointLight(0xffd99b,12,10,2);benchLight.position.set(-9,3.5,4);scene.add(benchLight);
 // Terminal is physically separated from the generator and exit.
@@ -642,6 +504,7 @@ function addTechnicalInk(root){
  });
 }
 const stationArt=applyArtDirection({THREE,scene,robot,terminal,terminalScreen,terminalLamp,terminalLit,exchanger,box,cylinder,pipeBetween,wornPaint,label});
+const referenceAssets=installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatch,hatchDoor,leftLeaf,rightLeaf,mountedArm,arm,box,cylinder,wornPaint,stationArt});
 addTechnicalInk(scene);
 const shadow=new THREE.Mesh(new THREE.CircleGeometry(.92,32),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.56}));
 shadow.rotation.x=-Math.PI/2;shadow.position.y=.018;robot.add(shadow);
@@ -666,14 +529,14 @@ let toastTimer;function notify(s){toast.textContent=s;toast.classList.add('show'
 function updateCharge(){document.querySelector('#charge').textContent=String(Math.ceil(charge)).padStart(2,'0')+'%';document.querySelector('#charge-bar').style.width=Math.max(0,charge)+'%'}
 function itemIcon(type){
  const base='<svg viewBox="0 0 96 72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
- if(type==='arm')return base+'<g transform="rotate(-20 48 36)" stroke="#1c211d" stroke-width="3"><rect x="34" y="3" width="29" height="17" rx="5" fill="#b7a13f"/><circle cx="49" cy="21" r="9" fill="#7a8176"/><rect x="40" y="26" width="19" height="25" rx="4" fill="#d0a84a"/><path d="M40 30h19M40 40h19" stroke="#222"/><circle cx="49" cy="52" r="7" fill="#838b80"/><path d="M43 57v12m12-12v12" stroke="#c1c6b9" stroke-width="6"/></g></svg>';
- return base+'<g stroke="#403c30" stroke-width="1.5"><path d="M31 7Q27 7 27 12V38L23 44V64Q23 68 29 68H60Q67 68 67 61V37L63 31V12Q63 7 58 7Z" fill="#b5a07a"/><rect x="30" y="13" width="15" height="26" rx="1" fill="#947447"/><path d="M33 18h9m-9 4h9m-9 4h9m-9 4h9" stroke-width="1"/><path d="M50 18l5-7 5 7Zm0 12 5 7 5-7Z" fill="#967247"/><rect x="51" y="22" width="9" height="5" rx="2" fill="#967247"/><circle cx="46" cy="44" r="7" fill="#20231e"/><circle cx="57" cy="57" r="8" fill="#967247"/><circle cx="34" cy="57" r="6" fill="#c2ac86"/><path d="M29 57h10m13 0h10"/><circle cx="29" cy="64" r="2" fill="#247b9a"/><path d="M36 7V3h14v4" fill="none"/></g></svg>';
+ if(type==='arm')return base+'<g transform="rotate(-20 48 36)" stroke="#1c211d" stroke-width="3"><rect x="34" y="3" width="29" height="17" rx="5" fill="#84917d"/><circle cx="49" cy="21" r="9" fill="#7a8176"/><rect x="40" y="26" width="19" height="25" rx="4" fill="#a0ab8a"/><path d="M40 30h19M40 40h19" stroke="#222"/><circle cx="49" cy="52" r="7" fill="#838b80"/><path d="M43 57v12m12-12v12" stroke="#c1c6b9" stroke-width="6"/></g></svg>';
+ return base+'<g stroke="#293233" stroke-width="2"><rect x="16" y="17" width="64" height="39" rx="5" fill="#b89948"/><path d="M21 20h54v14H21Z" fill="#d1a36a"/><path d="M26 20v14m7-14v14m7-14v14m7-14v14m7-14v14m7-14v14m7-14v14" stroke="#a75f32" stroke-width="4"/><path d="M15 14v46m66-46v46M15 15h66M15 58h66" stroke="#283230" stroke-width="7"/><rect x="26" y="39" width="44" height="10" fill="#263b33"/><path d="M30 42h31m-31 4h22" stroke="#d3c9a6" stroke-width="1"/><circle cx="19" cy="19" r="1" fill="#d8d6bd"/><circle cx="77" cy="54" r="1" fill="#d8d6bd"/></g></svg>';
 }
 function updateInventory(){
  mountedArm.visible=hasArm&&armEquipped;
  previewMountedArm.visible=hasArm&&armEquipped;
  const entries=[];
- if(hasArm)entries.push({type:'arm',name:'INDUSTRIAL MANIPULATOR',description:'Yellow-and-black interchangeable factory arm. Heavy-duty gripper for physical switches and mechanical releases.',stats:'CLASS  TOOL ARM  /  MOUNT  RIGHT  /  GRIP  85 N  /  STATUS  '+(armEquipped?'EQUIPPED':'STOWED'),draggable:!armEquipped});
+ if(hasArm)entries.push({type:'arm',name:'INDUSTRIAL MANIPULATOR',description:'Olive articulated industrial service arm. Heavy-duty gripper for physical switches and mechanical releases.',stats:'CLASS  TOOL ARM  /  MOUNT  RIGHT  /  GRIP  85 N  /  STATUS  '+(armEquipped?'EQUIPPED':'STOWED'),draggable:!armEquipped});
  if(hasCell&&!usedCell)entries.push({type:'cell',name:'PORTABLE POWER PACK',description:'Sealed auxiliary energy cartridge. Restores MU-1 internal charge when consumed with Q.',stats:'CLASS  CONSUMABLE  /  CHARGE  +55%  /  USE  Q',draggable:false});
  document.querySelector('#item-count').textContent=String(entries.length).padStart(2,'0')+' / 20';
  document.querySelector('#cell-hot').textContent=usedCell?'USED':hasCell?'READY':'EMPTY';
@@ -837,7 +700,7 @@ function chooseInspection(type){
  if(type==='cell')model.rotation.x=0;
  model.position.set(0,type==='arm'?1.7:.75,0);model.scale.setScalar(type==='arm'?1.2:2.1);itemModel.add(model);
  document.querySelector('#inspection-title').textContent=type==='arm'?'INDUSTRIAL MANIPULATOR':'PORTABLE POWER PACK';
- document.querySelector('#inspection-description').textContent=type==='arm'?'Interchangeable yellow-and-black industrial gripper. Used for heavy mechanical releases and service switches.':'Sealed auxiliary energy cartridge for MU-1. Consume with Q to restore internal charge.';
+ document.querySelector('#inspection-description').textContent=type==='arm'?'Olive cast housings, exposed rotary joints and a steel service gripper. Used for heavy mechanical releases and service switches.':'Caged amber power module with exposed copper windings. Consume with Q to restore internal charge.';
  document.querySelector('#inspection-specs').textContent=type==='arm'?'RIGHT MOUNT · MECHANICAL GRIPPER · 85 N · '+(armEquipped?'INSTALLED':'STOWED'):'ENERGY CARTRIDGE · +55% CHARGE · '+(hasCell?'READY':'USED');
 }
 itemHost.addEventListener('pointerdown',e=>{itemDragging=true;itemLastX=e.clientX;itemHost.setPointerCapture(e.pointerId)});
@@ -996,7 +859,7 @@ for(const z of [4.9,8.1])box(scene,4.8,.06,.1,hazardPaint,-9.55,.12,z);
 label(scene,'REPAIR BAY',-9.5,.16,8.2,0,1.1,0xc9ae75).rotation.x=-Math.PI/2;
 box(scene,3.7,.06,2.8,deckSteel,5,.08,-7);
 for(const x of [3.1,6.9])box(scene,.13,3.8,.25,ivory,x,1.9,-8.5);
-label(scene,'CONTROL',5,3.4,-8.35,0,.8,0xc7d8cb);
+// The old floating CONTROL label was removed with the obsolete control-alcove props.
 label(scene,'EXIT B-7',11.4,3.6,-10.15,0,.7,0xe9d7a4);
 function setStationPower(value){
  if(value===powerOn)return;
@@ -1089,12 +952,7 @@ function updateStationSystems(dt){
 }
 
 // Robot centre uses a 0.42-unit clearance around solid floor props.
-const solidProps=[
- [-5,-3,.6,.5],[5,-2,.6,.5],[-7,3,.52,.52],[7,4,.52,.52],[6,-5,.52,.52],
- [-5,2,1,.65],[5,-7,.5,.4],[-7,-4,1.10,.60],[-9,2.2,1.55,.58],[1.5,7,1.55,.58],
- ...[-8,-4,0,4,8].map(z=>[12.1,z,.8,.65]),
- ...[0,1,2,3].map(i=>[-10+i*.68,-5.8,.24,.28])
-];
+const solidProps=referenceAssets.colliders;
 function canOccupy(x,z){
  if(x< -12.5||x>12.5||z< -9.5||z>9.5)return false;
  return !solidProps.some(([px,pz,hx,hz])=>Math.abs(x-px)<hx+.42&&Math.abs(z-pz)<hz+.42);
@@ -1104,7 +962,7 @@ function moveRobot(dx,dz){
  if(canOccupy(robot.position.x+dx,robot.position.z))robot.position.x+=dx;
  if(canOccupy(robot.position.x,robot.position.z+dz))robot.position.z+=dz;
 }
-function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta();const dt=Math.min(elapsed,.04);if(opening?.active){controls.enabled=false;if(!paused)opening.update(elapsed);renderer.render(scene,opening.camera);return;}controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open')&&!terminalOpen;// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
+function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta();const dt=Math.min(elapsed,.04);referenceAssets.update(paused||ended?0:dt,powerOn,reducedMotion);if(opening?.active){controls.enabled=false;if(!paused)opening.update(elapsed);renderer.render(scene,opening.camera);return;}controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open')&&!terminalOpen;// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
 const desiredFocus=new THREE.Vector3(robot.position.x,1.25,robot.position.z);
 const followDelta=desiredFocus.sub(controls.target).multiplyScalar(1-Math.exp(-dt*4));
 controls.target.add(followDelta);camera.position.add(followDelta);
@@ -1144,3 +1002,4 @@ if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.
 updateStationSystems(dt);renderer.render(scene,camera);updateNearbyUI()}
 opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
 resize();updateStationSystems(0);animate();document.querySelector('#loading').classList.add('hidden');document.querySelector('#charge').textContent='60%';document.querySelector('#charge-bar').style.width='60%';updateCharge();updateInventory();refreshDirective();say('MU-1 ONLINE.');
+
