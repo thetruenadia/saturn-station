@@ -639,7 +639,7 @@ armSlot.addEventListener('drop',e=>{e.preventDefault();armSlot.classList.remove(
 document.querySelector('#close-inventory').addEventListener('click',closeInventory);
 document.querySelector('#fullscreen').addEventListener('click',()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()});
 function removeObject(o){if(selected===o)selected=null;scene.remove(o);const i=interactables.indexOf(o);if(i>=0)interactables.splice(i,1)}
-function nearest(){let best=null,d=Infinity;for(const o of interactables){const n=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(n<d){d=n;best=o}}return d<1.8?best:null}
+function nearest(){let best=null,d=Infinity;for(const o of interactables){const n=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);const score=n-(o.userData.workshopType==='locker-loot'?.8:0);if(score<d){d=score;best=o}}return d<1.8?best:null}
 function interact(){if(opening?.active)return;if(ended||pickup||inventory.classList.contains('open'))return;const o=(selected&&interactables.includes(selected)&&Math.hypot(robot.position.x-selected.userData.x,robot.position.z-selected.userData.z)<1.8?selected:null)||nearest();if(!o){notify('NO SERVICE OBJECT IN REACH');return}const dist=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(dist>1.8){target=new THREE.Vector3(o.userData.x,0,o.userData.z);notify('MOVING TO '+o.userData.name);return}
 const id=o.userData.name;interactionPulse=1;
 if(o.userData.workshopType){workshop.handle(o);return;}
@@ -709,7 +709,7 @@ else consoleLog('UNKNOWN COMMAND. Type help.')}
 let godMode=false;document.querySelector('#console-form').addEventListener('submit',e=>{e.preventDefault();const value=consoleInput.value;consoleLog('> '+value);runCommand(value);consoleInput.value=''});
 window.addEventListener('keydown',e=>{if(mainMenu?.active)return;const k=e.key.toLowerCase();if(opening?.active){if(k==='escape'&&opening.elapsed>0)setPaused(!paused);return;}if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){terminalUI.key(e);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
 if(k==='f2'){e.preventDefault();devConsole.classList.add('open');devConsole.setAttribute('aria-hidden','false');consoleInput.focus();return}
-if(workshop.isOpen){if(k==='escape'||k==='c'){workshop.close();return}return}
+if(workshop.isOpen||workshop.miniOpen){if(k==='escape'||k==='c'){workshop.close();return}if(workshop.isOpen)return}
 if(k==='i'&&inventory.classList.contains('open')){closeInventory();return}
 if(ended)return;
 if(k==='escape'){if(inventory.classList.contains('open')){closeInventory();return}if(deathScreen.classList.contains('open'))return;setPaused(!paused);return}
@@ -878,7 +878,7 @@ function interactionHint(o){
  if(o.userData.workshopType==='locker')return 'OPEN SALVAGE LOCKER';
  if(o.userData.workshopType==='bench')return 'OPEN WORKSHOP';
  if(o.userData.workshopType==='shard')return 'RECOVER SPEC SHARD';
- if(o.userData.workshopType==='loose')return 'PICK UP ITEM';
+ if(o.userData.workshopType==='loose'||o.userData.workshopType==='locker-loot')return 'PICK UP COMPONENT';
  const id=o.userData.name;
  if(id==='MAINTENANCE NOTE')return 'READ MAINTENANCE NOTE';
  if(id==='LOCK-SERVICE MANIPULATOR')return pickup?'RECOVERING':'RECOVER ARM';
@@ -1053,7 +1053,7 @@ function moveRobot(dx,dz){
  if(canOccupy(robot.position.x,robot.position.z+dz))robot.position.z+=dz;
 }
 function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta();const dt=Math.min(elapsed,.04);if(mainMenu?.active)return;referenceAssets.update(paused||ended?0:dt,powerOn,reducedMotion,!!pickup&&pickup.time>.53);if(opening?.active){controls.enabled=false;if(!paused)opening.update(elapsed);renderer.render(scene,opening.camera);return;}controls.enabled=!firstPerson&&!inventory.classList.contains('open')&&!workshop.isOpen&&!paused&&!devConsole.classList.contains('open')&&!terminalOpen;// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
-const desiredFocus=new THREE.Vector3(robot.position.x,1.25,robot.position.z);
+const desiredFocus=new THREE.Vector3(robot.position.x-(workshop.isOpen?1.6:0),1.25,robot.position.z);
 const followDelta=desiredFocus.sub(controls.target).multiplyScalar(1-Math.exp(-dt*4));
 controls.target.add(followDelta);camera.position.add(followDelta);
 controls.update();if(inventory.classList.contains('open')){renderInventoryPreview();renderItemInspection(dt)}if(!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!workshop.isOpen&&!devConsole.classList.contains('open')){let mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0);if(firstPerson){const f=-mz,r=mx;mx=Math.sin(lookHeading)*f+Math.cos(lookHeading)*r;mz=Math.cos(lookHeading)*f-Math.sin(lookHeading)*r;}const len=Math.hypot(mx,mz);const wantsMove=len>0&&!pickup;
@@ -1071,10 +1071,11 @@ animateGait(dt,gaitWeight>.06);
 interactionPulse=Math.max(0,interactionPulse-dt*2.7);
 const reach=pickup?Math.sin(Math.min(1,pickup.time/1.9)*Math.PI):Math.sin((1-interactionPulse)*Math.PI)*Math.min(1,interactionPulse*2);
 const working=armEquipped?mountedArm:originalArm;
-originalArm.rotation.x=THREE.MathUtils.damp(originalArm.rotation.x,working===originalArm?-reach*.9:0,11,dt);
+const tinkering=workshop.isOpen&&!paused?Math.sin(performance.now()*.009):0;
+originalArm.rotation.x=THREE.MathUtils.damp(originalArm.rotation.x,working===originalArm?(-reach*.9-tinkering*.3):0,11,dt);
 originalArm.rotation.z=THREE.MathUtils.damp(originalArm.rotation.z,working===originalArm?-reach*.3:0,11,dt);
-mountedArm.rotation.x=THREE.MathUtils.damp(mountedArm.rotation.x,working===mountedArm?-reach*1.1:0,11,dt);
-mountedArm.rotation.z=THREE.MathUtils.damp(mountedArm.rotation.z,working===mountedArm?reach*.3:0,11,dt);
+mountedArm.rotation.x=THREE.MathUtils.damp(mountedArm.rotation.x,working===mountedArm?(-reach*1.1-tinkering*.45):0,11,dt);
+mountedArm.rotation.z=THREE.MathUtils.damp(mountedArm.rotation.z,working===mountedArm?(reach*.3+tinkering*.15):0,11,dt);
 originalFore.rotation.z=.12+(working===originalArm?reach*.2:0);
 factoryFore.rotation.z=-.12-(working===mountedArm?reach*.24:0);
 const transfer=Math.sin(walkTime);
