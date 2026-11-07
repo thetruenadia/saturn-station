@@ -326,7 +326,43 @@ function triggerDeath(){if(godMode||deathScreen.classList.contains('open'))retur
 function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);const aspect=w/h,view=8;camera.left=-view*aspect;camera.right=view*aspect;camera.top=view;camera.bottom=-view;camera.updateProjectionMatrix()}
 window.addEventListener('resize',resize);resize();
 const clock=new THREE.Clock();
-function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');controls.update();if(!paused&&!ended&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);if(len>0){const speed=2.6;robot.position.x=THREE.MathUtils.clamp(robot.position.x+mx/len*speed*dt,-8,8);robot.position.z=THREE.MathUtils.clamp(robot.position.z+mz/len*speed*dt,-6,6);robot.rotation.y=Math.atan2(mx,mz);walkTime+=dt*9;for(const l of legs){l.hip.rotation.z=Math.sin(walkTime+l.side)*.22;l.knee.rotation.z=Math.max(0,Math.sin(walkTime+l.side+1))*.38}body.position.y=.035+Math.abs(Math.sin(walkTime*2))*.035}else{body.position.y=0;for(const l of legs){l.hip.rotation.z=0;l.knee.rotation.z=0}}}
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');controls.update();if(!paused&&!ended&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);if(len>0){
+ const speed=2.6;
+ robot.position.x=THREE.MathUtils.clamp(robot.position.x+mx/len*speed*dt,-8,8);
+ robot.position.z=THREE.MathUtils.clamp(robot.position.z+mz/len*speed*dt,-6,6);
+ robot.rotation.y=Math.atan2(mx,mz);
+ walkTime+=dt*7.6;
+ // Joint-local X is the sagittal axis: the knee follows its thigh, and the
+ // ankle counter-rotates so the split toes stay approximately level.
+ // Opposite phases give alternating support and swing rather than side sway.
+ for(const l of legs){
+   const phase=walkTime+(l.side===1?Math.PI:0);
+   const stride=Math.sin(phase);
+   const lift=Math.max(0,Math.cos(phase));
+   const hipTarget=.31*stride;
+   const kneeTarget=-.10-.53*lift;
+   const ankleTarget=-hipTarget-kneeTarget+.10*Math.sin(phase-.5);
+   const blend=Math.min(1,dt*13);
+   l.hip.rotation.x=THREE.MathUtils.lerp(l.hip.rotation.x,hipTarget,blend);
+   l.knee.rotation.x=THREE.MathUtils.lerp(l.knee.rotation.x,kneeTarget,blend);
+   l.ankle.rotation.x=THREE.MathUtils.lerp(l.ankle.rotation.x,ankleTarget,blend);
+   l.hip.rotation.z=THREE.MathUtils.lerp(l.hip.rotation.z,0,blend);
+   l.knee.rotation.z=THREE.MathUtils.lerp(l.knee.rotation.z,0,blend);
+ }
+ body.position.y=THREE.MathUtils.lerp(body.position.y,.018+Math.abs(Math.sin(walkTime))*.038,Math.min(1,dt*10));
+ body.rotation.z=THREE.MathUtils.lerp(body.rotation.z,Math.sin(walkTime)*.014,Math.min(1,dt*9));
+}else{
+ const blend=Math.min(1,dt*9);
+ body.position.y=THREE.MathUtils.lerp(body.position.y,0,blend);
+ body.rotation.z=THREE.MathUtils.lerp(body.rotation.z,0,blend);
+ for(const l of legs){
+   l.hip.rotation.x=THREE.MathUtils.lerp(l.hip.rotation.x,0,blend);
+   l.knee.rotation.x=THREE.MathUtils.lerp(l.knee.rotation.x,0,blend);
+   l.ankle.rotation.x=THREE.MathUtils.lerp(l.ankle.rotation.x,0,blend);
+   l.hip.rotation.z=THREE.MathUtils.lerp(l.hip.rotation.z,0,blend);
+   l.knee.rotation.z=THREE.MathUtils.lerp(l.knee.rotation.z,0,blend);
+ }
+}}
 if(!paused&&!ended&&!godMode&&charge>0){charge=Math.max(0,charge-dt*.1);updateCharge();if(charge===0){notify('POWER DEPLETED');triggerDeath()}}
 if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);hatchDoor.rotation.z=-1.65*t;if(t>=1){doorOpening=false;doorOpen=true;ended=true;task.textContent='Demo complete.';notify('DEMO COMPLETE')}}
 renderer.render(scene,camera)}
