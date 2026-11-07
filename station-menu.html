@@ -59,6 +59,11 @@ nav ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap
 .item[aria-disabled="true"]:hover,.item[aria-disabled="true"].sel{color:var(--faint)}
 .item small{font-size:1.25cqw;margin-left:1.4cqw;color:var(--faint);letter-spacing:.08em}
 .gap{height:1.4cqw}
+/* Music credit and unobtrusive audio toggle on the title screen. */
+.menu-music{position:absolute;right:3.5cqw;bottom:3cqw;z-index:5;text-align:right;font-size:1.2cqw;letter-spacing:.08em;color:var(--dim)}
+.menu-music button{margin-top:.7cqw;appearance:none;border:1px solid rgba(244,248,251,.28);background:rgba(3,9,13,.45);color:var(--white);padding:.45cqw .9cqw;font-size:1.2cqw;cursor:pointer}
+.menu-music button:hover,.menu-music button:focus-visible{border-color:var(--ice)}
+@media(max-aspect-ratio:1/1){.menu-music{font-size:2.5cqw;right:5cqw;bottom:4cqw}.menu-music button{font-size:2.5cqw;padding:1.2cqw 2cqw}}
 
 /* ---- overlay panels ---- */
 .panel{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;
@@ -109,6 +114,9 @@ nav ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap
   </nav>
 </main>
 
+<audio id="menu-music" src="./assets/my-angel-eyes.mp3" preload="auto" loop></audio>
+<div class="menu-music"><div>“MY ANGEL EYES” · INDIA DAVIES NILLSON</div><button id="menu-music-toggle" type="button" aria-label="Toggle main menu music">PLAY MUSIC</button></div>
+
 <!-- Load save -->
 <div class="panel" id="p-load" role="dialog" aria-modal="true" aria-label="Load save">
   <div class="card">
@@ -123,6 +131,7 @@ nav ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap
   <div class="card">
     <h2>Credits</h2>
     <p>Saturn Station — thetruenadia.</p>
+    <p>Main menu music: <em>“My Angel Eyes”</em> — India Davies Nillson.</p>
     <p>Menu background: “Enceladus Limb”, a still from the short film <em>Wanderers</em> by Erik Wernquist (erikwernquist.com/wanderers). Used here as a placeholder with a darkened, tinted treatment.</p>
     <p class="small">MU-1 and station: procedural game artwork. Service arm inspiration: Gregor Kopka.</p>
     <div class="row"><button class="btn" data-close>Back</button></div>

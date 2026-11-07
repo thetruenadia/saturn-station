@@ -1,4 +1,19 @@
 const $=s=>document.querySelector(s),items=[...document.querySelectorAll('.item')];
+// Menu soundtrack: browsers may block autoplay until the first user gesture.
+const menuMusic=$('#menu-music'),musicToggle=$('#menu-music-toggle');
+menuMusic.volume=.42;
+let musicEnabled=true;
+function updateMusicButton(){musicToggle.textContent=menuMusic.paused?'PLAY MUSIC':'MUTE MUSIC';musicToggle.setAttribute('aria-pressed',String(!menuMusic.paused));}
+function startMenuMusic(){if(!musicEnabled||!menuMusic.paused)return;menuMusic.play().then(updateMusicButton).catch(updateMusicButton);}
+musicToggle.addEventListener('click',()=>{if(menuMusic.paused){musicEnabled=true;startMenuMusic()}else{musicEnabled=false;menuMusic.pause();updateMusicButton()}});
+// The first click or keypress can unlock playback when autoplay is not permitted.
+document.addEventListener('pointerdown',e=>{if(e.target!==musicToggle)startMenuMusic()},{passive:true});
+document.addEventListener('keydown',e=>{if(e.key!=='Tab')startMenuMusic()});
+menuMusic.addEventListener('play',updateMusicButton);
+menuMusic.addEventListener('pause',updateMusicButton);
+menuMusic.addEventListener('error',()=>{musicToggle.textContent='MUSIC UNAVAILABLE';musicToggle.disabled=true;});
+updateMusicButton();startMenuMusic();
+
 let saves=[],sel=0,lastFocus=null;
 const send=(action,id)=>parent.postMessage({type:'saturn-menu-action',action,id},location.origin);
 const fmt=t=>t?new Date(t).toLocaleString(undefined,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Earlier local save';
@@ -21,7 +36,7 @@ function renderSlots(){
 function run(action){if(action==='start')send('start');else if(action==='resume'&&saves[0])send('load',saves[0].id);else if(action==='load'){renderSlots();open('#p-load')}else if(action==='credits')open('#p-credits');else if(action==='exit')open('#p-exit')}
 items.forEach((b,i)=>{b.onmouseenter=()=>{if(enabled(i))setSel(i)};b.onfocus=()=>{if(enabled(i))setSel(i)};b.onclick=()=>{if(enabled(i))run(b.dataset.act)}});
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeAll);document.querySelectorAll('.panel').forEach(p=>p.onmousedown=e=>{if(e.target===p)closeAll()});
-$('#exit-yes').onclick=()=>{closeAll();$('#closed').classList.add('open');$('.menu-screen').inert=true;$('#closed').tabIndex=-1;$('#closed').focus();};
+$('#exit-yes').onclick=()=>{menuMusic.pause();closeAll();$('#closed').classList.add('open');$('.menu-screen').inert=true;$('#closed').tabIndex=-1;$('#closed').focus();};
 document.addEventListener('keydown',e=>{
  const panel=document.querySelector('.panel.open');if(panel){if(e.key==='Escape')closeAll();if(e.key==='Tab'){const controls=[...panel.querySelectorAll('button')];const first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}}return;}
  if($('#closed').classList.contains('open'))return;
