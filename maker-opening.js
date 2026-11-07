@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {sampleOpening,OPENING_DURATION} from './opening-timeline.mjs';
 
 // Owns only cinematic presentation. Workshop, robot, door and gameplay stay in the host scene.
-export function createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,onComplete}){
+export function createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,onComplete,isSoundEnabled=()=>true}){
  const camera=new THREE.PerspectiveCamera(66,1,.05,100);
  // Optical sensor of the seated/slumped MU-1, at the existing repair-bay spawn.
  camera.position.set(robot.position.x,.92,robot.position.z);
@@ -43,7 +43,7 @@ export function createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,onCo
  const black=overlay.querySelector('.boot-black'),caption=overlay.querySelector('.boot-caption'),button=overlay.querySelector('button');
  let elapsed=0,started=false,active=true,finished=false,audio;
  const fired=new Set();
- function tone(frequency,duration,volume=.08){if(!audio)return;const osc=audio.createOscillator(),gain=audio.createGain();osc.type='triangle';osc.frequency.setValueAtTime(frequency,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(35,audio.currentTime+duration);gain.gain.setValueAtTime(volume,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+duration);}
+ function tone(frequency,duration,volume=.08){if(!audio||!isSoundEnabled())return;const osc=audio.createOscillator(),gain=audio.createGain();osc.type='triangle';osc.frequency.setValueAtTime(frequency,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(35,audio.currentTime+duration);gain.gain.setValueAtTime(volume,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+duration);}
  button.addEventListener('click',()=>{
   if(finished){active=false;overlay.remove();maker.visible=false;lap.visible=false;lamp.visible=false;robot.visible=true;document.body.classList.remove('opening-active');audio?.close();onComplete();return;}
   started=true;button.hidden=true;
@@ -66,8 +66,10 @@ export function createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,onCo
   const crouch=1-s.stand;maker.position.y=-.48*crouch;
   const face=Math.atan2(camera.position.x-repair.x,camera.position.z-repair.z);
   const heading=Math.atan2(route[segment+1].x-route[segment].x,route[segment+1].z-route[segment].z);
-  maker.rotation.y=elapsed<19?face:heading;
-  torso.rotation.x=.3*crouch;head.rotation.y=elapsed>=13&&elapsed<19?-1.1:0;
+  const exitHeading=Math.atan2(11.4-repair.x,-10.6-repair.z);
+  const turn=Math.atan2(Math.sin(exitHeading-face),Math.cos(exitHeading-face));
+  maker.rotation.y=elapsed<13?face:elapsed<19?face+turn*.65:heading;
+  torso.rotation.x=.3*crouch;head.rotation.y=elapsed>=13&&elapsed<19?turn*.35:0;
   head.rotation.x=elapsed<11?.22:elapsed<13?-.12:0;
   const working=elapsed<13,run=elapsed>=19&&elapsed<24.5;
   arms.forEach((arm,i)=>{arm.rotation.x=working?-1.1+Math.sin(elapsed*7+i)*.12:run?Math.sin(elapsed*12+i*Math.PI)*.85:0;});

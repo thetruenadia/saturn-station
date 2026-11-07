@@ -16,10 +16,12 @@ From this repository run `python3 -m http.server 8876`, then visit http://127.0.
 
 Click **REBOOT · ENTER WORKSHOP** after shutdown to return to the existing orthographic gameplay and recover the missing arm. The change of viewpoint is deliberately outside the completed cutscene. Reload or use pause/restart to replay. ESC pauses; inventory, movement, terminal and charge drain remain suspended during the opening. Background tabs suspend the timeline. Resize during playback to check perspective framing.
 
-Run `node --test tests/*.test.mjs`, `node --check prototype-3d.js`, and `node --check maker-opening.js`. Timing tests cover character order, door clearance and blackouts; existing tests cover inventory, terminal and collision regressions. Browser review remains necessary for framing, sound and animation quality.
+Run `node --test tests/*.test.mjs`, `node --check prototype-3d.js`, and `node --check maker-opening.js`. Timing tests cover character order, door clearance and blackouts; existing tests cover inventory, terminal and collision regressions. Browser review remains necessary for framing, sound and animation quality. The initial branch was inspected in-browser for boot framing and pause; the browser connection timed out before a complete review of the integrated main changes.
 
 ## Scope
 
 Maker uses blockout geometry, joint rotations and synthesised sound cues, with a cream maintenance coat, rust collar, dark work clothes and oversized civilian helmet. These are placeholders for authored art/animation/audio. The camera is fixed at the existing repair-bay spawn with seated lower-chassis geometry; the gameplay robot is hidden only during the opening. The original room remains intact, with a small passage added behind its existing doorway.
 
 The checkout already contained uncommitted inventory/terminal/collision fixes, their ten regression tests and CI. These are preserved in this branch.
+
+Latest main settings, local save restoration, station lighting and illustrated scenery are retained. Opening playback does not write saved progress; the existing save is restored when entering gameplay. The bulkhead starts gameplay closed to match the departure. Synthesised cues respect the existing sound toggle.
