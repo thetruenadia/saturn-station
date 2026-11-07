@@ -66,14 +66,14 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sou
   const angle=robot.rotation.y;
   const x=THREE.MathUtils.clamp(robot.position.x+Math.sin(angle)*1.05,-12.2,12.2);
   const z=THREE.MathUtils.clamp(robot.position.z+Math.cos(angle)*1.05,-9.2,9.2);
-  createLoose(item,x,z);notify('COMPONENT DROPPED');sound('collect');updateUI();save();
+  const object=createLoose(item,x,z);object.position.y=.65;object.userData.velocity=1.6;notify('COMPONENT DROPPED');sound('collect');updateUI();save();
  }
  function dropFuelCell(){
   if(cellCount()<1)return;
   setCellCount(cellCount()-1);
   const x=THREE.MathUtils.clamp(robot.position.x+Math.sin(robot.rotation.y)*1.1,-12.2,12.2);
   const z=THREE.MathUtils.clamp(robot.position.z+Math.cos(robot.rotation.y)*1.1,-9.2,9.2);
-  createLoose(null,x,z,'cell');notify('FUEL CELL DROPPED · 1.8 KG');updateUI();save();
+  const object=createLoose(null,x,z,'cell');object.position.y=.65;object.userData.velocity=1.25;notify('FUEL CELL DROPPED · 1.8 KG');updateUI();save();
  }
  const panel=document.createElement('section');panel.id='workshop-panel';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Maintenance workshop');
  panel.innerHTML='<div class="workshop-window"><header><span>MU-1 / MAINTENANCE WORKSHOP</span><button id="workshop-close">CLOSE ×</button></header><p id="workshop-status"></p><div class="workshop-columns"><section><h2>RECOVERED SALVAGE</h2><div id="workshop-items"></div><button id="workshop-drop-cell">DROP FUEL CELL</button><button id="workshop-dismantle-arm">DISMANTLE SERVICE ARM</button></section><section><h2>FABRICATION SPECS</h2><div id="workshop-spec"></div><h2>STORAGE LOCKER</h2><div id="workshop-locker"></div></section></div></div>';
@@ -81,7 +81,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sou
  const css=document.createElement('style');css.textContent='#workshop-panel{position:fixed;inset:0;z-index:210;display:grid;place-items:center;background:#020806db;color:#d9e0d2;font:12px IBM Plex Mono,monospace}#workshop-panel[hidden]{display:none}.workshop-window{width:min(900px,96vw);max-height:90vh;overflow:auto;background:#0c1715;border:1px solid #839886;padding:20px;box-shadow:0 15px 90px #000}.workshop-window header{display:flex;justify-content:space-between;border-bottom:1px solid #657664;padding-bottom:12px;letter-spacing:.12em}.workshop-window h2{font-size:13px;color:#a6c4ab;letter-spacing:.15em}.workshop-window button{background:#1c2b27;color:#d6e7d5;border:1px solid #6d8b78;padding:7px 10px;margin:4px;cursor:pointer}.workshop-columns{display:grid;grid-template-columns:1fr 1fr;gap:24px}.workshop-row{display:flex;align-items:center;justify-content:space-between;gap:7px;border-bottom:1px solid #43524a;padding:6px 0}.workshop-row button{flex-shrink:0}@media(max-width:650px){.workshop-columns{grid-template-columns:1fr}}';document.head.append(css);
  panel.querySelector('#workshop-close').onclick=close;
  panel.querySelector('#workshop-drop-cell').onclick=dropFuelCell;
- panel.querySelector('#workshop-dismantle-arm').onclick=()=>{if(inventory.length>16){notify('FREE FOUR SALVAGE SLOTS FIRST');return}if(!onDismantle()){notify('NO SERVICE ARM AVAILABLE TO DISMANTLE');return}for(const type of ['motor','gear','plate','wire'])inventory.push({id:'reclaimed-'+Math.floor(next()*1000000),type,rarity:'COMMON'});notify('ARM DISMANTLED · PARTIAL SALVAGE RECOVERED');updateUI();save()};
+ panel.querySelector('#workshop-dismantle-arm').onclick=()=>{if(inventory.length>16){notify('FREE FOUR SALVAGE SLOTS FIRST');return}if(!onDismantle()){notify('NO SERVICE ARM AVAILABLE TO DISMANTLE');return}specUnlocked=true;setShardVisible();for(const type of ['motor','gear','plate','wire'])inventory.push({id:'reclaimed-'+Math.floor(next()*1000000),type,rarity:'COMMON'});notify('ARM DISMANTLED · PARTIAL SALVAGE RECOVERED');updateUI();save()};
  function updateUI(){
   panel.querySelector('#workshop-status').textContent='SALVAGE '+inventory.length+' / 20 SLOTS · '+(mass()+cellCount()*1.8).toFixed(1)+' KG INCLUDING '+cellCount()+' FUEL CELL(S)';
   const list=panel.querySelector('#workshop-items');list.replaceChildren();
@@ -91,7 +91,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sou
   const text=document.createElement('p');text.textContent=specUnlocked?'SERVICE ARM / SPECIFICATION ACQUIRED':'LOCKED · Recover the fabrication shard from the terminal.';spec.append(text);
   if(specUnlocked){const requirements=document.createElement('p');requirements.textContent=Object.entries(recipe).map(([type,n])=>n+' × '+catalogue[type].name).join(' · ');spec.append(requirements);
    const can=Object.entries(recipe).every(([type,n])=>inventory.filter(x=>x.type===type).length>=n);
-   const btn=document.createElement('button');btn.textContent='FABRICATE SERVICE ARM';btn.disabled=!can;btn.onclick=()=>{for(const [type,n] of Object.entries(recipe)){for(let j=0;j<n;j++)inventory.splice(inventory.findIndex(x=>x.type===type),1)}onCraftArm();notify('SERVICE ARM FABRICATED · BLUEPRINT VERIFIED');sound('equip');updateUI();save();};spec.append(btn);
+   const btn=document.createElement('button');btn.textContent='FABRICATE SERVICE ARM';btn.disabled=!can;btn.onclick=()=>{if(!onCraftArm()){notify('SERVICE ARM ALREADY INSTALLED');return}for(const [type,n] of Object.entries(recipe)){for(let j=0;j<n;j++)inventory.splice(inventory.findIndex(x=>x.type===type),1)}notify('SERVICE ARM FABRICATED · BLUEPRINT VERIFIED');sound('equip');updateUI();save();};spec.append(btn);
   }
   const locker=panel.querySelector('#workshop-locker');locker.replaceChildren();
   if(activeLocker<0){locker.textContent='Open a locker with E to inspect its contents.';return;}
@@ -113,7 +113,8 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sou
  function releaseSpec(){if(specUnlocked)return 'SPEC ALREADY RECOVERED';if(specReleased)return 'SHARD WAITING AT TERMINAL OUTPUT';specReleased=true;setShardVisible();notify('FABRICATION SHARD EJECTED');save();return 'FABRICATION SHARD EJECTED · RECOVER FROM TERMINAL OUTPUT'}
  function serialize(){return {seed,inventory,lockerContents,opened,specReleased,specUnlocked,loose:loose.map(o=>({x:o.userData.x,z:o.userData.z,item:o.userData.item,kind:o.userData.kind}))}}
  function restore(data){if(!data||typeof data!=='object'){startFresh();return;}seed=Number.isInteger(data.seed)?data.seed:12345;inventory=Array.isArray(data.inventory)?data.inventory.filter(i=>catalogue[i.type]).slice(0,20):[];lockerContents=Array.isArray(data.lockerContents)&&data.lockerContents.length===2?data.lockerContents:[[],[]];opened=Array.isArray(data.opened)?data.opened:[false,false];specReleased=!!data.specReleased;specUnlocked=!!data.specUnlocked;for(const o of [...loose])removeLoose(o);for(const p of Array.isArray(data.loose)?data.loose:[]){if(Number.isFinite(p.x)&&Number.isFinite(p.z))createLoose(p.item,p.x,p.z,p.kind)}setShardVisible();updateUI()}
+ function update(dt){for(const o of loose){if(o.position.y<=0&&o.userData.velocity===undefined)continue;const v=(o.userData.velocity||0)-9.8*dt;o.position.y+=v*dt;if(o.position.y<=0){o.position.y=0;const bounce=-v*.16;if(bounce>.24)o.userData.velocity=bounce;else delete o.userData.velocity}else o.userData.velocity=v}}
  function hint(){if(!specUnlocked)return specReleased?'Collect the ejected spec shard beside the terminal.':'Explore the terminal files to release a fabrication specification.';return 'You can fabricate the service arm at the maintenance workshop using recovered parts.'}
  startFresh();
- return {open,close,handle,releaseSpec,serialize,restore,hint,updateUI,mass,get isOpen(){return screenOpen},get specUnlocked(){return specUnlocked}};
+ return {open,close,handle,releaseSpec,serialize,restore,hint,updateUI,update,mass,get isOpen(){return screenOpen},get specUnlocked(){return specUnlocked}};
 }
