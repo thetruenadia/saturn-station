@@ -253,7 +253,7 @@ for(const side of [-1,1]){
   }
   bodyBox(ankle,.22,.08,.23,sageDark,0,-.16,-.17);
   rodBetween(ankle,[-.10,-.02,-.02],[-.10,-.15,.18],.022,brass);
-  legs.push({hip,knee,side,ankle});
+  legs.push({hip,knee,side,ankle,thighB,shinB,plant:null,lastSwing:true});
 }
 // Scattered paint loss is concentrated on exposed edges, not evenly tiled.
 for(let i=0;i<15;i++){
@@ -326,43 +326,86 @@ function triggerDeath(){if(godMode||deathScreen.classList.contains('open'))retur
 function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);const aspect=w/h,view=8;camera.left=-view*aspect;camera.right=view*aspect;camera.top=view;camera.bottom=-view;camera.updateProjectionMatrix()}
 window.addEventListener('resize',resize);resize();
 const clock=new THREE.Clock();
+// Two-bone inverse kinematics. Targets are held in world space during stance,
+// so the feet stay planted as the robot moves across the station floor.
+const footLocal=new THREE.Vector3(),hipWorld=new THREE.Vector3();
+const worldFoot=new THREE.Vector3(),tmpFoot=new THREE.Vector3();
+function solveLegIK(l,worldTarget,dt){
+ robot.updateMatrixWorld(true);
+ hipWorld.set(0,0,0);l.hip.localToWorld(hipWorld);
+ footLocal.copy(worldTarget);robot.worldToLocal(footLocal);
+ const hy=l.hip.position.y,hz=l.hip.position.z;
+ const dy=footLocal.y-hy,dz=footLocal.z-hz;
+ const upper=Math.hypot(l.thighB[1],l.thighB[2]);
+ const lower=Math.hypot(l.shinB[1],l.shinB[2]);
+ const distance=Math.max(.07,Math.min(upper+lower-.012,Math.hypot(dy,dz)));
+ const ux=dy/Math.max(.0001,Math.hypot(dy,dz));
+ const uz=dz/Math.max(.0001,Math.hypot(dy,dz));
+ const along=(upper*upper-lower*lower+distance*distance)/(2*distance);
+ const side=Math.sqrt(Math.max(0,upper*upper-along*along));
+ // Choose the rear-facing knee solution characteristic of the reference.
+ const ky=along*ux+side*uz;
+ const kz=along*uz-side*ux;
+ const lowerY=dy-ky,lowerZ=dz-kz;
+ const baseUpper=Math.atan2(l.thighB[2],l.thighB[1]);
+ const baseLower=Math.atan2(l.shinB[2],l.shinB[1]);
+ const upperRotation=Math.atan2(kz,ky)-baseUpper;
+ const lowerRotation=Math.atan2(lowerZ,lowerY)-baseLower-upperRotation;
+ const blend=Math.min(1,dt*20);
+ l.hip.rotation.x=THREE.MathUtils.lerp(l.hip.rotation.x,upperRotation,blend);
+ l.knee.rotation.x=THREE.MathUtils.lerp(l.knee.rotation.x,lowerRotation,blend);
+ l.ankle.rotation.x=THREE.MathUtils.lerp(l.ankle.rotation.x,-l.hip.rotation.x-l.knee.rotation.x,blend);
+}
+function animateGait(dt,moving){
+ const cycle=walkTime/(Math.PI*2);
+ robot.updateMatrixWorld(true);
+ for(const l of legs){
+   const phase=((cycle+(l.side===1?.5:0))%1+1)%1;
+   const stance=phase<.60;
+   // Neutral foot location is calibrated to the current mechanical ankle.
+   const neutral=new THREE.Vector3(l.hip.position.x+l.thighB[0]+l.shinB[0],.27,.18);
+   tmpFoot.copy(neutral);robot.localToWorld(tmpFoot);
+   if(!l.plant)l.plant=tmpFoot.clone();
+   if(!moving){
+     // Return smoothly to a grounded standing pose.
+     l.plant.lerp(tmpFoot,Math.min(1,dt*7));
+     solveLegIK(l,l.plant,dt);
+     l.lastSwing=true;
+     continue;
+   }
+   if(stance){
+     if(l.lastSwing)l.plant.copy(tmpFoot);
+     l.lastSwing=false;
+     worldFoot.copy(l.plant);
+   }else{
+     if(!l.lastSwing)l.swingStart=l.plant.clone();
+     l.lastSwing=true;
+     const t=(phase-.60)/.40;
+     // Move target ahead in the robot's forward (+Z) direction.
+     const ahead=new THREE.Vector3(neutral.x,.27,neutral.z+.48);
+     robot.localToWorld(ahead);
+     const smooth=t*t*(3-2*t);
+     worldFoot.copy(l.swingStart).lerp(ahead,smooth);
+     worldFoot.y+=Math.sin(t*Math.PI)*.28;
+     if(t>.98)l.plant.copy(ahead);
+   }
+   solveLegIK(l,worldFoot,dt);
+ }
+}
 function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');controls.update();if(!paused&&!ended&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);if(len>0){
  const speed=2.6;
  robot.position.x=THREE.MathUtils.clamp(robot.position.x+mx/len*speed*dt,-8,8);
  robot.position.z=THREE.MathUtils.clamp(robot.position.z+mz/len*speed*dt,-6,6);
  robot.rotation.y=Math.atan2(mx,mz);
  walkTime+=dt*7.6;
- // Joint-local X is the sagittal axis: the knee follows its thigh, and the
- // ankle counter-rotates so the split toes stay approximately level.
- // Opposite phases give alternating support and swing rather than side sway.
- for(const l of legs){
-   const phase=walkTime+(l.side===1?Math.PI:0);
-   const stride=Math.sin(phase);
-   const lift=Math.max(0,Math.cos(phase));
-   const hipTarget=.31*stride;
-   const kneeTarget=-.10-.53*lift;
-   const ankleTarget=-hipTarget-kneeTarget+.10*Math.sin(phase-.5);
-   const blend=Math.min(1,dt*13);
-   l.hip.rotation.x=THREE.MathUtils.lerp(l.hip.rotation.x,hipTarget,blend);
-   l.knee.rotation.x=THREE.MathUtils.lerp(l.knee.rotation.x,kneeTarget,blend);
-   l.ankle.rotation.x=THREE.MathUtils.lerp(l.ankle.rotation.x,ankleTarget,blend);
-   l.hip.rotation.z=THREE.MathUtils.lerp(l.hip.rotation.z,0,blend);
-   l.knee.rotation.z=THREE.MathUtils.lerp(l.knee.rotation.z,0,blend);
- }
- body.position.y=THREE.MathUtils.lerp(body.position.y,.018+Math.abs(Math.sin(walkTime))*.038,Math.min(1,dt*10));
- body.rotation.z=THREE.MathUtils.lerp(body.rotation.z,Math.sin(walkTime)*.014,Math.min(1,dt*9));
+ animateGait(dt,true);
+ body.position.y=THREE.MathUtils.lerp(body.position.y,.018+Math.abs(Math.sin(walkTime))*.025,Math.min(1,dt*9));
+ body.rotation.z=THREE.MathUtils.lerp(body.rotation.z,Math.sin(walkTime)*.012,Math.min(1,dt*9));
 }else{
- const blend=Math.min(1,dt*9);
- body.position.y=THREE.MathUtils.lerp(body.position.y,0,blend);
- body.rotation.z=THREE.MathUtils.lerp(body.rotation.z,0,blend);
- for(const l of legs){
-   l.hip.rotation.x=THREE.MathUtils.lerp(l.hip.rotation.x,0,blend);
-   l.knee.rotation.x=THREE.MathUtils.lerp(l.knee.rotation.x,0,blend);
-   l.ankle.rotation.x=THREE.MathUtils.lerp(l.ankle.rotation.x,0,blend);
-   l.hip.rotation.z=THREE.MathUtils.lerp(l.hip.rotation.z,0,blend);
-   l.knee.rotation.z=THREE.MathUtils.lerp(l.knee.rotation.z,0,blend);
- }
-}}
+ animateGait(dt,false);
+ body.position.y=THREE.MathUtils.lerp(body.position.y,0,Math.min(1,dt*9));
+ body.rotation.z=THREE.MathUtils.lerp(body.rotation.z,0,Math.min(1,dt*9));
+}}}
 if(!paused&&!ended&&!godMode&&charge>0){charge=Math.max(0,charge-dt*.1);updateCharge();if(charge===0){notify('POWER DEPLETED');triggerDeath()}}
 if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);hatchDoor.rotation.z=-1.65*t;if(t>=1){doorOpening=false;doorOpen=true;ended=true;task.textContent='Demo complete.';notify('DEMO COMPLETE')}}
 renderer.render(scene,camera)}
