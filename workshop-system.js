@@ -1,5 +1,5 @@
 // Workshop prototype: seeded salvage, lockers, loose pickups and physical specification recovery.
-export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sound,save,cellCount,setCellCount,onCraftArm}){
+export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sound,save,cellCount,setCellCount,onCraftArm,onDismantle}){
  const catalogue={
   motor:{name:'SERVO MOTOR',mass:2.4,value:48,color:0x8c987f},
   gear:{name:'REDUCTION GEARS',mass:1.1,value:20,color:0xa8a797},
@@ -76,11 +76,12 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sou
   createLoose(null,x,z,'cell');notify('FUEL CELL DROPPED · 1.8 KG');updateUI();save();
  }
  const panel=document.createElement('section');panel.id='workshop-panel';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Maintenance workshop');
- panel.innerHTML='<div class="workshop-window"><header><span>MU-1 / MAINTENANCE WORKSHOP</span><button id="workshop-close">CLOSE ×</button></header><p id="workshop-status"></p><div class="workshop-columns"><section><h2>RECOVERED SALVAGE</h2><div id="workshop-items"></div><button id="workshop-drop-cell">DROP FUEL CELL</button></section><section><h2>FABRICATION SPECS</h2><div id="workshop-spec"></div><h2>STORAGE LOCKER</h2><div id="workshop-locker"></div></section></div></div>';
+ panel.innerHTML='<div class="workshop-window"><header><span>MU-1 / MAINTENANCE WORKSHOP</span><button id="workshop-close">CLOSE ×</button></header><p id="workshop-status"></p><div class="workshop-columns"><section><h2>RECOVERED SALVAGE</h2><div id="workshop-items"></div><button id="workshop-drop-cell">DROP FUEL CELL</button><button id="workshop-dismantle-arm">DISMANTLE SERVICE ARM</button></section><section><h2>FABRICATION SPECS</h2><div id="workshop-spec"></div><h2>STORAGE LOCKER</h2><div id="workshop-locker"></div></section></div></div>';
  document.body.append(panel);
  const css=document.createElement('style');css.textContent='#workshop-panel{position:fixed;inset:0;z-index:210;display:grid;place-items:center;background:#020806db;color:#d9e0d2;font:12px IBM Plex Mono,monospace}#workshop-panel[hidden]{display:none}.workshop-window{width:min(900px,96vw);max-height:90vh;overflow:auto;background:#0c1715;border:1px solid #839886;padding:20px;box-shadow:0 15px 90px #000}.workshop-window header{display:flex;justify-content:space-between;border-bottom:1px solid #657664;padding-bottom:12px;letter-spacing:.12em}.workshop-window h2{font-size:13px;color:#a6c4ab;letter-spacing:.15em}.workshop-window button{background:#1c2b27;color:#d6e7d5;border:1px solid #6d8b78;padding:7px 10px;margin:4px;cursor:pointer}.workshop-columns{display:grid;grid-template-columns:1fr 1fr;gap:24px}.workshop-row{display:flex;align-items:center;justify-content:space-between;gap:7px;border-bottom:1px solid #43524a;padding:6px 0}.workshop-row button{flex-shrink:0}@media(max-width:650px){.workshop-columns{grid-template-columns:1fr}}';document.head.append(css);
  panel.querySelector('#workshop-close').onclick=close;
  panel.querySelector('#workshop-drop-cell').onclick=dropFuelCell;
+ panel.querySelector('#workshop-dismantle-arm').onclick=()=>{if(inventory.length>16){notify('FREE FOUR SALVAGE SLOTS FIRST');return}if(!onDismantle()){notify('NO SERVICE ARM AVAILABLE TO DISMANTLE');return}for(const type of ['motor','gear','plate','wire'])inventory.push({id:'reclaimed-'+Math.floor(next()*1000000),type,rarity:'COMMON'});notify('ARM DISMANTLED · PARTIAL SALVAGE RECOVERED');updateUI();save()};
  function updateUI(){
   panel.querySelector('#workshop-status').textContent='SALVAGE '+inventory.length+' / 20 SLOTS · '+(mass()+cellCount()*1.8).toFixed(1)+' KG INCLUDING '+cellCount()+' FUEL CELL(S)';
   const list=panel.querySelector('#workshop-items');list.replaceChildren();
