@@ -405,7 +405,7 @@ function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDel
  animateGait(dt,false);
  body.position.y=THREE.MathUtils.lerp(body.position.y,0,Math.min(1,dt*9));
  body.rotation.z=THREE.MathUtils.lerp(body.rotation.z,0,Math.min(1,dt*9));
-}}}
+}}
 if(!paused&&!ended&&!godMode&&charge>0){charge=Math.max(0,charge-dt*.1);updateCharge();if(charge===0){notify('POWER DEPLETED');triggerDeath()}}
 if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);hatchDoor.rotation.z=-1.65*t;if(t>=1){doorOpening=false;doorOpen=true;ended=true;task.textContent='Demo complete.';notify('DEMO COMPLETE')}}
 renderer.render(scene,camera)}
