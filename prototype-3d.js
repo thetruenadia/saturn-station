@@ -1,6 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
-import { applyArtDirection } from './station-art.js?v=analogue2';
+import { applyArtDirection } from './station-art.js?v=blue-crt3';
 
 import {createMakerOpening} from './maker-opening.js';
 
@@ -340,7 +340,6 @@ for(let i=0;i<4;i++){const x=-10+i*.68;box(scene,.38,2.8,.48,wornOliveMat,x,1.4,
 const generatorLight=new THREE.PointLight(0xffc17b,18,10,2);generatorLight.position.set(5,4,-7);scene.add(generatorLight);
 const benchLight=new THREE.PointLight(0xffd99b,12,10,2);benchLight.position.set(-9,3.5,4);scene.add(benchLight);
 // Terminal is physically separated from the generator and exit.
-// Blue CRT computer on a cream instrumentation rack, facing the central aisle.
 const terminal=new THREE.Group();terminal.position.set(-7,0,-4);scene.add(terminal);
 const rackCream=wornPaint(0xb7b398,95),rackBlue=wornPaint(0x29486c,96),rackBlack=mat(0x141b1b,.72,.3),rackHandle=mat(0x8d9281,.5,.65);
 box(terminal,2.05,.15,1.15,rackBlack,0,.08,0);
@@ -668,7 +667,7 @@ function updateCharge(){document.querySelector('#charge').textContent=String(Mat
 function itemIcon(type){
  const base='<svg viewBox="0 0 96 72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
  if(type==='arm')return base+'<g transform="rotate(-20 48 36)" stroke="#1c211d" stroke-width="3"><rect x="34" y="3" width="29" height="17" rx="5" fill="#b7a13f"/><circle cx="49" cy="21" r="9" fill="#7a8176"/><rect x="40" y="26" width="19" height="25" rx="4" fill="#d0a84a"/><path d="M40 30h19M40 40h19" stroke="#222"/><circle cx="49" cy="52" r="7" fill="#838b80"/><path d="M43 57v12m12-12v12" stroke="#c1c6b9" stroke-width="6"/></g></svg>';
- return base+'<g stroke="#292a22" stroke-width="2"><path d="M29 5h32v30l6 8v19H32l-6-10V33h3z" fill="#b5a07a"/><rect x="32" y="10" width="13" height="24" fill="#967247"/><path d="M51 13l5 8H46zm0 21l5-8H46z" fill="#d0b88a"/><circle cx="46" cy="42" r="7" fill="#252820"/><circle cx="57" cy="54" r="8" fill="#967247"/><circle cx="35" cy="55" r="6" fill="#c4ad83"/><path d="M30 55h10M33 8V2h10" fill="none" stroke="#c4ad83"/></g></svg>';
+ return base+'<g stroke="#403c30" stroke-width="1.5"><path d="M31 7Q27 7 27 12V38L23 44V64Q23 68 29 68H60Q67 68 67 61V37L63 31V12Q63 7 58 7Z" fill="#b5a07a"/><rect x="30" y="13" width="15" height="26" rx="1" fill="#947447"/><path d="M33 18h9m-9 4h9m-9 4h9m-9 4h9" stroke-width="1"/><path d="M50 18l5-7 5 7Zm0 12 5 7 5-7Z" fill="#967247"/><rect x="51" y="22" width="9" height="5" rx="2" fill="#967247"/><circle cx="46" cy="44" r="7" fill="#20231e"/><circle cx="57" cy="57" r="8" fill="#967247"/><circle cx="34" cy="57" r="6" fill="#c2ac86"/><path d="M29 57h10m13 0h10"/><circle cx="29" cy="64" r="2" fill="#247b9a"/><path d="M36 7V3h14v4" fill="none"/></g></svg>';
 }
 function updateInventory(){
  mountedArm.visible=hasArm&&armEquipped;
@@ -836,7 +835,7 @@ function chooseInspection(type){
  }
  const model=(type==='arm'?mountedArm:cell).clone(true);model.visible=true;
  if(type==='cell')model.rotation.x=0;
- model.position.set(0,type==='arm'?1.7:.75,0);model.scale.setScalar(type==='arm'?1.2:1.45);itemModel.add(model);
+ model.position.set(0,type==='arm'?1.7:.75,0);model.scale.setScalar(type==='arm'?1.2:2.1);itemModel.add(model);
  document.querySelector('#inspection-title').textContent=type==='arm'?'INDUSTRIAL MANIPULATOR':'PORTABLE POWER PACK';
  document.querySelector('#inspection-description').textContent=type==='arm'?'Interchangeable yellow-and-black industrial gripper. Used for heavy mechanical releases and service switches.':'Sealed auxiliary energy cartridge for MU-1. Consume with Q to restore internal charge.';
  document.querySelector('#inspection-specs').textContent=type==='arm'?'RIGHT MOUNT · MECHANICAL GRIPPER · 85 N · '+(armEquipped?'INSTALLED':'STOWED'):'ENERGY CARTRIDGE · +55% CHARGE · '+(hasCell?'READY':'USED');
