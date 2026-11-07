@@ -326,70 +326,44 @@ function triggerDeath(){if(godMode||deathScreen.classList.contains('open'))retur
 function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);const aspect=w/h,view=8;camera.left=-view*aspect;camera.right=view*aspect;camera.top=view;camera.bottom=-view;camera.updateProjectionMatrix()}
 window.addEventListener('resize',resize);resize();
 const clock=new THREE.Clock();
-// Two-bone inverse kinematics. Targets are held in world space during stance,
-// so the feet stay planted as the robot moves across the station floor.
-const footLocal=new THREE.Vector3(),hipWorld=new THREE.Vector3();
-const worldFoot=new THREE.Vector3(),tmpFoot=new THREE.Vector3();
-function solveLegIK(l,worldTarget,dt){
- robot.updateMatrixWorld(true);
- hipWorld.set(0,0,0);l.hip.localToWorld(hipWorld);
- footLocal.copy(worldTarget);robot.worldToLocal(footLocal);
- const hy=l.hip.position.y,hz=l.hip.position.z;
- const dy=footLocal.y-hy,dz=footLocal.z-hz;
+// Stable two-link mechanical gait. The target is defined in robot-local space,
+// preventing world-space planting jumps when turning or crossing a phase boundary.
+const gaitTarget=new THREE.Vector3();
+function solveLegIK(l,target,dt){
  const upper=Math.hypot(l.thighB[1],l.thighB[2]);
  const lower=Math.hypot(l.shinB[1],l.shinB[2]);
- const distance=Math.max(.07,Math.min(upper+lower-.012,Math.hypot(dy,dz)));
- const ux=dy/Math.max(.0001,Math.hypot(dy,dz));
- const uz=dz/Math.max(.0001,Math.hypot(dy,dz));
- const along=(upper*upper-lower*lower+distance*distance)/(2*distance);
- const side=Math.sqrt(Math.max(0,upper*upper-along*along));
- // Choose the rear-facing knee solution characteristic of the reference.
- const ky=along*ux+side*uz;
- const kz=along*uz-side*ux;
- const lowerY=dy-ky,lowerZ=dz-kz;
- const baseUpper=Math.atan2(l.thighB[2],l.thighB[1]);
- const baseLower=Math.atan2(l.shinB[2],l.shinB[1]);
- const upperRotation=Math.atan2(kz,ky)-baseUpper;
- const lowerRotation=Math.atan2(lowerZ,lowerY)-baseLower-upperRotation;
- const blend=Math.min(1,dt*20);
- l.hip.rotation.x=THREE.MathUtils.lerp(l.hip.rotation.x,upperRotation,blend);
- l.knee.rotation.x=THREE.MathUtils.lerp(l.knee.rotation.x,lowerRotation,blend);
- l.ankle.rotation.x=THREE.MathUtils.lerp(l.ankle.rotation.x,-l.hip.rotation.x-l.knee.rotation.x,blend);
+ const dy=target.y-l.hip.position.y;
+ const dz=target.z-l.hip.position.z;
+ const actual=Math.hypot(dy,dz);
+ const reach=THREE.MathUtils.clamp(actual,.18,upper+lower-.035);
+ const uy=dy/Math.max(.0001,actual),uz=dz/Math.max(.0001,actual);
+ const along=(upper*upper-lower*lower+reach*reach)/(2*reach);
+ const perpendicular=Math.sqrt(Math.max(0,upper*upper-along*along));
+ // Positive perpendicular here places the knee towards -Z (behind the body).
+ const ky=along*uy-perpendicular*uz;
+ const kz=along*uz+perpendicular*uy;
+ const shinY=reach*uy-ky,shinZ=reach*uz-kz;
+ const restUpper=Math.atan2(l.thighB[2],l.thighB[1]);
+ const restLower=Math.atan2(l.shinB[2],l.shinB[1]);
+ const upperAngle=Math.atan2(kz,ky)-restUpper;
+ const lowerAngle=Math.atan2(shinZ,shinY)-restLower-upperAngle;
+ const lerpAngle=(current,destination,t)=>current+Math.atan2(Math.sin(destination-current),Math.cos(destination-current))*t;
+ const t=Math.min(1,dt*14);
+ l.hip.rotation.x=lerpAngle(l.hip.rotation.x,upperAngle,t);
+ l.knee.rotation.x=lerpAngle(l.knee.rotation.x,lowerAngle,t);
+ l.ankle.rotation.x=lerpAngle(l.ankle.rotation.x,-l.hip.rotation.x-l.knee.rotation.x,t);
+ l.hip.rotation.z=THREE.MathUtils.lerp(l.hip.rotation.z,0,t);
+ l.knee.rotation.z=THREE.MathUtils.lerp(l.knee.rotation.z,0,t);
 }
 function animateGait(dt,moving){
- const cycle=walkTime/(Math.PI*2);
- robot.updateMatrixWorld(true);
  for(const l of legs){
-   const phase=((cycle+(l.side===1?.5:0))%1+1)%1;
-   const stance=phase<.60;
-   // Neutral foot location is calibrated to the current mechanical ankle.
-   const neutral=new THREE.Vector3(l.hip.position.x+l.thighB[0]+l.shinB[0],.27,.18);
-   tmpFoot.copy(neutral);robot.localToWorld(tmpFoot);
-   if(!l.plant)l.plant=tmpFoot.clone();
-   if(!moving){
-     // Return smoothly to a grounded standing pose.
-     l.plant.lerp(tmpFoot,Math.min(1,dt*7));
-     solveLegIK(l,l.plant,dt);
-     l.lastSwing=true;
-     continue;
-   }
-   if(stance){
-     if(l.lastSwing)l.plant.copy(tmpFoot);
-     l.lastSwing=false;
-     worldFoot.copy(l.plant);
-   }else{
-     if(!l.lastSwing)l.swingStart=l.plant.clone();
-     l.lastSwing=true;
-     const t=(phase-.60)/.40;
-     // Move target ahead in the robot's forward (+Z) direction.
-     const ahead=new THREE.Vector3(neutral.x,.27,neutral.z+.48);
-     robot.localToWorld(ahead);
-     const smooth=t*t*(3-2*t);
-     worldFoot.copy(l.swingStart).lerp(ahead,smooth);
-     worldFoot.y+=Math.sin(t*Math.PI)*.28;
-     if(t>.98)l.plant.copy(ahead);
-   }
-   solveLegIK(l,worldFoot,dt);
+   const phase=walkTime+(l.side===1?Math.PI:0);
+   const stride=moving?Math.cos(phase)*.25:0;
+   // Smooth half-wave: lift at the centre of the forward swing.
+   const lift=moving?Math.pow(Math.max(0,Math.sin(phase)),2)*.21:0;
+   gaitTarget.set(l.hip.position.x+l.thighB[0]+l.shinB[0],
+     .22+lift,.16+stride);
+   solveLegIK(l,gaitTarget,dt);
  }
 }
 function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');controls.update();if(!paused&&!ended&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);if(len>0){
