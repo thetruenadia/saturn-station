@@ -35,6 +35,110 @@ function machine(x,z,colour=greenMat){const g=new THREE.Group();g.position.set(x
 machine(-5,-3);machine(5,-2, rustMat);
 function crate(x,z){const g=new THREE.Group();g.position.set(x,0,z);box(g,1,.8,1,mat(0x3d392d,.95,.15),0,.4,0);for(let i=-1;i<=1;i++)box(g,.08,.84,.08,edgeMat,i*.4,.4,.51);box(g,1.04,.08,1.04,rustMat,0,.82,0);scene.add(g)}
 crate(-7,3);crate(7,4);crate(6,-5);
+// Maintenance deck B-7: dense, abandoned industrial infrastructure.
+// Massive machinery is kept to the walls and high ceiling to preserve navigation.
+const industrial=new THREE.Group();scene.add(industrial);
+const iron=mat(0x343a35,.9,.48),oxidised=mat(0x514638,.97,.3);
+const conduit=mat(0x252d2a,.83,.58),insulation=mat(0x171d1b,.98,.1);
+const fadedSage=mat(0x465449,.91,.28),warning=mat(0x8a7748,.87,.2);
+function pipeBetween(parent,a,b,r,material,segments=10){
+ const av=new THREE.Vector3(...a),bv=new THREE.Vector3(...b),delta=bv.clone().sub(av);
+ const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),segments),material);
+ mesh.position.copy(av).add(bv).multiplyScalar(.5);
+ mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());
+ mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
+}
+function industrialTube(points,r,material){
+ const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));
+ const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,30,r,7,false),material);
+ mesh.castShadow=true;industrial.add(mesh);
+}
+// Tall wall frames, cross-bracing and layered service panels.
+for(const x of [-8.3,-5.6,-2.9,-.2,2.5,5.2,7.9]){
+ box(industrial,.26,6.4,.34,iron,x,3.25,-6.47);
+ box(industrial,.56,.18,.5,oxidised,x,1.05,-6.25);
+ box(industrial,.56,.18,.5,oxidised,x,4.65,-6.25);
+ box(industrial,2.4,.12,.25,iron,x+1.15,3.7,-6.35);
+ for(let k=0;k<3;k++)box(industrial,1.85,.65,.12,k===1?fadedSage:wallMat,x+1.05,1.65+k*.85,-6.31);
+}
+for(const x of [-8.65,8.65]){
+ for(let z=-5.4;z<=5.5;z+=2.25){
+  box(industrial,.4,6.1,.38,iron,x,3.1,z);
+  box(industrial,.52,.16,1.85,oxidised,x,4.5,z+.75);
+ }
+}
+// Heavy overhead cylindrical processing vessels along the rear of the room.
+for(const x of [-4.4,3.8]){
+ const vessel=new THREE.Group();vessel.position.set(x,5.35,-5.25);industrial.add(vessel);
+ const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.94,.94,6.3,16),oxidised);
+ barrel.rotation.z=Math.PI/2;barrel.castShadow=true;vessel.add(barrel);
+ for(const offset of [-2.7,-1.5,0,1.5,2.7]){
+  const band=new THREE.Mesh(new THREE.CylinderGeometry(1.015,1.015,.16,16),iron);
+  band.rotation.z=Math.PI/2;band.position.x=offset;vessel.add(band);
+ }
+ for(let k=0;k<7;k++){
+  const x0=-2.6+k*.85;
+  industrialTube([[x+x0,5.96,-5.95],[x+x0+.12,5.6,-6.18],[x+x0+.3,4.8,-6.28]],.035,conduit);
+ }
+}
+// Banks of large pipes turn down the rear wall, with couplings and collars.
+for(let i=0;i<11;i++){
+ const x=-7.5+i*1.45;
+ const r=i%3===0?.21:.115;
+ industrialTube([[x,6.2,-5.55],[x,5.3,-5.45],[x+.15,4.8,-6.03],[x+.18,3.15,-6.08],[x+.18,1.4,-6.12]],r,i%4===0?oxidised:conduit);
+ for(const y of [2.05,3.85])pipeBetween(industrial,[x+.18,y-.08,-6.08],[x+.18,y+.08,-6.08],r*1.3,iron);
+}
+// Long pipe racks and hanging cable bundles under the roof.
+for(let i=0;i<12;i++){
+ const x=-7.6+i*1.32;
+ industrialTube([[x,6.15,-6.1],[x-.15,5.7,-4.9],[x+.12,5.65,-3.25],[x+.05,5.9,-1.1]],.065+(i%3)*.023,i%4===0?oxidised:conduit);
+ if(i%2===0)industrialTube([[x,5.65,-3.3],[x+.3,5.1,-3.0],[x+.55,4.65,-3.35],[x+.6,4.95,-4.05]],.025,insulation);
+}
+for(const z of [-5.9,-3.8,-1.6,1.1,3.6]){
+ box(industrial,17.4,.22,.2,iron,0,6.3,z);
+ for(const x of [-7,-3.5,0,3.5,7])box(industrial,.16,.9,.16,iron,x,5.8,z);
+}
+// Perimeter grated service walkways, edge rails, and narrow access channels.
+for(const side of [-1,1]){
+ const x=side*7.65;
+ box(industrial,1.55,.13,11.6,iron,x,.085,-.1,false);
+ for(let z=-5.65;z<5.6;z+=.29)box(industrial,1.45,.018,.055,rawSteel,x,.17,z,false);
+ for(let z=-5.5;z<=5.5;z+=1.8){
+  pipeBetween(industrial,[side*6.8,.17,z],[side*6.8,1.1,z],.035,warning);
+ }
+ pipeBetween(industrial,[side*6.8,1.1,-5.5],[side*6.8,1.1,5.5],.035,warning);
+}
+// Wall-mounted service machinery and readable low-level silhouettes.
+for(const x of [-6.5,-3.3,.1,3.25,6.5]){
+ const g=new THREE.Group();g.position.set(x,0,-6.05);industrial.add(g);
+ box(g,1.35,1.8,.62,iron,0,1.5,0);
+ box(g,1.1,1.3,.09,fadedSage,0,1.55,.38);
+ for(const dx of [-.42,.42]){
+  pipeBetween(g,[dx,.55,.45],[dx,2.3,.45],.08,oxidised);
+  const valve=new THREE.Mesh(new THREE.TorusGeometry(.19,.035,6,12),warning);
+  valve.position.set(dx,1.05,.55);g.add(valve);
+ }
+ for(let k=0;k<5;k++)box(g,.12,.18,.05,insulation,-.43+k*.22,2.12,.46);
+}
+// Oil-stained access plates and exposed drainage slots across the deck.
+for(let i=0;i<28;i++){
+ const x=-6.9+(i*2.37)%13.8,z=-5.4+(i*3.19)%10.8;
+ box(industrial,.78,.015,.5,i%4===0?oxidised:iron,x,.014,z,false);
+ for(const dx of [-.32,.32])for(const dz of [-.19,.19])
+  cylinder(industrial,.023,.023,.012,insulation,x+dx,.03,z+dz);
+}
+for(const z of [-4.3,-1.8,1.1,3.7]){
+ box(industrial,11.5,.024,.3,insulation,0,.022,z,false);
+ for(let x=-5.4;x<5.5;x+=.32)box(industrial,.035,.03,.26,iron,x,.044,z,false);
+}
+// Restrained, uneven practical lights; the room remains shadowy.
+for(const x of [-6,0,6]){
+ box(industrial,1.4,.11,.42,iron,x,5.75,-3.8);
+ const lamp=box(industrial,1.13,.035,.28,screenMat,x,5.67,-3.8,false);
+ lamp.material=new THREE.MeshStandardMaterial({color:0xb2ba91,emissive:0x758263,emissiveIntensity:1.3});
+ const glow=new THREE.PointLight(0xb5b18a,4.2,7,2);glow.position.set(x,5.3,-3.7);industrial.add(glow);
+}
+
 // The lock-service manipulator: a loose, recognisable mechanical component on the deck.
 const interactables=[];
 const arm=new THREE.Group();arm.position.set(5,0,-3);arm.scale.setScalar(1.35);
