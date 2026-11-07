@@ -88,3 +88,9 @@
 #inspection-description{font-size:9px;color:#aebaa5;line-height:1.5;margin:8px 0}
 #inspection-specs{font-size:8px;line-height:1.6}
 @media(max-width:600px){.inventory-content{grid-template-columns:1fr}.inventory-grid{gap:5px}.inventory-grid-slot{min-height:44px}.inspection-layout{grid-template-columns:110px minmax(0,1fr)}#item-model-preview{width:110px;height:100px}.unit-silhouette{height:180px}}
+.inventory-grid-slot.selected{outline:2px solid #f5d88d;outline-offset:2px;background:radial-gradient(circle,#63704b,#253325);box-shadow:inset 0 0 16px #edcf7520}
+#equip-inspected{margin-top:8px;padding:7px 14px;border:1px solid #b6aa72;background:#293b2b;color:#eadcae;font:10px monospace;cursor:pointer}
+#equip-inspected[hidden]{display:none}
+#sound-toggle{font:9px monospace;width:auto;padding:6px 8px;white-space:nowrap}
+#interaction-marker{white-space:nowrap;font:9px monospace;padding:6px 8px;background:#101813df;border:1px solid #baa66d}
+.nearby-row small{max-width:155px;text-align:right;line-height:1.4}
