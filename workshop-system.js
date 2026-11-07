@@ -211,8 +211,8 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  function showPreview(type){
   if(previewType===type)return;
   previewType=type;previewModel.clear();
-  if(type==='arm'&&armModel){const model=armModel.clone(true);model.visible=true;model.scale.setScalar(.75);model.position.set(0,.8,0);previewModel.add(model)}else if(type&&catalogue[type])makePartModel(previewModel,type,1.65);
-  panel.querySelector('#workshop-preview-label').textContent=type==='arm'?'INDUSTRIAL MANIPULATOR':type?catalogue[type].name:'SELECT A COMPONENT';
+  if(type==='arm'&&armModel){const model=armModel.clone(true);model.visible=true;model.getObjectByName('door-access-probe')&&(model.getObjectByName('door-access-probe').visible=true);model.scale.setScalar(.75);model.position.set(0,.8,0);previewModel.add(model)}else if(type&&catalogue[type])makePartModel(previewModel,type,1.65);
+  panel.querySelector('#workshop-preview-label').textContent=type==='arm'?'ACCESS PROBE / STANDARD MANIPULATOR':type?catalogue[type].name:'SELECT A COMPONENT';
  }
  function stacked(items){const groups=new Map();for(const item of items){const key=item.type;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item)}return [...groups.values()]}
  function craftAvailable(){return specUnlocked&&!probeInstalled&&Math.hypot(robot.position.x-workbench.position.x,robot.position.z-workbench.position.z)<2.5&&Object.entries(recipe).every(([type,n])=>inventory.filter(x=>x.type===type).length>=n)}
