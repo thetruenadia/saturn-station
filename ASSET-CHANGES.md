@@ -26,3 +26,11 @@ Verification: 16 automated geometry, motion and gameplay regression tests passed
 - Power-off resets terminal authentication. Reduced motion disables decorative ending animation and powered machinery movement.
 
 Validation: 22 local automated tests passed, plus existing lighting/ownership checks. Actual browser checks verified timed boot, wrong-password rejection, ETNA login, physical note pickup, reading its file, saving through Record Entry, opening the door, reaching the congratulations screen, credits, menu destination and restarting. Weighted pickup completed in the browser. Developer power/position commands were used to reach targeted checks; this is not an uninterrupted full playthrough. Sound synthesis was implemented; listening quality and mobile layout were not audited in this pass.
+
+## Supplied main menu integration
+
+Replaced the temporary title/menu screen with the supplied “Saturn Station - Demo.html” design: Enceladus background, slow drift, thin Rajdhani typography, selection line and matching load/credits/exit panels. The supplied embedded JPEG is extracted into a local image asset; the supplied background credit is retained.
+
+Start game opens the real demo and preserves previous records. Resume last save and Load save restore full game snapshots, bypassing the opening cinematic and preserving saved door state. Existing pre-menu progress appears as a local record. New runs use separate save slots; autosave and terminal Record Entry update the current slot. Save deletion requires explicit confirmation. Pause → Main Menu and the completion screen's Go to Menu open this same supplied design. Exit ends the session while retaining saved records; the browser tab can then be closed normally.
+
+Verified in the actual browser: desktop visual design, narrow 390×844 layout, new game, pause return, older save selection, Resume last save, credits and exit confirmation/session-ended view. All 29 local regression tests passed. Version 0.1 remains untouched.

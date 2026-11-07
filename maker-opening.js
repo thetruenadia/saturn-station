@@ -94,5 +94,6 @@ export function createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,onCo
   if(s.done&&!finished){finished=true;button.hidden=false;button.textContent='REBOOT · ENTER WORKSHOP';}
  }
  update(0);
- return {camera,resize,update,get active(){return active;},get elapsed(){return elapsed;}};
+ return {camera,resize,update,skip:finish,get active(){return active;},get elapsed(){return elapsed;}};
 }
+

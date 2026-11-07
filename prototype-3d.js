@@ -1,12 +1,15 @@
+import {createMainMenu} from './main-menu.js?v=menu1';
+import {consumeLaunch} from './menu-saves.js?v=menu1';
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
-import {createTerminalBrowser,createDemoEnding} from './terminal-browser.js?v=etna1';
+import {createTerminalBrowser,createDemoEnding} from './terminal-browser.js?v=menu1';
 import {installReferenceAssets} from './reference-assets.js?v=etna1';
 import { applyArtDirection } from './station-art.js?v=etna1';
 
-import {createMakerOpening} from './maker-opening.js?v=skip-y';
+import {createMakerOpening} from './maker-opening.js?v=menu1';
 
-let opening;
+let opening,mainMenu;
+let menuLaunch=null;try{menuLaunch=consumeLaunch(sessionStorage)}catch{}
 const viewport=document.querySelector('#viewport');
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x242923);
@@ -650,7 +653,7 @@ function showNote(){Object.keys(keys).forEach(k=>keys[k]=false);setPaused(true);
 noteDialog.addEventListener('close',()=>setPaused(false));
 const pauseScreen=document.querySelector('#pause-screen'),deathScreen=document.querySelector('#death-screen'),devConsole=document.querySelector('#dev-console'),consoleOutput=document.querySelector('#console-output'),consoleInput=document.querySelector('#console-input');
 function setPaused(value){paused=value;pauseScreen.classList.toggle('open',paused);pauseScreen.setAttribute('aria-hidden',String(!paused));document.body.classList.toggle('paused',paused);if(paused){target=null;Object.keys(keys).forEach(k=>keys[k]=false)}}
-function restartDemo(){resettingProgress=true;try{localStorage.removeItem(SAVE_KEY)}catch{}location.reload()}
+function restartDemo(){resettingProgress=true;if(mainMenu){mainMenu.startNew();return;}try{localStorage.removeItem(SAVE_KEY)}catch{}location.reload()}
 document.querySelector('#resume-game').addEventListener('click',()=>setPaused(false));document.querySelector('#pause-restart').addEventListener('click',restartDemo);document.querySelector('#death-restart').addEventListener('click',restartDemo);
 function consoleLog(s){consoleOutput.textContent+='\n'+s;consoleOutput.scrollTop=consoleOutput.scrollHeight}
 function runCommand(raw){const p=raw.trim().split(/\s+/),cmd=(p.shift()||'').toLowerCase(),n=Number(p[0]);if(!cmd)return;
@@ -667,7 +670,7 @@ else if(cmd==='kill'){charge=0;updateCharge();triggerDeath()}
 else if(cmd==='clear')consoleOutput.textContent='SATURN STATION // 0.2 DEV CONSOLE';
 else consoleLog('UNKNOWN COMMAND. Type help.')}
 let godMode=false;document.querySelector('#console-form').addEventListener('submit',e=>{e.preventDefault();const value=consoleInput.value;consoleLog('> '+value);runCommand(value);consoleInput.value=''});
-window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(opening?.active){if(k==='escape'&&opening.elapsed>0)setPaused(!paused);return;}if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){terminalUI.key(e);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
+window.addEventListener('keydown',e=>{if(mainMenu?.active)return;const k=e.key.toLowerCase();if(opening?.active){if(k==='escape'&&opening.elapsed>0)setPaused(!paused);return;}if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){terminalUI.key(e);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
 if(k==='f2'){e.preventDefault();devConsole.classList.add('open');devConsole.setAttribute('aria-hidden','false');consoleInput.focus();return}
 if(k==='i'&&inventory.classList.contains('open')){closeInventory();return}
 if(ended)return;
@@ -813,7 +816,7 @@ const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const equipButton=document.createElement('button');equipButton.id='equip-inspected';equipButton.hidden=true;
 document.querySelector('.inspection-details').append(equipButton);
 equipButton.addEventListener('click',()=>setArmEquipped(!armEquipped));
-const demoEnding=createDemoEnding({restart:restartDemo,sound:playSound,reducedMotion});
+const demoEnding=createDemoEnding({restart:restartDemo,sound:playSound,reducedMotion,onMenu:()=>mainMenu.show()});
 function setArmEquipped(value){
  if(!hasArm)return;
  armEquipped=value;updateInventory();saveProgress();playSound('equip');
@@ -955,9 +958,9 @@ function playSound(kind){
  const [a,b,d]=tones[kind]||tones.select;o.type=kind==='terminal-key'?'square':kind==='step'?'triangle':'sine';o.frequency.setValueAtTime(a,now);o.frequency.exponentialRampToValueAtTime(b,now+d);g.gain.setValueAtTime(.001,now);g.gain.exponentialRampToValueAtTime(kind==='terminal-key'?.06:kind==='step'?.4:.22,now+.015);g.gain.exponentialRampToValueAtTime(.001,now+d);o.connect(g).connect(audioMaster);o.start(now);o.stop(now+d+.02);o.onended=()=>{o.disconnect();g.disconnect()};
 }
 function saveProgress(){
- if(opening?.active)return;
+ if(opening?.active||mainMenu?.active)return;
  if(resettingProgress)return;
- try{localStorage.setItem(SAVE_KEY,JSON.stringify({version:1,charge,hasArm,armEquipped,caseOpen,hasNote,hasCell,usedCell,powerOn,doorOpen,terminalBooted,x:robot.position.x,z:robot.position.z,heading:robot.rotation.y}));return true}catch{return false}
+ try{const progress={version:1,charge,hasArm,armEquipped,caseOpen,hasNote,hasCell,usedCell,powerOn,doorOpen,terminalBooted,x:robot.position.x,z:robot.position.z,heading:robot.rotation.y};if(mainMenu)mainMenu.record(progress);else localStorage.setItem(SAVE_KEY,JSON.stringify(progress));return true}catch{return false}
 }
 function restoreProgress(){
  try{
@@ -994,7 +997,7 @@ function moveRobot(dx,dz){
  if(canOccupy(robot.position.x+dx,robot.position.z))robot.position.x+=dx;
  if(canOccupy(robot.position.x,robot.position.z+dz))robot.position.z+=dz;
 }
-function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta();const dt=Math.min(elapsed,.04);referenceAssets.update(paused||ended?0:dt,powerOn,reducedMotion,!!pickup&&pickup.time>.53);if(opening?.active){controls.enabled=false;if(!paused)opening.update(elapsed);renderer.render(scene,opening.camera);return;}controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open')&&!terminalOpen;// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
+function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta();const dt=Math.min(elapsed,.04);if(mainMenu?.active)return;referenceAssets.update(paused||ended?0:dt,powerOn,reducedMotion,!!pickup&&pickup.time>.53);if(opening?.active){controls.enabled=false;if(!paused)opening.update(elapsed);renderer.render(scene,opening.camera);return;}controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open')&&!terminalOpen;// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
 const desiredFocus=new THREE.Vector3(robot.position.x,1.25,robot.position.z);
 const followDelta=desiredFocus.sub(controls.target).multiplyScalar(1-Math.exp(-dt*4));
 controls.target.add(followDelta);camera.position.add(followDelta);
@@ -1032,6 +1035,9 @@ body.rotation.x=THREE.MathUtils.damp(body.rotation.x,chassisPitch,7,dt);
 if(!paused&&!ended&&!godMode&&charge>0){charge=Math.max(0,charge-dt*.1);updateCharge();if(charge===0){notify('POWER DEPLETED');triggerDeath()}}
 if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);leftLeaf.position.x=-1.85*t;rightLeaf.position.x=1.85*t;if(t>=1){doorOpening=false;doorOpen=true;updateTerminalStatus();task.textContent='Exit door open. Terminal remains available.';notify('DOOR OPEN')}}
 updateStationSystems(dt);renderer.render(scene,camera);updateNearbyUI()}
-opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
+opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();if(menuLaunch?.mode!=='resume'){doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;}updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
+mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound});
+const returnMenuButton=document.createElement('button');returnMenuButton.textContent='MAIN MENU';returnMenuButton.addEventListener('click',()=>{hideTerminal();closeInventory();saveProgress();setPaused(true);mainMenu.show()});document.querySelector('#pause-restart').after(returnMenuButton);
+if(menuLaunch?.mode==='resume')opening.skip();else if(!menuLaunch)mainMenu.show();
 resize();updateStationSystems(0);animate();document.querySelector('#loading').classList.add('hidden');document.querySelector('#charge').textContent='60%';document.querySelector('#charge-bar').style.width='60%';updateCharge();updateInventory();refreshDirective();say('MU-1 ONLINE.');
 

@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {PROGRESS_KEY,SLOTS_KEY,ACTIVE_KEY,LAUNCH_KEY,listSaves,recordSave,newGame,loadSave,deleteSave,consumeLaunch} from '../menu-saves.js';
+const store=()=>{const m=new Map();return {getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k)}};
+const progress=(x=1)=>({version:1,charge:60,x,z:3,hasArm:true,hasNote:true,powerOn:true,doorOpen:true});
+test('a previous local game appears in the supplied menu without migration loss',()=>{const s=store();s.setItem(PROGRESS_KEY,JSON.stringify(progress()));const saves=listSaves(s);assert.equal(saves.length,1);assert.equal(saves[0].progress.hasNote,true);assert.equal(saves[0].id,'previous-local-record')});
+test('recording updates the same slot and retains the complete game snapshot',()=>{const s=store();recordSave(s,progress(),10);recordSave(s,progress(5),20);assert.equal(listSaves(s).length,1);assert.equal(listSaves(s)[0].progress.x,5);assert.equal(listSaves(s)[0].progress.doorOpen,true)});
+test('starting a new game preserves the previous saved record',()=>{const s=store();recordSave(s,progress(),10);newGame(s,30);assert.equal(s.getItem(PROGRESS_KEY),null);assert.equal(listSaves(s).length,1);recordSave(s,progress(8),40);assert.equal(listSaves(s).length,2);assert.equal(listSaves(s)[0].t,40)});
+test('load chooses the requested snapshot rather than the latest record',()=>{const s=store();recordSave(s,progress(1),10);const old=listSaves(s)[0].id;newGame(s,20);recordSave(s,progress(8),30);loadSave(s,old);assert.equal(JSON.parse(s.getItem(PROGRESS_KEY)).x,1);assert.equal(s.getItem(ACTIVE_KEY),old)});
+test('deleting active save removes its resume entry while preserving other slots',()=>{const s=store();recordSave(s,progress(),10);newGame(s,20);recordSave(s,progress(8),30);const current=s.getItem(ACTIVE_KEY);deleteSave(s,current);assert.equal(s.getItem(PROGRESS_KEY),null);assert.equal(listSaves(s).length,1)});
+test('malformed records do not become loadable games',()=>{const s=store();s.setItem(SLOTS_KEY,'[{"id":"bad","progress":{"version":1}}]');s.setItem(PROGRESS_KEY,'not json');assert.equal(listSaves(s).length,0);assert.throws(()=>loadSave(s,'bad'))});
+test('launch intent is consumed once so reload returns to the menu',()=>{const s=store();s.setItem(LAUNCH_KEY,JSON.stringify({mode:'resume'}));assert.equal(consumeLaunch(s).mode,'resume');assert.equal(consumeLaunch(s),null)});

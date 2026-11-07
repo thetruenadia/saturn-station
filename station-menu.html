@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Saturn Station - Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#05080c; --white:#f4f8fb; --dim:rgba(244,248,251,.58); --faint:rgba(244,248,251,.3);
+  --ice:#9fd3ea;
+  --sans:'Rajdhani','Arial Narrow',Arial,sans-serif;
+  box-sizing:border-box;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0;background:#000;overflow:hidden}
+body{display:grid;place-items:center}
+button{font-family:var(--sans);font-weight:300}
+
+/* 2576 x 1408 stage, scaled to fit; 1cqw = 1% of stage width */
+.stage{position:relative;width:min(100vw,calc(100vh * 2576 / 1408));aspect-ratio:2576/1408;container-type:size;overflow:hidden;
+  background:var(--ink);color:var(--white);font-family:var(--sans);font-weight:300}
+
+/* ---- backdrop ---- */
+.bg{position:absolute;inset:0;overflow:hidden}
+.bg .photo{position:absolute;inset:-3%;
+  background:url("./assets/menu-enceladus.jpg") center 40%/cover no-repeat;
+  filter:saturate(.7) contrast(1.08) brightness(.82);animation:drift 60s ease-in-out infinite alternate}
+.bg .tint{position:absolute;inset:0;background:linear-gradient(160deg,#0a2a3d 0%,#10394f 50%,#03070b 100%);mix-blend-mode:color;opacity:.55}
+.bg .shade{position:absolute;inset:0;
+  background:
+    linear-gradient(90deg,rgba(3,6,9,.94) 0%,rgba(3,6,9,.78) 26%,rgba(3,6,9,.25) 52%,rgba(3,6,9,0) 72%),
+    radial-gradient(120% 90% at 65% 45%,transparent 45%,rgba(0,0,0,.65) 100%)}
+.bg .grain{position:absolute;inset:0;opacity:.09;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+@keyframes drift{from{transform:scale(1.02) translate3d(0,0,0)}to{transform:scale(1.1) translate3d(-1.5%,-1%,0)}}
+
+.fade{position:absolute;inset:0;background:var(--ink);z-index:50;pointer-events:none;animation:open 3.2s ease-out .2s forwards}
+@keyframes open{to{opacity:0;visibility:hidden}}
+
+/* ---- layout ---- */
+.menu-screen{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;justify-content:center;padding:0 7cqw}
+h1{font-weight:300;font-size:9.5cqw;line-height:.86;letter-spacing:.015em;margin:0 0 6cqw;text-shadow:0 0 4cqw rgba(159,211,234,.25)}
+h1 span{display:block}
+h1 span:last-child{font-size:4cqw;padding-left:.6cqw;margin-top:1.4cqw;letter-spacing:.35em;color:var(--dim)}
+.tag{font-size:1.5cqw;letter-spacing:.14em;color:var(--dim);margin:-3.6cqw 0 4cqw}
+
+nav ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.2cqw}
+.item{appearance:none;background:none;border:0;color:var(--dim);font-size:2.35cqw;line-height:1;letter-spacing:.07em;
+  display:flex;align-items:center;padding:.75cqw 0;cursor:pointer;text-align:left;transition:color .25s}
+.item::before{content:"";display:block;height:1px;width:0;background:var(--ice);margin-right:0;transition:width .35s cubic-bezier(.2,.7,.2,1),margin .35s cubic-bezier(.2,.7,.2,1)}
+.item:hover,.item:focus-visible,.item.sel{color:var(--white)}
+.item:hover::before,.item:focus-visible::before,.item.sel::before{width:3.2cqw;margin-right:1.3cqw}
+.item:focus-visible{outline:none}
+.item[aria-disabled="true"]{color:var(--faint);cursor:not-allowed}
+.item[aria-disabled="true"]::before{background:var(--faint)}
+.item[aria-disabled="true"]:hover,.item[aria-disabled="true"].sel{color:var(--faint)}
+.item small{font-size:1.25cqw;margin-left:1.4cqw;color:var(--faint);letter-spacing:.08em}
+.gap{height:1.4cqw}
+
+/* ---- overlay panels ---- */
+.panel{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;
+  background:rgba(2,5,8,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.panel.open{display:flex;animation:in .35s ease-out}
+@keyframes in{from{opacity:0}to{opacity:1}}
+.card{width:38cqw;max-height:80cqh;overflow:auto;padding:3cqw;background:rgba(8,16,24,.84);border:1px solid rgba(159,211,234,.18)}
+.card h2{font-weight:300;font-size:3.6cqw;letter-spacing:.04em;margin:0 0 1.4cqw}
+.card p{font-size:1.6cqw;line-height:1.45;letter-spacing:.03em;color:rgba(244,248,251,.82);margin:0 0 1.1cqw}
+.card .small{font-size:1.3cqw;color:var(--dim)}
+.row{display:flex;gap:1cqw;flex-wrap:wrap;margin-top:1.8cqw}
+.btn{appearance:none;background:none;color:var(--white);border:1px solid rgba(244,248,251,.35);padding:.7cqw 1.8cqw;font-size:1.6cqw;letter-spacing:.08em;cursor:pointer;transition:background .2s,border-color .2s}
+.btn:hover,.btn:focus-visible{background:rgba(159,211,234,.14);border-color:var(--ice);outline:none}
+.slots{list-style:none;margin:0;padding:0}
+.slots li{display:flex;align-items:center;justify-content:space-between;gap:1cqw;border-top:1px solid rgba(244,248,251,.12);padding:1cqw 0}
+.slots li:last-child{border-bottom:1px solid rgba(244,248,251,.12)}
+.slots .meta{color:var(--dim);font-size:1.3cqw;letter-spacing:.05em}
+.slots .name{font-size:1.9cqw;letter-spacing:.05em}
+.slots .del{color:var(--faint);font-size:1.3cqw;padding:.4cqw .8cqw;border-color:transparent}
+
+.full{position:absolute;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;background:var(--ink);text-align:center}
+.full.open{display:flex;animation:in 1s ease-out}
+.full h2{font-weight:300;font-size:5cqw;letter-spacing:.06em;margin:0 0 .6cqw}
+.full p{font-size:1.8cqw;letter-spacing:.08em;color:var(--dim);margin:0 0 2cqw}
+
+@media (prefers-reduced-motion:reduce){.bg .photo{animation:none}.fade{animation-duration:.01s;animation-delay:0s}.item::before{transition:none}}
+
+@media(max-aspect-ratio:1/1){.stage{width:100vw;height:100dvh;aspect-ratio:auto}.menu-screen{padding:0 8cqw}h1{font-size:12cqw;margin-bottom:12cqw}h1 span:last-child{font-size:6cqw}.item{font-size:5.5cqw;padding:2.3cqw 0}.item small{font-size:2.8cqw}.gap{height:4cqw}.card{width:88cqw;padding:6cqw}.card h2{font-size:8cqw}.card p,.btn{font-size:4cqw}.card .small,.slots .meta,.slots .del{font-size:3cqw}.slots .name{font-size:4.5cqw}.full h2{font-size:9cqw}.full p{font-size:4cqw}.row{gap:3cqw}.btn{padding:2cqw 4cqw}}
+</style>
+</head>
+<body>
+<div class="stage">
+<div class="bg" aria-hidden="true"><div class="photo"></div><div class="tint"></div><div class="shade"></div><div class="grain"></div></div>
+<div class="fade" aria-hidden="true"></div>
+
+<main class="menu-screen">
+  <h1><span>Saturn Station</span><span>Demo</span></h1>
+  
+  <nav aria-label="Main menu">
+    <ul id="menu">
+      <li><button class="item" data-act="start">Start game</button></li>
+      <li><button class="item" data-act="resume" id="resume">Resume last save</button></li>
+      <li><button class="item" data-act="load" id="load">Load save</button></li>
+      <li class="gap"></li>
+      <li><button class="item" data-act="credits">Credits</button></li>
+      <li><button class="item" data-act="exit">Exit game</button></li>
+    </ul>
+  </nav>
+</main>
+
+<!-- Load save -->
+<div class="panel" id="p-load" role="dialog" aria-modal="true" aria-label="Load save">
+  <div class="card">
+    <h2>Load save</h2>
+    <ul class="slots" id="slots"></ul>
+    <div class="row"><button class="btn" data-close>Back</button></div>
+  </div>
+</div>
+
+<!-- Credits -->
+<div class="panel" id="p-credits" role="dialog" aria-modal="true" aria-label="Credits">
+  <div class="card">
+    <h2>Credits</h2>
+    <p>Saturn Station — thetruenadia.</p>
+    <p>Menu background: “Enceladus Limb”, a still from the short film <em>Wanderers</em> by Erik Wernquist (erikwernquist.com/wanderers). Used here as a placeholder with a darkened, tinted treatment.</p>
+    <p class="small">MU-1 and station: procedural game artwork. Service arm inspiration: Gregor Kopka.</p>
+    <div class="row"><button class="btn" data-close>Back</button></div>
+  </div>
+</div>
+
+<!-- Exit confirm -->
+<div class="panel" id="p-exit" role="dialog" aria-modal="true" aria-label="Exit game">
+  <div class="card">
+    <h2>Exit game?</h2>
+    <p>Your saves are kept. End this session?</p>
+    <div class="row"><button class="btn" id="exit-yes">Exit game</button><button class="btn" data-close>Stay</button></div>
+  </div>
+</div>
+
+<!-- Closed -->
+<div class="full" id="closed">
+  <h2>Session ended</h2>
+  <p>You can close this tab.</p>
+</div>
+
+</div>
+<script type="module" src="menu-screen.js?v=menu1"></script>
+</body>
+</html>
