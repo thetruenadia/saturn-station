@@ -108,3 +108,18 @@
 #game-settings button:focus-visible,#game-settings input:focus-visible{outline:2px solid #ebce86;outline-offset:4px}
 #game-settings footer{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid #58634e;padding-top:18px;font-size:9px;color:#a5b39a}
 body:has(#game-settings[open]) #pause-screen{visibility:hidden}
+
+
+/* Keep the full inventory reachable without nested scrolling on narrow screens. */
+.equip-slot[role="button"]{cursor:pointer}.equip-slot[role="button"]:focus-visible{outline:2px solid var(--green)}
+@media(max-width:700px){.inventory-content{grid-template-columns:1fr}.unit-diagram{border-right:0;border-bottom:1px solid #59684e55}.inspection-layout{grid-template-columns:110px minmax(0,1fr)}#item-model-preview{width:110px}.hint{white-space:normal;text-align:center;width:90%}}
+@media(max-width:420px){.hotbar-note{white-space:normal;max-width:65px}#hotbar{gap:3px;padding:5px}#nearby-panel{width:155px}.readout{width:125px}}
+
+/* In-engine optical boot: the world continues behind the black sensor overlay. */
+#maker-opening{position:absolute;inset:0;z-index:90;pointer-events:none}
+.boot-black{position:absolute;inset:0;background:#000}
+.boot-caption{position:absolute;bottom:16%;left:8%;right:8%;color:#c3c9a5;font:12px/1.7 monospace;letter-spacing:.15em;text-align:center}
+.boot-action{position:absolute;left:50%;top:60%;transform:translateX(-50%);pointer-events:auto;padding:16px 24px;background:#202a24;color:#d6d4b4;border:1px solid #8b927b;cursor:pointer}
+.boot-action[hidden]{display:none}
+.opening-active .readout,.opening-active .task-readout,.opening-active .hint,.opening-active #hotbar,.opening-active #nearby-panel,.opening-active #interaction-marker,.opening-active .top-right{visibility:hidden}
+.opening-active #pause-screen{z-index:100}

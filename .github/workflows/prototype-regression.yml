@@ -1,0 +1,13 @@
+name: Prototype 0.2 regression
+on: [push, pull_request]
+jobs:
+  opening:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check prototype-3d.js
+      - run: node --check maker-opening.js
+      - run: node --test tests/*.test.mjs

@@ -2,6 +2,9 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.m
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
 import { applyArtDirection } from './station-art.js?v=blue-crt3';
 
+import {createMakerOpening} from './maker-opening.js';
+
+let opening;
 const viewport=document.querySelector('#viewport');
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x242923);
@@ -652,11 +655,11 @@ let terminalBooted=false,terminalOpen=false;
 const terminalOutput=terminalPanel.querySelector('#terminal-output');
 terminalPanel.setAttribute('role','dialog');terminalPanel.setAttribute('aria-label','Station control terminal');
 const terminalStatus=document.createElement('div');terminalStatus.style.cssText='margin-top:28px;border-top:1px solid #5a765b;padding-top:13px;color:#7e9b7c;font-size:11px;letter-spacing:.16em';terminalPanel.append(terminalStatus);
-function updateTerminalStatus(){terminalStatus.textContent='AUXILIARY GRID: '+(powerOn?'ONLINE':'OFFLINE')+'   /   DOOR: '+(doorOpen?'OPEN':'SEALED')+'   /   MU-1 LINK: ACTIVE'}
+function updateTerminalStatus(){terminalStatus.textContent='AUXILIARY GRID: '+(powerOn?'ONLINE':'OFFLINE')+'   /   DOOR: '+(doorOpen?'OPEN':doorOpening?'OPENING':'SEALED')+'   /   MU-1 LINK: ACTIVE'}
 
 function showTerminal(){updateTerminalStatus();terminalOpen=true;terminalPanel.style.display='block';terminalOutput.textContent=terminalBooted?'LOCAL CONTROL // READY\n1  OPEN DOOR\n2  CLOSE DOOR\n3  TURN OFF POWER':'SYSTEM READY\n\nPRESS ENTER TO BOOT TERMINAL';Object.keys(keys).forEach(k=>keys[k]=false)}
 function hideTerminal(){terminalOpen=false;terminalPanel.style.display='none'}
-function terminalKey(k){if(k==='escape'){hideTerminal();return}if(k==='enter'){terminalBooted=true;terminalOutput.textContent='BOOT COMPLETE\nLOCAL CONTROL // READY\n\n1  OPEN DOOR\n2  CLOSE DOOR\n3  TURN OFF POWER';return}if(!terminalBooted){terminalOutput.textContent='PRESS ENTER TO BOOT TERMINAL';return}if(k==='1'){if(!powerOn){terminalOutput.textContent='ERROR: GENERATOR OFFLINE';return}doorOpening=true;hatch.userData.openStarted=performance.now();terminalOutput.textContent='COMMAND 01: OPEN DOOR\nACTUATOR ENGAGED';updateTerminalStatus();task.textContent='Door opening. Explore the exit.'}else if(k==='2'){doorOpening=false;doorOpen=false;leftLeaf.position.x=0;rightLeaf.position.x=0;terminalOutput.textContent='COMMAND 02: CLOSE DOOR\nDOOR SEALED';updateTerminalStatus()}else if(k==='3'){setStationPower(false);terminalBooted=false;updateTerminalStatus();hideTerminal();task.textContent='Restore generator power to use the terminal.';notify('GENERATOR POWER OFF')}}
+function terminalKey(k){if(k==='escape'){hideTerminal();return}if(k==='enter'){terminalBooted=true;terminalOutput.textContent='BOOT COMPLETE\nLOCAL CONTROL // READY\n\n1  OPEN DOOR\n2  CLOSE DOOR\n3  TURN OFF POWER';return}if(!terminalBooted){terminalOutput.textContent='PRESS ENTER TO BOOT TERMINAL';return}if(k==='1'){if(doorOpen||doorOpening)return;if(!powerOn){terminalOutput.textContent='ERROR: GENERATOR OFFLINE';return}doorOpening=true;hatch.userData.openStarted=performance.now();terminalOutput.textContent='COMMAND 01: OPEN DOOR\nACTUATOR ENGAGED';updateTerminalStatus();task.textContent='Door opening. Explore the exit.'}else if(k==='2'){doorOpening=false;doorOpen=false;leftLeaf.position.x=0;rightLeaf.position.x=0;terminalOutput.textContent='COMMAND 02: CLOSE DOOR\nDOOR SEALED';task.textContent='Exit door sealed. Use the terminal to reopen it.';updateTerminalStatus()}else if(k==='3'){setStationPower(false);terminalBooted=false;updateTerminalStatus();hideTerminal();task.textContent='Restore generator power to use the terminal.';notify('GENERATOR POWER OFF')}}
 
 function say(s){logMessages.push(s);if(logMessages.length>8)logMessages.shift()}
 let toastTimer;function notify(s){toast.textContent=s;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600)}
@@ -667,6 +670,8 @@ function itemIcon(type){
  return base+'<g stroke="#403c30" stroke-width="1.5"><path d="M31 7Q27 7 27 12V38L23 44V64Q23 68 29 68H60Q67 68 67 61V37L63 31V12Q63 7 58 7Z" fill="#b5a07a"/><rect x="30" y="13" width="15" height="26" rx="1" fill="#947447"/><path d="M33 18h9m-9 4h9m-9 4h9m-9 4h9" stroke-width="1"/><path d="M50 18l5-7 5 7Zm0 12 5 7 5-7Z" fill="#967247"/><rect x="51" y="22" width="9" height="5" rx="2" fill="#967247"/><circle cx="46" cy="44" r="7" fill="#20231e"/><circle cx="57" cy="57" r="8" fill="#967247"/><circle cx="34" cy="57" r="6" fill="#c2ac86"/><path d="M29 57h10m13 0h10"/><circle cx="29" cy="64" r="2" fill="#247b9a"/><path d="M36 7V3h14v4" fill="none"/></g></svg>';
 }
 function updateInventory(){
+ mountedArm.visible=hasArm&&armEquipped;
+ previewMountedArm.visible=hasArm&&armEquipped;
  const entries=[];
  if(hasArm)entries.push({type:'arm',name:'INDUSTRIAL MANIPULATOR',description:'Yellow-and-black interchangeable factory arm. Heavy-duty gripper for physical switches and mechanical releases.',stats:'CLASS  TOOL ARM  /  MOUNT  RIGHT  /  GRIP  85 N  /  STATUS  '+(armEquipped?'EQUIPPED':'STOWED'),draggable:!armEquipped});
  if(hasCell&&!usedCell)entries.push({type:'cell',name:'PORTABLE POWER PACK',description:'Sealed auxiliary energy cartridge. Restores MU-1 internal charge when consumed with Q.',stats:'CLASS  CONSUMABLE  /  CHARGE  +55%  /  USE  Q',draggable:false});
@@ -674,7 +679,7 @@ function updateInventory(){
  document.querySelector('#cell-hot').textContent=usedCell?'USED':hasCell?'READY':'EMPTY';
  document.querySelector('#cell-hot').classList.toggle('filled',hasCell||usedCell);
  document.querySelector('#arm-slot').textContent=armEquipped?'FACTORY MANIPULATOR':'EMPTY';
- document.querySelector('#arm-slot').nextElementSibling.textContent=armEquipped?'COMPONENT INSTALLED':'DRAG COMPONENT HERE';
+ document.querySelector('#arm-slot').nextElementSibling.textContent=armEquipped?'COMPONENT INSTALLED':hasArm?'CLICK OR DRAG TO INSTALL':'RECOVER COMPONENT FIRST';
  document.querySelector('#arm-hot').innerHTML=armEquipped?itemIcon('arm'):'';
  document.querySelector('#cell-icon').innerHTML=hasCell||usedCell?itemIcon('cell'):'';
  mountedArm.visible=hasArm&&armEquipped;previewMountedArm.visible=hasArm&&armEquipped;
@@ -697,14 +702,24 @@ function updateInventory(){
   grid.append(slot);
  }
 }
-function openInventory(){if(pickup)return;Object.keys(keys).forEach(k=>keys[k]=false);inventory.classList.add('open');inventory.setAttribute('aria-hidden','false');updateInventory();target=null}
+function openInventory(){if(opening?.active||pickup)return;Object.keys(keys).forEach(k=>keys[k]=false);inventory.classList.add('open');inventory.setAttribute('aria-hidden','false');updateInventory();target=null}
 function closeInventory(){inventory.classList.remove('open');inventory.setAttribute('aria-hidden','true')}
-const armSlot=document.querySelector('[data-slot="arm"]');armSlot.addEventListener('dragover',e=>{e.preventDefault();armSlot.classList.add('drag-over')});armSlot.addEventListener('dragleave',()=>armSlot.classList.remove('drag-over'));armSlot.addEventListener('drop',e=>{e.preventDefault();armSlot.classList.remove('drag-over');if(e.dataTransfer.getData('text/plain')==='lock-arm'&&hasArm){setArmEquipped(true)}});
+function equipArm(){
+ if(!hasArm||armEquipped)return;
+ armEquipped=true;updateInventory();say('LOCK-SERVICE ARM INSTALLED.');notify('COMPONENT INSTALLED');task.textContent='Activate the generator switch.';
+}
+const armSlot=document.querySelector('[data-slot="arm"]');
+armSlot.tabIndex=0;armSlot.setAttribute('role','button');armSlot.setAttribute('aria-label','Install recovered manipulator');
+armSlot.addEventListener('click',equipArm);
+armSlot.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();equipArm()}});
+armSlot.addEventListener('dragover',e=>{e.preventDefault();armSlot.classList.add('drag-over')});
+armSlot.addEventListener('dragleave',()=>armSlot.classList.remove('drag-over'));
+armSlot.addEventListener('drop',e=>{e.preventDefault();armSlot.classList.remove('drag-over');if(e.dataTransfer.getData('text/plain')==='lock-arm')equipArm()});
 document.querySelector('#close-inventory').addEventListener('click',closeInventory);
 document.querySelector('#fullscreen').addEventListener('click',()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()});
 function removeObject(o){if(selected===o)selected=null;scene.remove(o);const i=interactables.indexOf(o);if(i>=0)interactables.splice(i,1)}
 function nearest(){let best=null,d=Infinity;for(const o of interactables){const n=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(n<d){d=n;best=o}}return d<1.8?best:null}
-function interact(){if(ended||pickup||inventory.classList.contains('open'))return;const o=(selected&&interactables.includes(selected)&&Math.hypot(robot.position.x-selected.userData.x,robot.position.z-selected.userData.z)<1.8?selected:null)||nearest();if(!o){notify('NO SERVICE OBJECT IN REACH');return}const dist=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(dist>1.8){target=new THREE.Vector3(o.userData.x,0,o.userData.z);notify('MOVING TO '+o.userData.name);return}
+function interact(){if(opening?.active)return;if(ended||pickup||inventory.classList.contains('open'))return;const o=(selected&&interactables.includes(selected)&&Math.hypot(robot.position.x-selected.userData.x,robot.position.z-selected.userData.z)<1.8?selected:null)||nearest();if(!o){notify('NO SERVICE OBJECT IN REACH');return}const dist=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(dist>1.8){target=new THREE.Vector3(o.userData.x,0,o.userData.z);notify('MOVING TO '+o.userData.name);return}
 const id=o.userData.name;interactionPulse=1;
 if(id==='LOCK-SERVICE MANIPULATOR'){if(hasArm)return;beginPickup(o)}
 else if(id==='SEALED SERVICE CASE'){if(!armEquipped){notify('MECHANICAL RELEASE REQUIRED');say('CASE LOCK CANNOT BE OPERATED WITHOUT A MANIPULATOR.');return}if(!caseOpen){caseOpen=true;lidPivot.rotation.x=-1.35;cell.visible=true;say('SERVICE CASE RELEASED.');task.textContent='Recover the portable power cell from the open case.';notify('LOCK RELEASED')}else if(!hasCell){hasCell=true;cell.visible=false;say('PORTABLE POWER CELL RECOVERED.');task.textContent='Use the power cell to restore internal charge.';updateInventory();notify('POWER CELL ACQUIRED')}}
@@ -746,7 +761,7 @@ function updateNearbyUI(){
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let downX=0,downY=0,dragged=false;
 renderer.domElement.addEventListener('pointerdown',e=>{downX=e.clientX;downY=e.clientY;dragged=false});
 renderer.domElement.addEventListener('pointermove',e=>{if(Math.hypot(e.clientX-downX,e.clientY-downY)>5)dragged=true});
-renderer.domElement.addEventListener('pointerup',e=>{if(dragged||ended||paused||inventory.classList.contains('open'))return;const r=renderer.domElement.getBoundingClientRect();pointer.x=((e.clientX-r.left)/r.width)*2-1;pointer.y=-((e.clientY-r.top)/r.height)*2+1;raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects(interactables,true);let hit=null;for(const h of hits){let obj=h.object;while(obj.parent&&!interactables.includes(obj))obj=obj.parent;if(interactables.includes(obj)){hit=obj;break}}if(hit){selected=hit;notify(hit.userData.name)}});
+renderer.domElement.addEventListener('pointerup',e=>{if(opening?.active||dragged||ended||paused||inventory.classList.contains('open'))return;const r=renderer.domElement.getBoundingClientRect();pointer.x=((e.clientX-r.left)/r.width)*2-1;pointer.y=-((e.clientY-r.top)/r.height)*2+1;raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects(interactables,true);let hit=null;for(const h of hits){let obj=h.object;while(obj.parent&&!interactables.includes(obj))obj=obj.parent;if(interactables.includes(obj)){hit=obj;break}}if(hit){selected=hit;notify(hit.userData.name)}});
 const pauseScreen=document.querySelector('#pause-screen'),deathScreen=document.querySelector('#death-screen'),devConsole=document.querySelector('#dev-console'),consoleOutput=document.querySelector('#console-output'),consoleInput=document.querySelector('#console-input');
 function setPaused(value){paused=value;pauseScreen.classList.toggle('open',paused);pauseScreen.setAttribute('aria-hidden',String(!paused));document.body.classList.toggle('paused',paused);if(paused){target=null;Object.keys(keys).forEach(k=>keys[k]=false)}}
 function restartDemo(){resettingProgress=true;try{localStorage.removeItem(SAVE_KEY)}catch{}location.reload()}
@@ -766,8 +781,9 @@ else if(cmd==='kill'){charge=0;updateCharge();triggerDeath()}
 else if(cmd==='clear')consoleOutput.textContent='SATURN STATION // 0.2 DEV CONSOLE';
 else consoleLog('UNKNOWN COMMAND. Type help.')}
 let godMode=false;document.querySelector('#console-form').addEventListener('submit',e=>{e.preventDefault();const value=consoleInput.value;consoleLog('> '+value);runCommand(value);consoleInput.value=''});
-window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){e.preventDefault();terminalKey(k);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
+window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(opening?.active){if(k==='escape'&&opening.elapsed>0)setPaused(!paused);return;}if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){e.preventDefault();terminalKey(k);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
 if(k==='f2'){e.preventDefault();devConsole.classList.add('open');devConsole.setAttribute('aria-hidden','false');consoleInput.focus();return}
+if(k==='i'&&inventory.classList.contains('open')){closeInventory();return}
 if(k==='escape'){if(inventory.classList.contains('open')){closeInventory();return}if(deathScreen.classList.contains('open'))return;setPaused(!paused);return}
 if(paused||ended||inventory.classList.contains('open'))return;
 if(k in keys){keys[k]=true;e.preventDefault()}
@@ -775,7 +791,7 @@ if(k==='i'){openInventory();return}if(k==='e')interact();if(k==='q'&&hasCell&&!u
 window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k in keys)keys[k]=false});
 window.addEventListener('blur',()=>Object.keys(keys).forEach(k=>keys[k]=false));
 function triggerDeath(){if(godMode||deathScreen.classList.contains('open'))return;ended=true;Object.keys(keys).forEach(k=>keys[k]=false);deathScreen.classList.add('open');deathScreen.setAttribute('aria-hidden','false');task.textContent='UNIT POWER DEPLETED.';say('CRITICAL: UNIT POWER DEPLETED.');}
-function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);const aspect=w/h,view=8;camera.left=-view*aspect;camera.right=view*aspect;camera.top=view;camera.bottom=-view;camera.updateProjectionMatrix()}
+function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);const aspect=w/h,view=8;camera.left=-view*aspect;camera.right=view*aspect;camera.top=view;camera.bottom=-view;camera.updateProjectionMatrix();opening?.resize(w,h)}
 window.addEventListener('resize',resize);resize();
 const clock=new THREE.Clock();
 // Smaller, lower stance: the Maintenance Unit should feel compact and grounded.
@@ -1045,6 +1061,7 @@ function playSound(kind){
  const [a,b,d]=tones[kind]||tones.select;o.type=kind==='step'?'triangle':'sine';o.frequency.setValueAtTime(a,now);o.frequency.exponentialRampToValueAtTime(b,now+d);g.gain.setValueAtTime(.001,now);g.gain.exponentialRampToValueAtTime(kind==='step'?.4:.22,now+.015);g.gain.exponentialRampToValueAtTime(.001,now+d);o.connect(g).connect(audioMaster);o.start(now);o.stop(now+d+.02);o.onended=()=>{o.disconnect();g.disconnect()};
 }
 function saveProgress(){
+ if(opening?.active)return;
  if(resettingProgress)return;
  try{localStorage.setItem(SAVE_KEY,JSON.stringify({version:1,charge,hasArm,armEquipped,caseOpen,hasCell,usedCell,powerOn,doorOpen,terminalBooted,x:robot.position.x,z:robot.position.z,heading:robot.rotation.y}))}catch{}
 }
@@ -1071,7 +1088,23 @@ function updateStationSystems(dt){
  if(musicGain&&audio){const audible=!document.hidden&&(!paused||settingsPanel.open)&&!ended;musicGain.gain.setTargetAtTime(audible?musicVolume/100*.12:0,audio.currentTime,.15);const chords=[[110,164.81,220],[98,146.83,196],[87.31,130.81,174.61],[98,146.83,220]],chord=chords[Math.floor(audio.currentTime/12)%chords.length];musicVoices.forEach((voice,i)=>voice.frequency.setTargetAtTime(chord[i],audio.currentTime,2))}
 }
 
-function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
+// Robot centre uses a 0.42-unit clearance around solid floor props.
+const solidProps=[
+ [-5,-3,.6,.5],[5,-2,.6,.5],[-7,3,.52,.52],[7,4,.52,.52],[6,-5,.52,.52],
+ [-5,2,1,.65],[5,-7,.5,.4],[-7,-4,1.10,.60],[-9,2.2,1.55,.58],[1.5,7,1.55,.58],
+ ...[-8,-4,0,4,8].map(z=>[12.1,z,.8,.65]),
+ ...[0,1,2,3].map(i=>[-10+i*.68,-5.8,.24,.28])
+];
+function canOccupy(x,z){
+ if(x< -12.5||x>12.5||z< -9.5||z>9.5)return false;
+ return !solidProps.some(([px,pz,hx,hz])=>Math.abs(x-px)<hx+.42&&Math.abs(z-pz)<hz+.42);
+}
+function moveRobot(dx,dz){
+ // Separate axes let the unit slide along an obstacle rather than sticking.
+ if(canOccupy(robot.position.x+dx,robot.position.z))robot.position.x+=dx;
+ if(canOccupy(robot.position.x,robot.position.z+dz))robot.position.z+=dz;
+}
+function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta();const dt=Math.min(elapsed,.04);if(opening?.active){controls.enabled=false;if(!paused)opening.update(elapsed);renderer.render(scene,opening.camera);return;}controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open')&&!terminalOpen;// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
 const desiredFocus=new THREE.Vector3(robot.position.x,1.25,robot.position.z);
 const followDelta=desiredFocus.sub(controls.target).multiplyScalar(1-Math.exp(-dt*4));
 controls.target.add(followDelta);camera.position.add(followDelta);
@@ -1081,8 +1114,7 @@ const targetSpeed=wantsMove?2.25:0;
 gaitVelocity=THREE.MathUtils.damp(gaitVelocity,targetSpeed,wantsMove?6.2:8.5,dt);
 gaitWeight=THREE.MathUtils.damp(gaitWeight,wantsMove?1:0,wantsMove?3.0:5.0,dt);
 if(wantsMove){
- robot.position.x=THREE.MathUtils.clamp(robot.position.x+mx/len*gaitVelocity*dt,-12.5,12.5);
- robot.position.z=THREE.MathUtils.clamp(robot.position.z+mz/len*gaitVelocity*dt,-9.5,9.5);
+ moveRobot(mx/len*gaitVelocity*dt,mz/len*gaitVelocity*dt);
  const desiredHeading=Math.atan2(mx,mz);
  robot.rotation.y+=Math.atan2(Math.sin(desiredHeading-robot.rotation.y),Math.cos(desiredHeading-robot.rotation.y))*Math.min(1,dt*9);
 }
@@ -1108,6 +1140,7 @@ body.rotation.z=THREE.MathUtils.damp(body.rotation.z,chassisRoll,7,dt);
 body.rotation.x=THREE.MathUtils.damp(body.rotation.x,chassisPitch,7,dt);
 }
 if(!paused&&!ended&&!godMode&&charge>0){charge=Math.max(0,charge-dt*.1);updateCharge();if(charge===0){notify('POWER DEPLETED');triggerDeath()}}
-if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);leftLeaf.position.x=-1.85*t;rightLeaf.position.x=1.85*t;if(t>=1){doorOpening=false;doorOpen=true;task.textContent='Exit door open. Terminal remains available.';notify('DOOR OPEN')}}
+if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);leftLeaf.position.x=-1.85*t;rightLeaf.position.x=1.85*t;if(t>=1){doorOpening=false;doorOpen=true;updateTerminalStatus();task.textContent='Exit door open. Terminal remains available.';notify('DOOR OPEN')}}
 updateStationSystems(dt);renderer.render(scene,camera);updateNearbyUI()}
-restoreProgress();updateStationSystems(0);animate();document.querySelector('#loading').classList.add('hidden');document.querySelector('#charge').textContent='60%';document.querySelector('#charge-bar').style.width='60%';updateCharge();updateInventory();refreshDirective();say('MU-1 ONLINE.');
+opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){restoreProgress();doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
+resize();updateStationSystems(0);animate();document.querySelector('#loading').classList.add('hidden');document.querySelector('#charge').textContent='60%';document.querySelector('#charge-bar').style.width='60%';updateCharge();updateInventory();refreshDirective();say('MU-1 ONLINE.');
