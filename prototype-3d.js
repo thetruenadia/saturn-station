@@ -1,6 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
-import { applyArtDirection } from './station-art.js?v=1';
+import { applyArtDirection } from './station-art.js?v=analogue2';
 
 const viewport=document.querySelector('#viewport');
 const scene=new THREE.Scene();
@@ -591,7 +591,7 @@ function addTechnicalInk(root){
   edge.renderOrder=1;edge.scale.setScalar(1.003);o.add(edge);inkMeshes.push(edge);
  });
 }
-const stationArt=applyArtDirection({THREE,scene,robot,terminal,exchanger,box,cylinder,pipeBetween,wornPaint,label});
+const stationArt=applyArtDirection({THREE,scene,robot,terminal,terminalScreen,terminalLamp,terminalLit,exchanger,box,cylinder,pipeBetween,wornPaint,label});
 addTechnicalInk(scene);
 const shadow=new THREE.Mesh(new THREE.CircleGeometry(.92,32),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.56}));
 shadow.rotation.x=-Math.PI/2;shadow.position.y=.018;robot.add(shadow);

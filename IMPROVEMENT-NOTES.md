@@ -72,3 +72,11 @@ Acceptance: painted surfaces should read as illustrated metal at gameplay distan
 ## Suggested next pass
 
 Start with the opening repair-bay composition and one fully developed focal machine. Compare the result with the reference board before extending that treatment across the entire room.
+
+## Analogue technology reference — 7 November 2026
+
+The user supplied a photograph of a yellow-green instrument installation as the reference for technology such as the terminal. Carry forward its rounded enamel panels, bolted circular scopes, clustered analogue gauges, black removable modules, keypad banks and sloped control surfaces. Interpret these features as original station equipment.
+
+This pass rebuilds the terminal around that reference, retaining its existing power and door-control behaviour. The amber circular scope follows auxiliary power. The control alcove receives a deliberate cutaway around the equipment, and scenery occlusion transitions gradually rather than snapping.
+
+Remaining review: assess the new terminal at normal gameplay distance, tune gauge and label readability, and develop the opening repair bay next. Other unchecked proposals above remain outstanding.
