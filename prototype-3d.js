@@ -520,7 +520,7 @@ addTechnicalInk(scene);
 const shadow=new THREE.Mesh(new THREE.CircleGeometry(.92,32),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.56}));
 shadow.rotation.x=-Math.PI/2;shadow.position.y=.018;robot.add(shadow);
 
-let interactionPulse=0;let cellCount=0,workshop;let charge=60,hasArm=false,armEquipped=false,caseOpen=false,hasNote=false,hasCell=false,usedCell=false,powerOn=false,ended=false,paused=false,doorOpening=false,doorOpen=false,target=null,selected=null,walkTime=0;
+let interactionPulse=0;let cellCount=0,caseCellTaken=false,workshop;let charge=60,hasArm=false,armEquipped=false,caseOpen=false,hasNote=false,hasCell=false,usedCell=false,powerOn=false,ended=false,paused=false,doorOpening=false,doorOpen=false,target=null,selected=null,walkTime=0;
 const keys={w:false,a:false,s:false,d:false};
 const logMessages=[];const task=document.querySelector('#task'),toast=document.querySelector('#toast'),inventory=document.querySelector('#inventory');
 let terminalBooted=false,terminalOpen=false;
@@ -530,7 +530,7 @@ const terminalUI=createTerminalBrowser({
  readNote:()=>hasNote,sound:playSound,onSpec:()=>workshop.releaseSpec()
 });
 function setCellCount(n){cellCount=Math.max(0,Math.floor(n));hasCell=cellCount>0;usedCell=!hasCell;updateInventory()}
-workshop=createWorkshopSystem({THREE,scene,robot,interactables,notify,sound:playSound,save:saveProgress,cellCount:()=>cellCount,setCellCount,onCraftArm(){hasArm=true;armEquipped=true;removeObject(arm);updateInventory();refreshDirective()}});
+workshop=createWorkshopSystem({THREE,scene,robot,interactables,notify,sound:playSound,save:saveProgress,cellCount:()=>cellCount,setCellCount,onCraftArm(){if(hasArm)return false;hasArm=true;armEquipped=true;removeObject(arm);updateInventory();refreshDirective();return true},onDismantle(){if(!hasArm)return false;hasArm=false;armEquipped=false;updateInventory();refreshDirective();return true}});
 function updateTerminalStatus(){terminalUI.setStatus('AUXILIARY GRID: '+(powerOn?'ONLINE':'OFFLINE')+' / DOOR: '+(doorOpen?'OPEN':doorOpening?'OPENING':'SEALED')+' / MU-1 LINK: ACTIVE')}
 function showTerminal(){Object.keys(keys).forEach(k=>keys[k]=false);terminalOpen=true;updateTerminalStatus();terminalUI.show()}
 function hideTerminal(){terminalUI.hide()}
@@ -615,7 +615,7 @@ const id=o.userData.name;interactionPulse=1;
 if(o.userData.workshopType){workshop.handle(o);return;}
 if(id==='MAINTENANCE NOTE'){hasNote=true;removeObject(o);updateInventory();saveProgress();notify('NOTE RECOVERED · THE PASSWORD IS ETNA');showNote();}
 else if(id==='LOCK-SERVICE MANIPULATOR'){if(hasArm)return;beginPickup(o)}
-else if(id==='SEALED SERVICE CASE'){if(!armEquipped){notify('MECHANICAL RELEASE REQUIRED');say('CASE LOCK CANNOT BE OPERATED WITHOUT A MANIPULATOR.');return}if(!caseOpen){caseOpen=true;lidPivot.rotation.x=-1.35;cell.visible=true;say('SERVICE CASE RELEASED.');task.textContent='Recover the portable power cell from the open case.';notify('LOCK RELEASED')}else if(!hasCell){setCellCount(cellCount+1);cell.visible=false;say('PORTABLE POWER CELL RECOVERED.');task.textContent='Use the power cell to restore internal charge.';updateInventory();notify('POWER CELL ACQUIRED')}}
+else if(id==='SEALED SERVICE CASE'){if(!armEquipped){notify('MECHANICAL RELEASE REQUIRED');say('CASE LOCK CANNOT BE OPERATED WITHOUT A MANIPULATOR.');return}if(!caseOpen){caseOpen=true;lidPivot.rotation.x=-1.35;cell.visible=true;say('SERVICE CASE RELEASED.');task.textContent='Recover the portable power cell from the open case.';notify('LOCK RELEASED')}else if(!caseCellTaken){caseCellTaken=true;setCellCount(cellCount+1);cell.visible=false;say('PORTABLE POWER CELL RECOVERED.');task.textContent='Use the power cell to restore internal charge.';updateInventory();notify('POWER CELL ACQUIRED')}}
 else if(id==='AUXILIARY POWER DISTRIBUTION'){if(!armEquipped){notify('MANIPULATOR REQUIRED TO THROW SWITCH');return}setStationPower(true);say('GENERATOR SWITCH ENGAGED. TERMINAL POWER AVAILABLE.');task.textContent='Access the powered terminal.';notify('GENERATOR ONLINE')}
 else if(id==='CONTROL TERMINAL'){if(!powerOn){notify('TERMINAL OFFLINE');return}showTerminal()}else if(id==='MAINTENANCE EXIT'){if(doorOpen)finishDemo();else notify('DOOR SEALED · USE TERMINAL')}
 }
@@ -981,18 +981,18 @@ function playSound(kind){
 function saveProgress(){
  if(opening?.active||mainMenu?.active)return;
  if(resettingProgress)return;
- try{const progress={version:1,charge,hasArm,armEquipped,caseOpen,hasNote,hasCell,usedCell,cellCount,workshop:workshop.serialize(),powerOn,doorOpen,terminalBooted,x:robot.position.x,z:robot.position.z,heading:robot.rotation.y};if(mainMenu)mainMenu.record(progress);else localStorage.setItem(SAVE_KEY,JSON.stringify(progress));return true}catch{return false}
+ try{const progress={version:1,charge,hasArm,armEquipped,caseOpen,caseCellTaken,hasNote,hasCell,usedCell,cellCount,workshop:workshop.serialize(),powerOn,doorOpen,terminalBooted,x:robot.position.x,z:robot.position.z,heading:robot.rotation.y};if(mainMenu)mainMenu.record(progress);else localStorage.setItem(SAVE_KEY,JSON.stringify(progress));return true}catch{return false}
 }
 function restoreProgress(){
  try{
   const p=JSON.parse(localStorage.getItem(SAVE_KEY));if(!p||p.version!==1)return;
   const flag=k=>p[k]===true;
-  hasNote=flag('hasNote');if(hasNote)removeObject(maintenanceNote);hasArm=flag('hasArm');armEquipped=hasArm&&flag('armEquipped');caseOpen=flag('caseOpen');setCellCount(Number.isInteger(p.cellCount)?p.cellCount:(flag('hasCell')&&!flag('usedCell')?1:0));workshop.restore(p.workshop);
+  hasNote=flag('hasNote');if(hasNote)removeObject(maintenanceNote);hasArm=flag('hasArm');armEquipped=hasArm&&flag('armEquipped');caseOpen=flag('caseOpen');caseCellTaken=flag('caseCellTaken')||flag('hasCell')||flag('usedCell');setCellCount(Number.isInteger(p.cellCount)?p.cellCount:(flag('hasCell')&&!flag('usedCell')?1:0));workshop.restore(p.workshop);
   charge=Number.isFinite(p.charge)?THREE.MathUtils.clamp(p.charge,1,100):60;
   if(Number.isFinite(p.x)&&Number.isFinite(p.z))robot.position.set(THREE.MathUtils.clamp(p.x,-12.5,12.5),0,THREE.MathUtils.clamp(p.z,-9.5,9.5));
   if(Number.isFinite(p.heading))robot.rotation.y=p.heading;
   if(!canOccupy(robot.position.x,robot.position.z))robot.position.set(0,0,0);
-  if(hasArm)removeObject(arm);lidPivot.rotation.x=caseOpen?-1.35:0;cell.visible=caseOpen&&!hasCell;
+  if(hasArm)removeObject(arm);lidPivot.rotation.x=caseOpen?-1.35:0;cell.visible=caseOpen&&!caseCellTaken;
   powerOn=flag('powerOn');powerElapsed=10;generatorLever.rotation.z=powerOn?.75:0;terminalScreen.material=terminalLamp.material=powerOn?terminalLit:terminalDark;
   terminalBooted=powerOn&&flag('terminalBooted');doorOpen=flag('doorOpen');leftLeaf.position.x=doorOpen?-1.85:0;rightLeaf.position.x=doorOpen?1.85:0;
   controls.target.set(robot.position.x,1.3,robot.position.z);camera.position.set(robot.position.x+12,16,robot.position.z+12);notify('LOCAL PROGRESS RESTORED');
