@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090b0b">
+  <title>Saturn Station // Deck B-7</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topline">
+      <div class="brand"><span class="sigil">S</span><span>SATURN STATION</span><small>OUTER SYSTEMS AUTHORITY</small></div>
+      <div class="location"><span class="live-dot"></span> MAINTENANCE DECK B-7 <span class="divider">/</span> LOCAL TIME 03:17</div>
+      <div class="signal">HABITAT PRESSURE <b>STABLE</b></div>
+    </header>
+
+    <section class="game-layout">
+      <section class="viewport-panel">
+        <div class="panel-heading"><span>01 / DECK VIEW</span><span id="area-label">B-7 // SERVICE GANTRY</span></div>
+        <div class="viewport">
+          <canvas id="game" width="960" height="600" aria-label="Isometric view of a maintenance deck on Saturn Station"></canvas>
+          <div class="crosshair" aria-hidden="true">+</div>
+          <div class="view-caption"><span>CAM 04 / MANUAL FEED</span><span id="coords">GRID 04-04</span></div>
+          <div id="toast" class="toast" role="status"></div>
+        </div>
+        <div class="controls-hint"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE</span><span><kbd>E</kbd> INTERACT</span><span><kbd>CLICK</kbd> INSPECT</span></div>
+      </section>
+
+      <aside class="side-panel">
+        <section class="panel character-panel">
+          <div class="panel-heading"><span>02 / UNIT PROFILE</span><span>SRV-09</span></div>
+          <div class="unit-visual">
+            <div class="scanline"></div>
+            <svg class="unit-silhouette" viewBox="0 0 260 170" role="img" aria-label="SRV-09 elongated modular industrial walker">
+              <g stroke-linejoin="round" stroke-linecap="round">
+                <path d="M93 103 L68 125 L49 149 L62 155 L91 137 L116 111" fill="none" stroke="#151d19" stroke-width="15"/>
+                <path d="M93 103 L68 125 L49 149 L62 155 L91 137 L116 111" fill="none" stroke="#66745c" stroke-width="8"/>
+                <path d="M160 102 L183 120 L194 146 L217 151 L207 133 L190 101" fill="none" stroke="#151d19" stroke-width="17"/>
+                <path d="M160 102 L183 120 L194 146 L217 151" fill="none" stroke="#778267" stroke-width="8"/>
+                <path d="M44 148 L35 159 L68 161 L77 151 M190 145 L184 158 L224 160 L230 151" fill="#252e27" stroke="#a2a17b" stroke-width="3"/>
+                <path d="M84 91 L75 108 L91 119 L176 113 L190 93 L171 77 Z" fill="#202a24" stroke="#879276" stroke-width="3"/>
+                <path d="M50 44 L76 25 L170 29 L204 49 L188 87 L91 91 L47 69 Z" fill="#647253" stroke="#b0b18a" stroke-width="3"/>
+                <path d="M50 44 L76 25 L124 31 L118 83 L91 88 L47 69 Z" fill="#7d8768" stroke="#c0b88e" stroke-width="1.5"/>
+                <path d="M124 31 L170 29 L204 49 L188 87 L118 83 Z" fill="#394638" stroke="#929b7b" stroke-width="2"/>
+                <path d="M82 94 L97 106 L91 119 M166 91 L179 105 L176 116" fill="none" stroke="#8b9271" stroke-width="7"/>
+                <circle cx="91" cy="107" r="9" fill="#101713" stroke="#b0a47c" stroke-width="3"/>
+                <circle cx="177" cy="105" r="9" fill="#101713" stroke="#b0a47c" stroke-width="3"/>
+                <path d="M142 30 L158 15 L170 18 L166 34 Z" fill="#303a30" stroke="#a3a782" stroke-width="3"/>
+                <circle cx="164" cy="22" r="4" fill="#111914" stroke="#a5ad82" stroke-width="2"/>
+                <path d="M176 50 L205 51 L215 63 L202 77 L179 70 Z" fill="#1a211c" stroke="#a5a47e" stroke-width="3"/>
+                <circle cx="199" cy="63" r="9" fill="#080d0b" stroke="#b2a77c" stroke-width="2"/>
+                <circle cx="200" cy="63" r="4" fill="#c84d3d"/>
+                <path d="M119 44 L147 45 L147 66 L119 66 Z" fill="#17231b" stroke="#8e9a73" stroke-width="2"/>
+                <path d="M124 50 L142 50 L142 59 L124 59 Z" fill="#a8e58a"/>
+                <path d="M70 52 L81 57 M83 65 L93 69 M151 77 L174 74" stroke="#d3c59a" stroke-width="2"/>
+                <path d="M101 94 C119 78 130 108 146 91 S169 90 180 101" fill="none" stroke="#101713" stroke-width="6"/>
+                <path d="M101 94 C119 78 130 108 146 91 S169 90 180 101" fill="none" stroke="#788365" stroke-width="2"/>
+                <path d="M54 45 L60 38 L73 32 M185 45 L197 51" fill="none" stroke="#c1b88d" stroke-width="2"/>
+                <path d="M60 73 L81 80 M155 83 L179 81" fill="none" stroke="#343c2f" stroke-width="3"/>
+              </g>
+            </svg>      </svg>
+            <div class="unit-id">SRV-09 / MODULAR WALKER<br>PERSONAL BUILD / CONFIGURATION UNKNOWN</div>
+          </div>
+          <div class="meters">
+            <div class="meter"><span>CHARGE</span><b id="charge-value">08%</b><i><em id="charge-bar" style="width:8%"></em></i></div>
+            <div class="meter"><span>INTEGRITY</span><b>100%</b><i><em style="width:100%"></em></i></div>
+            <div class="meter"><span>CORE TEMP</span><b>STABLE</b><i><em style="width:38%"></em></i></div>
+          </div>
+        </section>
+
+        <section class="panel terminal-panel">
+          <div class="panel-heading"><span>03 / SYSTEM LOG</span><span class="phosphor">● REC</span></div>
+          <div id="log" class="log" aria-live="polite">
+            <p>BOOT SEQUENCE COMPLETE</p><p>DECK B-7 / ACCESS GRANTED</p><p>3 UNREAD SERVICE NOTICES</p><p class="dim">AWAITING INPUT_</p>
+          </div>
+        </section>
+
+        <section class="panel inventory-panel">
+          <div class="panel-heading"><span>04 / CARRYING</span><span id="item-count">00 ITEMS</span></div>
+          <div class="inventory-grid" id="inventory-grid">
+            <button class="item empty" aria-label="Empty slot"><span>·</span></button>
+            <button class="item empty" aria-label="Empty slot"><span>·</span></button>
+            <button class="item empty" aria-label="Empty slot"><span>·</span></button>
+            <button class="item empty" aria-label="Empty slot"><span>·</span></button>
+            <button class="item empty" aria-label="Empty slot"><span>·</span></button>
+            <button class="item empty" aria-label="Empty slot"><span>·</span></button>
+          </div>
+          <div id="item-description" class="item-description">NO ITEMS STORED</div>
+        </section>
+      </aside>
+    </section>
+
+    <footer class="bottom-panel">
+      <div class="action-label"><span>05 / ACTIONS</span><small>MANUAL CONTROL</small></div>
+      <button class="action active" data-action="move"><b>✣</b><span>MOVE</span></button>
+      <button class="action" data-action="inspect"><b>⌕</b><span>INSPECT</span></button>
+      <button class="action" data-action="interact"><b>↯</b><span>USE</span></button>
+      <button class="action" data-action="terminal"><b>▤</b><span>LOG</span></button>
+      <div class="footer-status"><i></i> CONNECTION SECURE <span>BUILD 0.2.1 / LOCAL</span></div>
+    </footer>
+  </main>
+  <div id="boot-screen" class="boot-screen">
+    <div class="boot-terminal">
+      <div class="boot-top"><span>SRV-09 // PERSONAL BUILD</span><span>RECOVERY MODE</span></div>
+      <div class="boot-mark">S<span>ATURN</span></div>
+      <div class="boot-sub">STATION SYSTEMS / MAINTENANCE DECK B-7</div>
+      <div class="boot-rule"></div>
+      <p class="boot-message">POWER RESERVE CRITICAL<br>MEMORY INTEGRITY: PARTIAL<br>EXTERNAL NETWORK: NO RESPONSE</p>
+      <button id="boot-button" class="boot-button">▶ &nbsp; BOOT SYSTEM</button>
+      <div class="boot-foot">PERSONAL MAINTENANCE UNIT // BUILD 0.3.0</div>
+    </div>
+  </div>
+  <div id="end-screen" class="boot-screen hidden">
+    <div class="boot-terminal">
+      <div class="boot-top"><span>SRV-09 // EXIT ROUTINE</span><span>DEMO COMPLETE</span></div>
+      <div class="boot-mark">ACCESS<span> GRANTED</span></div>
+      <div class="boot-sub">MAINTENANCE DECK B-7 / OUTER DOOR</div>
+      <div class="boot-rule"></div>
+      <p class="boot-message">LOCK RELEASED<br>OUTER SECTION ACCESSIBLE<br>END OF CURRENT BUILD</p>
+      <button id="reboot-button" class="boot-button">↻ &nbsp; RETURN TO TITLE</button>
+      <div class="boot-foot">THANK YOU FOR PLAYING / BUILD 0.3.0</div>
+    </div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>

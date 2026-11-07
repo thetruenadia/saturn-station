@@ -155,7 +155,7 @@
     unitSpriteReady=true;
   };
   unitSheet.onerror=()=>{unitSpriteReady=false;};
-  unitSheet.src='assets/sprites/Gemini_Generated_Image_jt74kajt74kajt74.jpeg';
+  unitSheet.src='../../assets/sprites/Gemini_Generated_Image_jt74kajt74kajt74.jpeg';
 
   function drawRobot(t){
     if(!unitSpriteReady){drawRobotFallback(t);return;}

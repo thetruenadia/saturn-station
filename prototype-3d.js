@@ -272,7 +272,7 @@ const rackCable=new THREE.CatmullRomCurve3([new THREE.Vector3(-.35,1.85,.65),new
 terminal.add(new THREE.Mesh(new THREE.TubeGeometry(rackCable,24,.027,7,false),rackHandle));
 terminal.userData={name:'CONTROL TERMINAL',x:-7,z:-4};interactables.push(terminal);
 // The existing hatch stays at the exit and is controlled exclusively by the terminal.
-// SRV-09 silhouette-first reconstruction for 0.2.
+// MU-1 silhouette-first reconstruction for 0.2.
 // Proportions follow the supplied sprite/blueprint: broad, heavy upper chassis,
 // compact reverse-jointed legs, and a total height close to 1.8x its width.
 // Forward is +Z. This block is deliberately self-contained.
