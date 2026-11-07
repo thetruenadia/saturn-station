@@ -405,26 +405,35 @@ function solveLegIK(l,target,dt){
  l.hip.rotation.z=THREE.MathUtils.lerp(l.hip.rotation.z,0,t);
  l.knee.rotation.z=THREE.MathUtils.lerp(l.knee.rotation.z,0,t);
 }
-// Predictable robot-local gait. A bounded target prevents knee snapping when
-// turning, braking, or reaching the end of a step.
+// AT-ST-inspired alternating mechanical gait: long support, short recovery.
+// Feet sweep backwards under load and lift only during the forward swing.
 const gaitLocalTarget=new THREE.Vector3();
 function animateGait(dt,moving){
  const blend=THREE.MathUtils.clamp(gaitWeight,0,1);
  for(const l of legs){
-   const phase=walkTime+(l.side===1?Math.PI:0);
-   // Backward ground stroke, then a short low forward recovery.
-   const stride=.115*Math.cos(phase)*blend;
-   const lift=.075*Math.pow(Math.max(0,Math.sin(phase)),2)*blend;
+   const cycle=((walkTime/(Math.PI*2)+(l.side===1?.5:0))%1+1)%1;
+   const stance=.62;
+   let forward, lift=0;
+   if(cycle<stance){
+     const t=cycle/stance;
+     // A long, controlled planted-looking ground stroke.
+     forward=.24*(1-2*t);
+   }else{
+     const t=(cycle-stance)/(1-stance);
+     const eased=t*t*(3-2*t);
+     forward=-.24+.48*eased;
+     lift=.105*Math.sin(Math.PI*t);
+   }
    gaitLocalTarget.set(
      l.hip.position.x+l.thighB[0]+l.shinB[0],
-     .155+lift,
-     .09+stride
+     .155+lift*blend,
+     .09+forward*blend
    );
    solveLegIK(l,gaitLocalTarget,dt);
  }
 }
 function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');controls.update();if(inventory.classList.contains('open'))renderInventoryPreview();if(!paused&&!ended&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);const wantsMove=len>0;
-const targetSpeed=wantsMove?1.55:0;
+const targetSpeed=wantsMove?.75:0;
 // Inertial acceleration and braking make the chassis feel mechanically heavy.
 gaitVelocity=THREE.MathUtils.damp(gaitVelocity,targetSpeed,wantsMove?3.3:5.2,dt);
 gaitWeight=THREE.MathUtils.damp(gaitWeight,wantsMove?1:0,wantsMove?3.0:5.0,dt);
@@ -434,13 +443,13 @@ if(wantsMove){
  const desiredHeading=Math.atan2(mx,mz);
  robot.rotation.y+=Math.atan2(Math.sin(desiredHeading-robot.rotation.y),Math.cos(desiredHeading-robot.rotation.y))*Math.min(1,dt*6);
 }
-walkTime+=dt*4.2*(gaitVelocity/1.55);
+walkTime+=dt*4.8*(gaitVelocity/.75);
 animateGait(dt,gaitWeight>.06);
 const transfer=Math.sin(walkTime);
 const load=Math.abs(transfer);
 // A slight dip at each footfall and sideways roll onto the supporting leg.
-const chassisY=gaitWeight*(-.018+.008*load);
-const chassisRoll=gaitWeight*.012*transfer;
+const chassisY=gaitWeight*(-.025+.013*load);
+const chassisRoll=gaitWeight*.018*transfer;
 const chassisPitch=gaitWeight*.012;
 body.position.y=THREE.MathUtils.damp(body.position.y,chassisY,8,dt);
 body.rotation.z=THREE.MathUtils.damp(body.rotation.z,chassisRoll,7,dt);
