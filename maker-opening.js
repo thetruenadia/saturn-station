@@ -39,13 +39,26 @@ export function createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,onCo
  for(const x of [9.45,13.35])box(corridor,[.25,3.5,5],dark,[x,1.6,-13.2]);
  box(corridor,[4,3.5,.2],dark,[11.4,1.6,-15.7]);
  const lamp=new THREE.PointLight(0xf2c78b,9,5);lamp.position.set(-6.8,1.8,4);scene.add(lamp);
- const overlay=document.createElement('section');overlay.id='maker-opening';overlay.innerHTML='<div class="boot-black"></div><div class="boot-caption" role="status" aria-live="polite"></div><button class="boot-action">BEGIN BOOT SEQUENCE</button>';viewport.append(overlay);
+ const overlay=document.createElement('section');overlay.id='maker-opening';overlay.innerHTML='<div class="boot-black"></div><div class="boot-caption" role="status" aria-live="polite"></div><button class="boot-action">BEGIN BOOT SEQUENCE</button><button class="boot-skip" aria-label="Skip cutscene (Y)"><kbd>Y</kbd> SKIP CUTSCENE</button>';viewport.append(overlay);
  const black=overlay.querySelector('.boot-black'),caption=overlay.querySelector('.boot-caption'),button=overlay.querySelector('button');
  let elapsed=0,started=false,active=true,finished=false,audio;
  const fired=new Set();
  function tone(frequency,duration,volume=.08){if(!audio||!isSoundEnabled())return;const osc=audio.createOscillator(),gain=audio.createGain();osc.type='triangle';osc.frequency.setValueAtTime(frequency,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(35,audio.currentTime+duration);gain.gain.setValueAtTime(volume,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+duration);}
+ function finish(){
+  if(!active)return;
+  active=false;leftLeaf.position.x=rightLeaf.position.x=0;
+  overlay.remove();maker.visible=false;lap.visible=false;lamp.visible=false;robot.visible=true;
+  document.body.classList.remove('opening-active');audio?.close();
+  window.removeEventListener('keydown',skipKey,true);onComplete();
+ }
+ function skipKey(event){
+  if(!active||event.key.toLowerCase()!=='y'||event.ctrlKey||event.metaKey||event.altKey)return;
+  event.preventDefault();event.stopImmediatePropagation();finish();
+ }
+ window.addEventListener('keydown',skipKey,true);
+ overlay.querySelector('.boot-skip').addEventListener('click',finish);
  button.addEventListener('click',()=>{
-  if(finished){active=false;overlay.remove();maker.visible=false;lap.visible=false;lamp.visible=false;robot.visible=true;document.body.classList.remove('opening-active');audio?.close();onComplete();return;}
+  if(finished){finish();return;}
   started=true;button.hidden=true;
   try{audio=new (window.AudioContext||window.webkitAudioContext)();audio.resume();tone(95,.6);}catch{/* Silent playback remains usable. */}
  });
