@@ -542,7 +542,7 @@ function addTechnicalInk(root){
  });
 }
 const maintenanceNote=new THREE.Group();maintenanceNote.position.set(5,1.25,-10.15);scene.add(maintenanceNote);
-assetLabel(maintenanceNote,'MAINTENANCE NOTE\nLOCAL ACCESS\nPASSWORD: ETNA',.65,.44,0,0,0,'#c2b68e','#353a2d');
+assetLabel(maintenanceNote,'STAFF LOCKERS\nB-7 / 106',.65,.44,0,0,0,'#c2b68e','#353a2d');
 maintenanceNote.userData={name:'MAINTENANCE NOTE',x:5,z:-10.15};interactables.push(maintenanceNote);
 const stationArt=applyArtDirection({THREE,scene,robot,terminal,terminalScreen,terminalLamp,terminalLit,exchanger,box,cylinder,pipeBetween,wornPaint,label});
 const referenceAssets=installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatch,hatchDoor,leftLeaf,rightLeaf,mountedArm,arm,box,cylinder,wornPaint,stationArt,generator,generatorLever});
@@ -560,7 +560,9 @@ const terminalUI=createTerminalBrowser({
  readNote:()=>hasNote,sound:playSound,onSpec:()=>workshop.releaseSpec()
 });
 function setCellCount(n){cellCount=Math.max(0,Math.floor(n));hasCell=cellCount>0;usedCell=!hasCell;updateInventory()}
-workshop=createWorkshopSystem({THREE,scene,robot,interactables,colliders:referenceAssets.colliders,notify,sound:playSound,save:saveProgress,cellCount:()=>cellCount,setCellCount,onCraftArm(){if(hasArm)return false;hasArm=true;armEquipped=true;removeObject(arm);updateInventory();refreshDirective();return true},onDismantle(){if(!hasArm)return false;hasArm=false;armEquipped=false;updateInventory();refreshDirective();return true},armModel:mountedArm});
+workshop=createWorkshopSystem({THREE,scene,robot,interactables,colliders:referenceAssets.colliders,notify,sound:playSound,save:saveProgress,cellCount:()=>cellCount,setCellCount,onCraftProbe(){return !workshop.hasProbe},onAccessCard(value){hasNote=value;updateInventory()},armModel:originalArm});
+// Retain the loose arm as scenery, not a field-replaceable part.
+{const i=interactables.indexOf(arm);if(i>=0)interactables.splice(i,1)}
 function updateTerminalStatus(){terminalUI.setStatus('AUXILIARY GRID: '+(powerOn?'ONLINE':'OFFLINE')+' / DOOR: '+(doorOpen?'OPEN':doorOpening?'OPENING':'SEALED')+' / MU-1 LINK: ACTIVE')}
 function showTerminal(){Object.keys(keys).forEach(k=>keys[k]=false);terminalOpen=true;updateTerminalStatus();terminalUI.show()}
 function hideTerminal(){terminalUI.hide()}
@@ -569,6 +571,7 @@ function terminalCommand(k){
  if(!terminalUI.session.state.authenticated)return 'AUTHENTICATION REQUIRED';
  if(k==='1'){
   if(!powerOn)return 'ERROR: AUXILIARY GRID OFFLINE';
+   if(!workshop.hasProbe)return 'DOOR LINK ISOLATED · FIT ACCESS PROBE AND USE LOCAL SOCKET';
   if(doorOpen||doorOpening)return doorOpen?'DOOR ALREADY OPEN':'ACTUATOR IN MOTION';
   doorOpening=true;hatch.userData.openStarted=performance.now();task.textContent='Door opening. Approach the exit to finish the demo.';updateTerminalStatus();return 'COMMAND 01 ACCEPTED / OPENING BULKHEAD';
  }
@@ -644,10 +647,10 @@ function interact(){if(opening?.active)return;if(ended||pickup||inventory.classL
 const id=o.userData.name;interactionPulse=1;
 if(o.userData.workshopType){workshop.handle(o);return;}
 if(id==='MAINTENANCE NOTE'){hasNote=true;removeObject(o);updateInventory();saveProgress();notify('NOTE RECOVERED · THE PASSWORD IS ETNA');showNote();}
-else if(id==='LOCK-SERVICE MANIPULATOR'){if(hasArm)return;beginPickup(o)}
-else if(id==='SEALED SERVICE CASE'){if(!armEquipped){notify('MECHANICAL RELEASE REQUIRED');say('CASE LOCK CANNOT BE OPERATED WITHOUT A MANIPULATOR.');return}if(!caseOpen){caseOpen=true;lidPivot.rotation.x=-1.35;cell.visible=true;say('SERVICE CASE RELEASED.');task.textContent='Recover the portable power cell from the open case.';notify('LOCK RELEASED')}else if(!caseCellTaken){caseCellTaken=true;setCellCount(cellCount+1);cell.visible=false;say('PORTABLE POWER CELL RECOVERED.');task.textContent='Use the power cell to restore internal charge.';updateInventory();notify('POWER CELL ACQUIRED')}}
-else if(id==='AUXILIARY POWER DISTRIBUTION'){if(!armEquipped){notify('MANIPULATOR REQUIRED TO THROW SWITCH');return}setStationPower(true);say('GENERATOR SWITCH ENGAGED. TERMINAL POWER AVAILABLE.');task.textContent='Access the powered terminal.';notify('GENERATOR ONLINE')}
-else if(id==='CONTROL TERMINAL'){if(!powerOn){notify('TERMINAL OFFLINE');return}showTerminal()}else if(id==='MAINTENANCE EXIT'){if(doorOpen)finishDemo();else notify('DOOR SEALED · USE TERMINAL')}
+else if(id==='LOCK-SERVICE MANIPULATOR'){notify('PART REPLACEMENT REQUIRES A SERVICE BAY')}
+else if(id==='SEALED SERVICE CASE'){if(!caseOpen){caseOpen=true;lidPivot.rotation.x=-1.35;cell.visible=true;say('SERVICE CASE RELEASED.');task.textContent='Recover the portable power cell from the open case.';notify('LOCK RELEASED')}else if(!caseCellTaken){caseCellTaken=true;setCellCount(cellCount+1);cell.visible=false;say('PORTABLE POWER CELL RECOVERED.');task.textContent='Use the power cell to restore internal charge.';updateInventory();notify('POWER CELL ACQUIRED')}}
+else if(id==='AUXILIARY POWER DISTRIBUTION'){setStationPower(true);say('GENERATOR SWITCH ENGAGED. TERMINAL POWER AVAILABLE.');task.textContent='Access the powered terminal.';notify('GENERATOR ONLINE')}
+else if(id==='CONTROL TERMINAL'){if(!powerOn){notify('TERMINAL OFFLINE');return}showTerminal()}else if(id==='MAINTENANCE EXIT'){if(doorOpen)finishDemo();else if(!workshop.hasProbe)notify('DOOR SOCKET REQUIRES ACCESS PROBE');else if(!powerOn)notify('RESTORE POWER FIRST');else{doorOpening=true;hatch.userData.openStarted=performance.now();notify('ACCESS PROBE ENGAGED · DOOR UNLOCKING');saveProgress()}}
 }
 // Nearby item readout and small projected E key above interactable objects.
 const nearbyPanel=document.querySelector('#nearby-panel');
@@ -724,7 +727,7 @@ window.addEventListener('resize',resize);resize();
 
 const hintBox=document.createElement('aside');hintBox.id='hint-box';hintBox.hidden=true;hintBox.innerHTML='<strong>MAINTENANCE GUIDANCE</strong><button aria-label="Close hints">×</button><p></p><small>H CLOSE · C WORKSHOP · § VIEW</small>';document.querySelector('#viewport').append(hintBox);
 const hintButton=document.createElement('button');hintButton.id='hint-toggle';hintButton.textContent='?';hintButton.title='Gameplay hints (H)';document.querySelector('#viewport').append(hintButton);
-function toggleHint(){hintBox.hidden=!hintBox.hidden;hintBox.querySelector('p').textContent=!hasArm?'Find the service arm near the repair bay. Approach and press E.':!armEquipped?'Press I and equip the recovered arm.':!powerOn?'Restore auxiliary power with your manipulator.':!terminalBooted?'Find the maintenance note to log in at the terminal.':workshop.hint()}
+function toggleHint(){hintBox.hidden=!hintBox.hidden;hintBox.querySelector('p').textContent=!powerOn?'Throw the generator switch to power the room.':!hasNote?'Find the staff card in locker 106.':workshop.hint()}
 hintButton.onclick=toggleHint;hintBox.querySelector('button').onclick=()=>hintBox.hidden=true;
 window.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='h'&&!mainMenu?.active&&!terminalOpen&&!workshop.isOpen&&!inventory.classList.contains('open'))toggleHint()});
 
@@ -873,19 +876,20 @@ function setArmEquipped(value){
  armEquipped=value;updateInventory();saveProgress();playSound('equip');
  notify(value?'MANIPULATOR INSTALLED':'MANIPULATOR STOWED');refreshDirective();
 }
-function refreshDirective(){task.textContent=powerOn?'Access the powered terminal.':!hasArm?'Recover the missing manipulator from the repair bay.':!armEquipped?'Inspect and equip the recovered manipulator.':'Activate auxiliary power at the generator.'}
+function refreshDirective(){task.textContent=!powerOn?'Restore auxiliary power at the generator.':!hasNote?'Find the worker access card in locker 106.':!workshop.specUnlocked?'Use the terminal to recover the fabrication spec.':!workshop.hasProbe?'Dismantle the broken claw and fabricate an Access Probe.':'Use the probe on the exit door socket.'}
 function interactionHint(o){
  if(o.userData.workshopType==='locker')return 'OPEN SALVAGE LOCKER';
  if(o.userData.workshopType==='bench')return 'OPEN WORKSHOP';
  if(o.userData.workshopType==='shard')return 'RECOVER SPEC SHARD';
- if(o.userData.workshopType==='loose'||o.userData.workshopType==='locker-loot')return 'PICK UP COMPONENT';
+ if(o.userData.workshopType==='loose'||o.userData.workshopType==='locker-loot')return 'RECOVER ITEM';
+  if(o.userData.workshopType==='broken-claw')return 'DISMANTLE BROKEN CLAW';
  const id=o.userData.name;
  if(id==='MAINTENANCE NOTE')return 'READ MAINTENANCE NOTE';
  if(id==='LOCK-SERVICE MANIPULATOR')return pickup?'RECOVERING':'RECOVER ARM';
  if(id==='SEALED SERVICE CASE')return !armEquipped?'MANIPULATOR REQUIRED':!caseOpen?'RELEASE CASE':!caseCellTaken?'TAKE POWER CELL':'CASE EMPTY';
- if(id==='AUXILIARY POWER DISTRIBUTION')return !armEquipped?'MANIPULATOR REQUIRED':powerOn?'POWER ONLINE':'RESTORE POWER';
+ if(id==='AUXILIARY POWER DISTRIBUTION')return powerOn?'POWER ONLINE':'RESTORE POWER';
  if(id==='CONTROL TERMINAL')return powerOn?'ACCESS TERMINAL':'POWER REQUIRED';
- return doorOpen?'FINISH DEMO':'TERMINAL REQUIRED';
+ return doorOpen?'FINISH DEMO':workshop.hasProbe?'USE ACCESS PROBE':'ACCESS PROBE REQUIRED';
 }
 function beginPickup(o){
  referenceAssets.releaseArm();pickup={object:o,time:0,start:o.position.clone()};target=null;
