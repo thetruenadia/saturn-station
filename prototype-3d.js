@@ -118,31 +118,41 @@ function hazardMark(parent,x,y,z,rotationY=0){
   const m=new THREE.Mesh(new THREE.ShapeGeometry(s),new THREE.MeshBasicMaterial({color:0x171b17,side:THREE.DoubleSide}));
   m.position.set(x,y,z);m.rotation.y=rotationY;parent.add(m);
 }
-// The chassis is the dominant mass. A deep anvil-like shell, not a narrow torso.
-const shell=new THREE.Group();shell.position.set(0,2.48,0);body.add(shell);
-bodyBox(shell,1.62,.78,1.04,sage,0,0,0);
-const roof=bodyBox(shell,1.55,.13,.98,sageLight,-.015,.43,-.025);roof.rotation.x=-.12;
-bodyBox(shell,1.52,.19,.11,sageDark,0,-.30,.53);
-bodyBox(shell,1.43,.32,.055,gunmetal,0,-.17,.59);
-bodyBox(shell,1.38,.12,.045,sage,0,-.01,.63);
-bodyBox(shell,.16,.49,.88,sageDark,-.79,-.035,-.015);
-bodyBox(shell,.16,.43,.88,sage,-.78,-.015,-.015);
-bodyBox(shell,.13,.42,.88,sageDark,.79,-.035,-.015);
-bodyBox(shell,.08,.34,.78,sage,.83,-.015,-.015);
-// Layered armour lip, side rails, visible seams and fasteners.
-for(const side of [-1,1]){
-  bodyBox(shell,.07,.69,.94,rawSteel,side*.82,-.005,-.015);
-  bodyBox(shell,.09,.09,.86,rust,side*.78,-.36,-.015);
-  for(const z of [-.38,.34]){
-    const bolt=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.035,10),rawSteel);
-    bolt.rotation.z=Math.PI/2;bolt.position.set(side*.87,.04,z);shell.add(bolt);
-  }
+// Maintenance Unit 0.2: custom Three.js geometry rebuilt from the reference views.
+function wedge(parent,name,rings,material){
+ const v=[],indices=[];
+ for(const [z,w,lo,hi,shift] of rings)v.push(shift-w,lo,z,shift+w,lo,z,shift+w,hi,z,shift-w,hi,z);
+ indices.push(0,3,2,0,2,1);
+ for(let i=0;i<rings.length-1;i++)for(let j=0;j<4;j++){
+ const x=i*4+j,y=i*4+(j+1)%4;indices.push(x,y,y+4,x,y+4,x+4);
+ }
+ const n=(rings.length-1)*4;indices.push(n,n+1,n+2,n,n+2,n+3);
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(v,3));geo.setIndex(indices);geo.computeVertexNormals();
+ const obj=new THREE.Mesh(geo,material);obj.name=name;obj.castShadow=true;obj.receiveShadow=true;parent.add(obj);return obj;
 }
-for(let i=0;i<6;i++)bodyBox(shell,.075,.025,.25,jointMetal,-.56+i*.13,.51,-.19);
-bodyBox(shell,.53,.045,.22,gunmetal,-.32,.515,-.34);
-bodyBox(shell,.30,.035,.18,rust,.36,.51,-.31);
-label(shell,'ば',-.51,.02,.624,0,.19);
-label(shell,'の',.22,-.17,.632,0,.09,0xb6b49e);
+const shell=new THREE.Group();shell.position.set(0,2.48,0);body.add(shell);
+wedge(shell,'Asymmetric broad stepped wedge chassis',[
+ [-.92,.56,-.27,.28,-.03],[-.63,.74,-.35,.39,-.02],
+ [.06,.81,-.37,.41,0],[.42,.75,-.34,.34,.03],[.70,.60,-.25,.25,.04]
+],sage);
+wedge(shell,'Left extended pale sage side cheek',[
+ [-.91,.17,-.16,.26,-.60],[-.61,.20,-.22,.38,-.60],
+ [.19,.19,-.20,.35,-.61],[.48,.13,-.15,.24,-.59]
+],sageLight);
+wedge(shell,'Right irregular dark side cheek',[
+ [-.90,.15,-.16,.25,.62],[-.60,.19,-.21,.35,.62],
+ [.17,.18,-.20,.32,.62],[.47,.12,-.14,.23,.59]
+],sageDark);
+const access=bodyBox(shell,.72,.035,.60,sageDark,-.08,.415,-.16);access.rotation.x=-.08;
+bodyBox(shell,.63,.045,.49,sageLight,-.08,.44,-.16);
+bodyBox(shell,.75,.17,.32,sageLight,-.37,.28,-.76);
+bodyBox(shell,.30,.10,.34,gunmetal,.41,.43,-.37);
+for(const side of [-1,1]){
+ bodyBox(shell,.04,.11,.90,rawSteel,side*.79,-.25,-.10);
+ for(const z of [-.58,-.15,.27])cylX(shell,.022,.025,rawSteel,side*.82,.12,z);
+}
+label(shell,'ば',-.50,.36,-.94,0,.16);
+label(shell,'の',.20,-.10,.708,0,.09,0xb6b49e);
 // Front-right primary optic: deeply recessed into a thick metal collar.
 const optic=new THREE.Group();optic.position.set(.49,-.10,.635);shell.add(optic);
 const opticCup=new THREE.Mesh(new THREE.CylinderGeometry(.19,.22,.16,20),jointMetal);opticCup.rotation.x=Math.PI/2;optic.add(opticCup);
@@ -197,12 +207,12 @@ for(const side of [-1,1])rodBetween(manipulator,[0,-.02,-.60],[side*.085,-.045,-
 // Compact reverse-jointed legs. The thigh sweeps backwards; the shin returns forwards.
 const legs=[];
 for(const side of [-1,1]){
-  const hip=new THREE.Group();hip.position.set(side*.48,1.88,0);robot.add(hip);
+  const hip=new THREE.Group();hip.position.set(side*.53,1.88,0);robot.add(hip);
   cylX(hip,.23,.22,jointMetal,0,0,0);
   cylX(hip,.17,.25,gunmetal,side*.015,0,0);
   cylX(hip,.085,.28,rawSteel,side*.025,0,0);
   // Thigh: a substantial armoured upper segment, angled out and rearward.
-  const thighA=[0,-.10,0],thighB=[side*.12,-.69,-.20];
+  const thighA=[0,-.10,0],thighB=[side*.28,-.77,-.39];
   beam(hip,thighA,thighB,.27,.34,sageDark);
   beam(hip,[side*.015,-.15,.12],[side*.13,-.61,-.045],.20,.075,sage);
   beam(hip,[side*.02,-.17,-.14],[side*.14,-.61,-.30],.055,.06,rawSteel);
@@ -217,7 +227,7 @@ for(const side of [-1,1]){
     pin.rotation.z=Math.PI/2;pin.position.set(s*.17,0,0);knee.add(pin);
   }
   // Shin angles forward below the backward knee.
-  const shinA=[0,-.04,0],shinB=[-side*.055,-.72,.36];
+  const shinA=[0,-.04,0],shinB=[-side*.18,-.88,.58];
   beam(knee,shinA,shinB,.13,.16,gunmetal);
   // Removable green shin armour sleeve on the forward face.
   const sleeve=beam(knee,[side*.015,-.12,.075],[-side*.035,-.62,.38],.23,.20,sage);
