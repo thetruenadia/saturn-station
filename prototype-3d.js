@@ -130,44 +130,65 @@ function wedge(parent,name,rings,material){
  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(v,3));geo.setIndex(indices);geo.computeVertexNormals();
  const obj=new THREE.Mesh(geo,material);obj.name=name;obj.castShadow=true;obj.receiveShadow=true;parent.add(obj);return obj;
 }
+// Sculpted low, elongated body: the front is +Z, rear service boom is -Z.
 const shell=new THREE.Group();shell.position.set(0,2.48,0);body.add(shell);
-wedge(shell,'Asymmetric broad stepped wedge chassis',[
- [-.92,.56,-.27,.28,-.03],[-.63,.74,-.35,.39,-.02],
- [.06,.81,-.37,.41,0],[.42,.75,-.34,.34,.03],[.70,.60,-.25,.25,.04]
+// Main load-bearing chassis is narrow in height and extended along the travel axis.
+wedge(shell,'Main low-profile cast wedge',[
+ [-1.02,.49,-.23,.26,-.06],[-.77,.58,-.27,.35,-.04],
+ [-.25,.63,-.29,.39,-.02],[.18,.62,-.28,.33,.02],
+ [.60,.55,-.27,.23,.07],[1.03,.45,-.24,.16,.10],
+ [1.18,.34,-.17,.10,.10]
 ],sage);
-wedge(shell,'Left extended pale sage side cheek',[
- [-.91,.17,-.16,.26,-.60],[-.61,.20,-.22,.38,-.60],
- [.19,.19,-.20,.35,-.61],[.48,.13,-.15,.24,-.59]
+// Raised rear engine fairing and long, offset left rear service boom.
+wedge(shell,'Raised rear upper fairing',[
+ [-1.08,.40,.10,.33,-.09],[-.84,.48,.12,.47,-.08],
+ [-.38,.49,.15,.48,-.07],[-.11,.38,.13,.40,-.06]
 ],sageLight);
-wedge(shell,'Right irregular dark side cheek',[
- [-.90,.15,-.16,.25,.62],[-.60,.19,-.21,.35,.62],
- [.17,.18,-.20,.32,.62],[.47,.12,-.14,.23,.59]
-],sageDark);
-const access=bodyBox(shell,.72,.035,.60,sageDark,-.08,.415,-.16);access.rotation.x=-.08;
-bodyBox(shell,.63,.045,.49,sageLight,-.08,.44,-.16);
-bodyBox(shell,.75,.17,.32,sageLight,-.37,.28,-.76);
-bodyBox(shell,.30,.10,.34,gunmetal,.41,.43,-.37);
+wedge(shell,'Offset left rear service boom',[
+ [-1.42,.18,.15,.34,-.48],[-1.24,.19,.15,.36,-.49],
+ [-.77,.18,.17,.37,-.48],[-.58,.15,.16,.32,-.48]
+],sageLight);
+// Projecting front-right armour has a faceted side, rather than a second box.
+wedge(shell,'Angular front optic cheek',[
+ [-.32,.25,-.23,.30,.42],[.22,.28,-.26,.30,.43],
+ [.70,.25,-.25,.22,.43],[1.11,.18,-.18,.12,.39],
+ [1.24,.12,-.10,.055,.36]
+],sageLight);
+// Opposite cheek is shorter, leaving an intentionally asymmetric silhouette.
+wedge(shell,'Short left front cheek',[
+ [-.29,.14,-.21,.30,-.48],[.22,.17,-.23,.27,-.48],
+ [.69,.13,-.21,.19,-.43],[1.02,.09,-.12,.10,-.39]
+],sage);
+// Dark inset top access panel and thin raised surrounding lip.
+const hatch=bodyBox(shell,.69,.018,.74,gunmetal,.03,.401,.16);
+hatch.rotation.x=-.10;
+const hatchInset=bodyBox(shell,.61,.019,.64,sageDark,.03,.420,.16);
+hatchInset.rotation.x=-.10;
+// Rear mechanical vent and raised service identification panel.
+bodyBox(shell,.60,.15,.21,sageLight,-.48,.30,-1.30);
+bodyBox(shell,.35,.035,.15,gunmetal,.15,.485,-.68);
 for(const side of [-1,1]){
- bodyBox(shell,.04,.11,.90,rawSteel,side*.79,-.25,-.10);
- for(const z of [-.58,-.15,.27])cylX(shell,.022,.025,rawSteel,side*.82,.12,z);
+ for(const z of [-.56,.02,.56,.94]){
+  cylX(shell,.017,.018,rawSteel,side*(z>.70?.51:.63),.13,z);
+ }
 }
-label(shell,'ば',-.50,.36,-.94,0,.16);
-label(shell,'の',.20,-.10,.708,0,.09,0xb6b49e);
+label(shell,'ば',-.52,.38,-1.414,0,.15);
+label(shell,'の',-.03,-.05,1.195,0,.085,0xb6b49e);
 // Front-right primary optic: deeply recessed into a thick metal collar.
-const optic=new THREE.Group();optic.position.set(.49,-.10,.635);shell.add(optic);
+const optic=new THREE.Group();optic.position.set(.61,-.065,.94);shell.add(optic);
 const opticCup=new THREE.Mesh(new THREE.CylinderGeometry(.19,.22,.16,20),jointMetal);opticCup.rotation.x=Math.PI/2;optic.add(opticCup);
 const opticRim=new THREE.Mesh(new THREE.TorusGeometry(.148,.035,10,32),rawSteel);opticRim.position.z=.09;optic.add(opticRim);
 const lens=new THREE.Mesh(new THREE.SphereGeometry(.105,20,16),opticGlass);lens.position.z=.105;optic.add(lens);
 const lensCore=new THREE.Mesh(new THREE.SphereGeometry(.035,12,10),new THREE.MeshBasicMaterial({color:0xffa16b}));lensCore.position.set(-.025,.022,.18);optic.add(lensCore);
-const opticLight=new THREE.PointLight(0xff3217,.45,1.3);opticLight.position.set(.5,2.38,.92);body.add(opticLight);
+const opticLight=new THREE.PointLight(0xff3217,.45,1.3);opticLight.position.set(.64,2.40,1.04);body.add(opticLight);
 // Rear-right secondary sensor pod, visibly distinct from the main chassis.
-const sensor=new THREE.Group();sensor.position.set(.57,2.98,-.27);body.add(sensor);
+const sensor=new THREE.Group();sensor.position.set(.39,2.99,-.66);body.add(sensor);
 bodyBox(sensor,.32,.25,.36,gunmetal,0,0,0);
 bodyBox(sensor,.27,.12,.27,sageDark,0,.16,-.015);
 const sensorLens=new THREE.Mesh(new THREE.SphereGeometry(.065,14,12),blackGlass);sensorLens.position.set(0,-.015,.205);sensor.add(sensorLens);
 cylX(sensor,.09,.36,rawSteel,0,-.03,-.02);
 // Flush service access panel behind the sensor.
-const service=new THREE.Group();service.position.set(-.40,2.91,-.27);body.add(service);
+const service=new THREE.Group();service.position.set(-.31,2.94,-.48);body.add(service);
 bodyBox(service,.36,.035,.30,gunmetal,0,0,0);
 bodyBox(service,.30,.025,.24,sageLight,0,.024,0);
 for(const x of [-.13,.13])cylX(service,.018,.04,rawSteel,x,.045,-.10);
