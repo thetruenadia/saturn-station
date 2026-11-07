@@ -393,12 +393,15 @@ const lens=new THREE.Mesh(new THREE.SphereGeometry(.105,20,16),opticGlass);lens.
 const lensCore=new THREE.Mesh(new THREE.SphereGeometry(.035,12,10),new THREE.MeshBasicMaterial({color:0xffa16b}));lensCore.position.set(-.025,.022,.18);optic.add(lensCore);
 const opticLight=new THREE.PointLight(0xff3217,.45,1.3);opticLight.position.set(.64,2.40,1.04);body.add(opticLight);
 // Rear-right secondary sensor pod, visibly distinct from the main chassis.
+// Structural pedestal ties the raised sensor assembly into the chassis below.
+bodyBox(body,.30,.37,.31,gunmetal,.39,2.72,-.66);
 const sensor=new THREE.Group();sensor.position.set(.39,2.99,-.66);body.add(sensor);
 bodyBox(sensor,.32,.25,.36,gunmetal,0,0,0);
 bodyBox(sensor,.27,.12,.27,sageDark,0,.16,-.015);
 const sensorLens=new THREE.Mesh(new THREE.SphereGeometry(.065,14,12),blackGlass);sensorLens.position.set(0,-.015,.205);sensor.add(sensorLens);
 cylX(sensor,.09,.36,rawSteel,0,-.03,-.02);
 // Flush service access panel behind the sensor.
+bodyBox(body,.27,.23,.29,sageDark,-.31,2.79,-.48);
 const service=new THREE.Group();service.position.set(-.31,2.94,-.48);body.add(service);
 bodyBox(service,.36,.035,.30,gunmetal,0,0,0);
 bodyBox(service,.30,.025,.24,sageLight,0,.024,0);
@@ -530,7 +533,7 @@ const terminalUI=createTerminalBrowser({
  readNote:()=>hasNote,sound:playSound,onSpec:()=>workshop.releaseSpec()
 });
 function setCellCount(n){cellCount=Math.max(0,Math.floor(n));hasCell=cellCount>0;usedCell=!hasCell;updateInventory()}
-workshop=createWorkshopSystem({THREE,scene,robot,interactables,notify,sound:playSound,save:saveProgress,cellCount:()=>cellCount,setCellCount,onCraftArm(){if(hasArm)return false;hasArm=true;armEquipped=true;removeObject(arm);updateInventory();refreshDirective();return true},onDismantle(){if(!hasArm)return false;hasArm=false;armEquipped=false;updateInventory();refreshDirective();return true}});
+workshop=createWorkshopSystem({THREE,scene,robot,interactables,colliders:referenceAssets.colliders,notify,sound:playSound,save:saveProgress,cellCount:()=>cellCount,setCellCount,onCraftArm(){if(hasArm)return false;hasArm=true;armEquipped=true;removeObject(arm);updateInventory();refreshDirective();return true},onDismantle(){if(!hasArm)return false;hasArm=false;armEquipped=false;updateInventory();refreshDirective();return true}});
 function updateTerminalStatus(){terminalUI.setStatus('AUXILIARY GRID: '+(powerOn?'ONLINE':'OFFLINE')+' / DOOR: '+(doorOpen?'OPEN':doorOpening?'OPENING':'SEALED')+' / MU-1 LINK: ACTIVE')}
 function showTerminal(){Object.keys(keys).forEach(k=>keys[k]=false);terminalOpen=true;updateTerminalStatus();terminalUI.show()}
 function hideTerminal(){terminalUI.hide()}
@@ -1056,7 +1059,7 @@ body.rotation.x=THREE.MathUtils.damp(body.rotation.x,chassisPitch,7,dt);
 if(!paused&&!ended&&!godMode&&charge>0){charge=Math.max(0,charge-dt*.1);updateCharge();if(charge===0){notify('POWER DEPLETED');triggerDeath()}}
 if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);leftLeaf.position.x=-1.85*t;rightLeaf.position.x=1.85*t;if(t>=1){doorOpening=false;doorOpen=true;updateTerminalStatus();task.textContent='Exit door open. Terminal remains available.';notify('DOOR OPEN')}}
 if(firstPerson){firstPersonCamera.position.set(robot.position.x,2.15,robot.position.z);firstPersonCamera.lookAt(robot.position.x+Math.sin(lookHeading)*Math.cos(lookPitch),2.15+Math.sin(lookPitch),robot.position.z+Math.cos(lookHeading)*Math.cos(lookPitch));}
-updateStationSystems(dt);renderer.render(scene,activeCamera());updateNearbyUI()}
+workshop.update(dt);updateStationSystems(dt);renderer.render(scene,activeCamera());updateNearbyUI()}
 opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();if(menuLaunch?.mode!=='resume'){doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;}updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
 mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound});
 const returnMenuButton=document.createElement('button');returnMenuButton.textContent='MAIN MENU';returnMenuButton.addEventListener('click',()=>{hideTerminal();closeInventory();saveProgress();setPaused(true);mainMenu.show()});document.querySelector('#pause-restart').after(returnMenuButton);
