@@ -1056,7 +1056,7 @@ function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta()
 const desiredFocus=new THREE.Vector3(robot.position.x-(workshop.isOpen?1.6:0),1.25,robot.position.z);
 const followDelta=desiredFocus.sub(controls.target).multiplyScalar(1-Math.exp(-dt*4));
 controls.target.add(followDelta);camera.position.add(followDelta);
-controls.update();if(inventory.classList.contains('open')){renderInventoryPreview();renderItemInspection(dt)}if(!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!workshop.isOpen&&!devConsole.classList.contains('open')){let mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0);if(firstPerson){const f=-mz,r=mx;mx=Math.sin(lookHeading)*f+Math.cos(lookHeading)*r;mz=Math.cos(lookHeading)*f-Math.sin(lookHeading)*r;}const len=Math.hypot(mx,mz);const wantsMove=len>0&&!pickup;
+controls.update();if(inventory.classList.contains('open')){renderInventoryPreview();renderItemInspection(dt)}if(!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){let mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0);if(firstPerson){const f=-mz,r=mx;mx=Math.sin(lookHeading)*f+Math.cos(lookHeading)*r;mz=Math.cos(lookHeading)*f-Math.sin(lookHeading)*r;}const len=Math.hypot(mx,mz);const wantsMove=len>0&&!pickup&&!workshop.isOpen;
 const targetSpeed=wantsMove?2.25*Math.max(.72,1-(workshop.mass()+cellCount*1.8)*.006):0;
 // Inertial acceleration and braking make the chassis feel mechanically heavy.
 gaitVelocity=THREE.MathUtils.damp(gaitVelocity,targetSpeed,wantsMove?6.2:8.5,dt);
