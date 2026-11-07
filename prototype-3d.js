@@ -303,14 +303,45 @@ function closeInventory(){inventory.classList.remove('open');inventory.setAttrib
 const armSlot=document.querySelector('[data-slot="arm"]');armSlot.addEventListener('dragover',e=>{e.preventDefault();armSlot.classList.add('drag-over')});armSlot.addEventListener('dragleave',()=>armSlot.classList.remove('drag-over'));armSlot.addEventListener('drop',e=>{e.preventDefault();armSlot.classList.remove('drag-over');if(e.dataTransfer.getData('text/plain')==='lock-arm'&&hasArm){armEquipped=true;updateInventory();say('LOCK-SERVICE ARM INSTALLED.');notify('COMPONENT INSTALLED');task.textContent='Use the arm to release the sealed service case.'}});
 document.querySelector('#close-inventory').addEventListener('click',closeInventory);
 document.querySelector('#fullscreen').addEventListener('click',()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()});
-function removeObject(o){scene.remove(o);const i=interactables.indexOf(o);if(i>=0)interactables.splice(i,1)}
+function removeObject(o){if(selected===o)selected=null;scene.remove(o);const i=interactables.indexOf(o);if(i>=0)interactables.splice(i,1)}
 function nearest(){let best=null,d=Infinity;for(const o of interactables){const n=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(n<d){d=n;best=o}}return d<1.8?best:null}
-function interact(){if(ended||inventory.classList.contains('open'))return;const o=selected||nearest();if(!o){notify('NO SERVICE OBJECT IN REACH');return}const dist=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(dist>1.8){target=new THREE.Vector3(o.userData.x,0,o.userData.z);notify('MOVING TO '+o.userData.name);return}
+function interact(){if(ended||inventory.classList.contains('open'))return;const o=(selected&&interactables.includes(selected)&&Math.hypot(robot.position.x-selected.userData.x,robot.position.z-selected.userData.z)<1.8?selected:null)||nearest();if(!o){notify('NO SERVICE OBJECT IN REACH');return}const dist=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(dist>1.8){target=new THREE.Vector3(o.userData.x,0,o.userData.z);notify('MOVING TO '+o.userData.name);return}
 const id=o.userData.name;
 if(id==='LOCK-SERVICE MANIPULATOR'){if(hasArm)return;hasArm=true;removeObject(o);updateInventory();say('LOOSE MANIPULATOR RECOVERED.');task.textContent='Inspect the recovered component in your inventory.';notify('COMPONENT RECOVERED');setTimeout(()=>notify('NEW COMPONENT STORED  ·  I TO INSPECT'),850)}
 else if(id==='SEALED SERVICE CASE'){if(!armEquipped){notify('MECHANICAL RELEASE REQUIRED');say('CASE LOCK CANNOT BE OPERATED WITHOUT A MANIPULATOR.');return}if(!caseOpen){caseOpen=true;lidPivot.rotation.x=-1.35;cell.visible=true;say('SERVICE CASE RELEASED.');task.textContent='Recover the portable power cell from the open case.';notify('LOCK RELEASED')}else if(!hasCell){hasCell=true;cell.visible=false;say('PORTABLE POWER CELL RECOVERED.');task.textContent='Use the power cell to restore internal charge.';updateInventory();notify('POWER CELL ACQUIRED')}}
 else if(id==='AUXILIARY POWER DISTRIBUTION'){if(!usedCell){notify('POWER RESERVE REQUIRED');return}powerOn=true;phosphor.intensity=34;say('AUXILIARY DISTRIBUTION ONLINE.');task.textContent='Reach the maintenance exit.';notify('ROOM POWER RESTORED')}
 else if(id==='MAINTENANCE EXIT'){if(!powerOn){notify('ACCESS SYSTEMS OFFLINE');return}if(!doorOpening&&!doorOpen){doorOpening=true;hatch.userData.openStarted=performance.now();say('EXIT MECHANISM ENGAGED.');task.textContent='Maintenance exit opening...';notify('ACCESS GRANTED');}}
+}
+// Nearby item readout and small projected E key above interactable objects.
+const nearbyPanel=document.querySelector('#nearby-panel');
+const nearbyList=document.querySelector('#nearby-list');
+const interactionMarker=document.querySelector('#interaction-marker');
+const markerWorld=new THREE.Vector3();
+function updateNearbyUI(){
+ const hidden=paused||ended||inventory.classList.contains('open')||devConsole.classList.contains('open');
+ if(hidden){nearbyPanel.classList.remove('visible');interactionMarker.classList.remove('visible');return}
+ const close=interactables.map(o=>({o,d:Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z)}))
+   .filter(x=>x.d<3.3).sort((a,b)=>a.d-b.d);
+ nearbyPanel.classList.toggle('visible',close.length>0);
+ nearbyList.replaceChildren();
+ for(const {o,d} of close.slice(0,3)){
+   const row=document.createElement('div');
+   row.className='nearby-row'+(d<=1.8?' reachable':'');
+   const name=document.createElement('span');name.textContent=o.userData.name;
+   const state=document.createElement('small');state.textContent=d<=1.8?'IN RANGE':'NEARBY';
+   row.append(name,state);nearbyList.appendChild(row);
+ }
+ const active=close.find(x=>x.d<=1.8);
+ if(!active){interactionMarker.classList.remove('visible');return}
+ const o=active.o;
+ markerWorld.set(o.userData.x,1.65,o.userData.z).project(camera);
+ if(markerWorld.z< -1||markerWorld.z>1){interactionMarker.classList.remove('visible');return}
+ const rect=renderer.domElement.getBoundingClientRect();
+ const x=(markerWorld.x*.5+.5)*rect.width;
+ const y=(-markerWorld.y*.5+.5)*rect.height;
+ interactionMarker.style.left=x+'px';
+ interactionMarker.style.top=y+'px';
+ interactionMarker.classList.add('visible');
 }
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let downX=0,downY=0,dragged=false;
 renderer.domElement.addEventListener('pointerdown',e=>{downX=e.clientX;downY=e.clientY;dragged=false});
@@ -457,5 +488,5 @@ body.rotation.x=THREE.MathUtils.damp(body.rotation.x,chassisPitch,7,dt);
 }
 if(!paused&&!ended&&!godMode&&charge>0){charge=Math.max(0,charge-dt*.1);updateCharge();if(charge===0){notify('POWER DEPLETED');triggerDeath()}}
 if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);hatchDoor.rotation.z=-1.65*t;if(t>=1){doorOpening=false;doorOpen=true;ended=true;task.textContent='Demo complete.';notify('DEMO COMPLETE')}}
-renderer.render(scene,camera)}
+renderer.render(scene,camera);updateNearbyUI()}
 animate();document.querySelector('#loading').classList.add('hidden');document.querySelector('#charge').textContent='20%';document.querySelector('#charge-bar').style.width='20%';updateCharge();updateInventory();say('SYSTEMS ONLINE. RECOVERY DIRECTIVE RECEIVED.');
