@@ -347,6 +347,10 @@ function triggerDeath(){if(godMode||deathScreen.classList.contains('open'))retur
 function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);const aspect=w/h,view=8;camera.left=-view*aspect;camera.right=view*aspect;camera.top=view;camera.bottom=-view;camera.updateProjectionMatrix()}
 window.addEventListener('resize',resize);resize();
 const clock=new THREE.Clock();
+// Smaller, lower stance: the Maintenance Unit should feel compact and grounded.
+robot.scale.setScalar(.84);
+let gaitVelocity=0;
+let gaitWeight=0;
 // Stable two-link mechanical gait. The target is defined in robot-local space,
 // preventing world-space planting jumps when turning or crossing a phase boundary.
 const gaitTarget=new THREE.Vector3();
@@ -379,27 +383,36 @@ function solveLegIK(l,target,dt){
 function animateGait(dt,moving){
  for(const l of legs){
    const phase=walkTime+(l.side===1?Math.PI:0);
-   const stride=moving?Math.cos(phase)*.25:0;
+   const stride=moving?Math.cos(phase)*.16:0;
    // Smooth half-wave: lift at the centre of the forward swing.
-   const lift=moving?Math.pow(Math.max(0,Math.sin(phase)),2)*.21:0;
+   const lift=moving?Math.pow(Math.max(0,Math.sin(phase)),2)*.115:0;
    gaitTarget.set(l.hip.position.x+l.thighB[0]+l.shinB[0],
-     .22+lift,.16+stride);
+     .155+lift,.09+stride);
    solveLegIK(l,gaitTarget,dt);
  }
 }
-function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');controls.update();if(!paused&&!ended&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);if(len>0){
- const speed=2.6;
- robot.position.x=THREE.MathUtils.clamp(robot.position.x+mx/len*speed*dt,-8,8);
- robot.position.z=THREE.MathUtils.clamp(robot.position.z+mz/len*speed*dt,-6,6);
- robot.rotation.y=Math.atan2(mx,mz);
- walkTime+=dt*7.6;
- animateGait(dt,true);
- body.position.y=THREE.MathUtils.lerp(body.position.y,.018+Math.abs(Math.sin(walkTime))*.025,Math.min(1,dt*9));
- body.rotation.z=THREE.MathUtils.lerp(body.rotation.z,Math.sin(walkTime)*.012,Math.min(1,dt*9));
-}else{
- animateGait(dt,false);
- body.position.y=THREE.MathUtils.lerp(body.position.y,0,Math.min(1,dt*9));
- body.rotation.z=THREE.MathUtils.lerp(body.rotation.z,0,Math.min(1,dt*9));
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');controls.update();if(!paused&&!ended&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);const wantsMove=len>0;
+const targetSpeed=wantsMove?1.55:0;
+// Inertial acceleration and braking make the chassis feel mechanically heavy.
+gaitVelocity=THREE.MathUtils.damp(gaitVelocity,targetSpeed,wantsMove?3.3:5.2,dt);
+gaitWeight=THREE.MathUtils.damp(gaitWeight,wantsMove?1:0,wantsMove?3.0:5.0,dt);
+if(wantsMove){
+ robot.position.x=THREE.MathUtils.clamp(robot.position.x+mx/len*gaitVelocity*dt,-8,8);
+ robot.position.z=THREE.MathUtils.clamp(robot.position.z+mz/len*gaitVelocity*dt,-6,6);
+ const desiredHeading=Math.atan2(mx,mz);
+ robot.rotation.y+=Math.atan2(Math.sin(desiredHeading-robot.rotation.y),Math.cos(desiredHeading-robot.rotation.y))*Math.min(1,dt*6);
+}
+walkTime+=dt*4.15*(gaitVelocity/1.55);
+animateGait(dt,gaitWeight>.06);
+const transfer=Math.sin(walkTime);
+const load=Math.abs(transfer);
+// A slight dip at each footfall and sideways roll onto the supporting leg.
+const chassisY=gaitWeight*(-.045+.035*load);
+const chassisRoll=gaitWeight*.038*transfer;
+const chassisPitch=gaitWeight*(.027+.013*Math.cos(walkTime*2));
+body.position.y=THREE.MathUtils.damp(body.position.y,chassisY,8,dt);
+body.rotation.z=THREE.MathUtils.damp(body.rotation.z,chassisRoll,7,dt);
+body.rotation.x=THREE.MathUtils.damp(body.rotation.x,chassisPitch,7,dt);
 }}
 if(!paused&&!ended&&!godMode&&charge>0){charge=Math.max(0,charge-dt*.1);updateCharge();if(charge===0){notify('POWER DEPLETED');triggerDeath()}}
 if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);hatchDoor.rotation.z=-1.65*t;if(t>=1){doorOpening=false;doorOpen=true;ended=true;task.textContent='Demo complete.';notify('DEMO COMPLETE')}}
