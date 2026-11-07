@@ -296,7 +296,7 @@ const logMessages=[];const task=document.querySelector('#task'),toast=document.q
 function say(s){logMessages.push(s);if(logMessages.length>8)logMessages.shift()}
 let toastTimer;function notify(s){toast.textContent=s;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600)}
 function updateCharge(){document.querySelector('#charge').textContent=String(Math.ceil(charge)).padStart(2,'0')+'%';document.querySelector('#charge-bar').style.width=Math.max(0,charge)+'%'}
-function updateInventory(){document.querySelector('#item-count').textContent=hasArm?'01':'00';document.querySelector('#arm-hot').textContent=armEquipped?'EQUIPPED':hasArm?'STOWED':'EMPTY';document.querySelector('#arm-hot').classList.toggle('filled',hasArm);document.querySelector('#cell-hot').textContent=hasCell?'READY':usedCell?'USED':'EMPTY';document.querySelector('#cell-hot').classList.toggle('filled',hasCell||usedCell);document.querySelector('#arm-slot').textContent=armEquipped?'LOCK-SERVICE ARM':'EMPTY';document.querySelector('#arm-slot').nextElementSibling.textContent=armEquipped?'COMPONENT INSTALLED':'DRAG COMPONENT HERE';
+function updateInventory(){document.querySelector('#item-count').textContent=hasArm?'01':'00';document.querySelector('#cell-hot').textContent=hasCell?'READY':usedCell?'USED':'EMPTY';document.querySelector('#cell-hot').classList.toggle('filled',hasCell||usedCell);document.querySelector('#arm-slot').textContent=armEquipped?'LOCK-SERVICE ARM':'EMPTY';document.querySelector('#arm-slot').nextElementSibling.textContent=armEquipped?'COMPONENT INSTALLED':'DRAG COMPONENT HERE';
 const list=document.querySelector('#inventory-items');list.innerHTML='';if(!hasArm){list.innerHTML='<p class="empty-inventory">No components recovered.</p>'}else{const item=document.createElement('div');item.className='inventory-item';item.draggable=true;item.innerHTML='<strong>LOCK-SERVICE MANIPULATOR</strong><small>ARTICULATED TOOL ARM · MECHANICAL LOCK RELEASE</small>';item.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain','lock-arm');e.dataTransfer.effectAllowed='move'});list.appendChild(item)}}
 function openInventory(){inventory.classList.add('open');inventory.setAttribute('aria-hidden','false');updateInventory();target=null}
 function closeInventory(){inventory.classList.remove('open');inventory.setAttribute('aria-hidden','true')}
@@ -351,6 +351,31 @@ const clock=new THREE.Clock();
 robot.scale.setScalar(.84);
 let gaitVelocity=0;
 let gaitWeight=0;
+// Inventory preview: cloned idle model, independent of walking animation.
+const previewHost=document.querySelector('#unit-preview');
+const previewScene=new THREE.Scene();
+const previewCamera=new THREE.PerspectiveCamera(35,1,.1,40);
+previewCamera.position.set(5.6,3.9,6.6);
+previewCamera.lookAt(0,1.35,0);
+previewScene.add(new THREE.HemisphereLight(0xb9c8b4,0x293129,2.2));
+const previewLight=new THREE.DirectionalLight(0xf1e7c9,2.6);
+previewLight.position.set(-3,7,5);previewScene.add(previewLight);
+const previewRobot=robot.clone(true);
+previewRobot.position.set(0,0,0);previewRobot.rotation.set(0,-.3,0);
+previewScene.add(previewRobot);
+const previewRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+previewRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
+previewRenderer.outputColorSpace=THREE.SRGBColorSpace;
+previewRenderer.toneMapping=THREE.ACESFilmicToneMapping;
+previewRenderer.toneMappingExposure=1.2;
+previewHost.appendChild(previewRenderer.domElement);
+function renderInventoryPreview(){
+ const w=previewHost.clientWidth,h=previewHost.clientHeight;
+ if(!w||!h)return;
+ previewRenderer.setSize(w,h,false);
+ previewCamera.aspect=w/h;previewCamera.updateProjectionMatrix();
+ previewRenderer.render(previewScene,previewCamera);
+}
 // Stable two-link mechanical gait. The target is defined in robot-local space,
 // preventing world-space planting jumps when turning or crossing a phase boundary.
 const gaitTarget=new THREE.Vector3();
@@ -426,7 +451,7 @@ function animateGait(dt,moving){
    solveLegIK(l,gaitLocalTarget,dt);
  }
 }
-function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');controls.update();if(!paused&&!ended&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);const wantsMove=len>0;
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');controls.update();if(inventory.classList.contains('open'))renderInventoryPreview();if(!paused&&!ended&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);const wantsMove=len>0;
 const targetSpeed=wantsMove?1.55:0;
 // Inertial acceleration and braking make the chassis feel mechanically heavy.
 gaitVelocity=THREE.MathUtils.damp(gaitVelocity,targetSpeed,wantsMove?3.3:5.2,dt);
