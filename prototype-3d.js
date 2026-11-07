@@ -405,49 +405,21 @@ function solveLegIK(l,target,dt){
  l.hip.rotation.z=THREE.MathUtils.lerp(l.hip.rotation.z,0,t);
  l.knee.rotation.z=THREE.MathUtils.lerp(l.knee.rotation.z,0,t);
 }
-// A planted foot retains its world position throughout stance. During swing,
-// the target travels continuously from the old contact to the next foothold.
-const gaitWorldTarget=new THREE.Vector3();
+// Predictable robot-local gait. A bounded target prevents knee snapping when
+// turning, braking, or reaching the end of a step.
 const gaitLocalTarget=new THREE.Vector3();
-const gaitAhead=new THREE.Vector3();
-const gaitFootOffset=new THREE.Vector3();
 function animateGait(dt,moving){
- robot.updateMatrixWorld(true);
+ const blend=THREE.MathUtils.clamp(gaitWeight,0,1);
  for(const l of legs){
-   const phase=((walkTime/(Math.PI*2)+(l.side===1?.5:0))%1+1)%1;
-   const stanceFraction=.56;
-   // A fresh target at each step; keep it across frames, including turns.
-   if(!l.footAnchor){
-     gaitFootOffset.set(l.hip.position.x+l.thighB[0]+l.shinB[0],.155,.09);
-     l.footAnchor=robot.localToWorld(gaitFootOffset.clone());
-     l.previousPhase=phase;
-     l.swingStart=l.footAnchor.clone();
-     l.swingEnd=l.footAnchor.clone();
-   }
-   if(!moving){
-     // Do not snap to neutral when stopping; settle the contact gradually.
-     gaitFootOffset.set(l.hip.position.x+l.thighB[0]+l.shinB[0],.155,.09);
-     gaitAhead.copy(gaitFootOffset);robot.localToWorld(gaitAhead);
-     l.footAnchor.lerp(gaitAhead,Math.min(1,dt*4));
-     gaitWorldTarget.copy(l.footAnchor);
-   }else if(phase<stanceFraction){
-     // On the first stance frame, the previous swing's endpoint becomes contact.
-     if(l.previousPhase>=stanceFraction)l.footAnchor.copy(l.swingEnd);
-     gaitWorldTarget.copy(l.footAnchor);
-   }else{
-     if(l.previousPhase<stanceFraction){
-       l.swingStart.copy(l.footAnchor);
-       gaitFootOffset.set(l.hip.position.x+l.thighB[0]+l.shinB[0],.155,.35);
-       l.swingEnd.copy(gaitFootOffset);robot.localToWorld(l.swingEnd);
-     }
-     const t=(phase-stanceFraction)/(1-stanceFraction);
-     const smooth=t*t*(3-2*t);
-     gaitWorldTarget.copy(l.swingStart).lerp(l.swingEnd,smooth);
-     gaitWorldTarget.y+=.115*Math.sin(Math.PI*t);
-   }
-   l.previousPhase=phase;
-   gaitLocalTarget.copy(gaitWorldTarget);
-   robot.worldToLocal(gaitLocalTarget);
+   const phase=walkTime+(l.side===1?Math.PI:0);
+   // Backward ground stroke, then a short low forward recovery.
+   const stride=.115*Math.cos(phase)*blend;
+   const lift=.075*Math.pow(Math.max(0,Math.sin(phase)),2)*blend;
+   gaitLocalTarget.set(
+     l.hip.position.x+l.thighB[0]+l.shinB[0],
+     .155+lift,
+     .09+stride
+   );
    solveLegIK(l,gaitLocalTarget,dt);
  }
 }
@@ -462,14 +434,14 @@ if(wantsMove){
  const desiredHeading=Math.atan2(mx,mz);
  robot.rotation.y+=Math.atan2(Math.sin(desiredHeading-robot.rotation.y),Math.cos(desiredHeading-robot.rotation.y))*Math.min(1,dt*6);
 }
-walkTime+=dt*6.0*(gaitVelocity/1.55);
+walkTime+=dt*4.2*(gaitVelocity/1.55);
 animateGait(dt,gaitWeight>.06);
 const transfer=Math.sin(walkTime);
 const load=Math.abs(transfer);
 // A slight dip at each footfall and sideways roll onto the supporting leg.
-const chassisY=gaitWeight*(-.045+.035*load);
-const chassisRoll=gaitWeight*.038*transfer;
-const chassisPitch=gaitWeight*(.027+.013*Math.cos(walkTime*2));
+const chassisY=gaitWeight*(-.018+.008*load);
+const chassisRoll=gaitWeight*.012*transfer;
+const chassisPitch=gaitWeight*.012;
 body.position.y=THREE.MathUtils.damp(body.position.y,chassisY,8,dt);
 body.rotation.z=THREE.MathUtils.damp(body.rotation.z,chassisRoll,7,dt);
 body.rotation.x=THREE.MathUtils.damp(body.rotation.x,chassisPitch,7,dt);
