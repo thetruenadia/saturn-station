@@ -380,15 +380,50 @@ function solveLegIK(l,target,dt){
  l.hip.rotation.z=THREE.MathUtils.lerp(l.hip.rotation.z,0,t);
  l.knee.rotation.z=THREE.MathUtils.lerp(l.knee.rotation.z,0,t);
 }
+// A planted foot retains its world position throughout stance. During swing,
+// the target travels continuously from the old contact to the next foothold.
+const gaitWorldTarget=new THREE.Vector3();
+const gaitLocalTarget=new THREE.Vector3();
+const gaitAhead=new THREE.Vector3();
+const gaitFootOffset=new THREE.Vector3();
 function animateGait(dt,moving){
+ robot.updateMatrixWorld(true);
  for(const l of legs){
-   const phase=walkTime+(l.side===1?Math.PI:0);
-   const stride=moving?Math.cos(phase)*.16:0;
-   // Smooth half-wave: lift at the centre of the forward swing.
-   const lift=moving?Math.pow(Math.max(0,Math.sin(phase)),2)*.115:0;
-   gaitTarget.set(l.hip.position.x+l.thighB[0]+l.shinB[0],
-     .155+lift,.09+stride);
-   solveLegIK(l,gaitTarget,dt);
+   const phase=((walkTime/(Math.PI*2)+(l.side===1?.5:0))%1+1)%1;
+   const stanceFraction=.56;
+   // A fresh target at each step; keep it across frames, including turns.
+   if(!l.footAnchor){
+     gaitFootOffset.set(l.hip.position.x+l.thighB[0]+l.shinB[0],.155,.09);
+     l.footAnchor=robot.localToWorld(gaitFootOffset.clone());
+     l.previousPhase=phase;
+     l.swingStart=l.footAnchor.clone();
+     l.swingEnd=l.footAnchor.clone();
+   }
+   if(!moving){
+     // Do not snap to neutral when stopping; settle the contact gradually.
+     gaitFootOffset.set(l.hip.position.x+l.thighB[0]+l.shinB[0],.155,.09);
+     gaitAhead.copy(gaitFootOffset);robot.localToWorld(gaitAhead);
+     l.footAnchor.lerp(gaitAhead,Math.min(1,dt*4));
+     gaitWorldTarget.copy(l.footAnchor);
+   }else if(phase<stanceFraction){
+     // On the first stance frame, the previous swing's endpoint becomes contact.
+     if(l.previousPhase>=stanceFraction)l.footAnchor.copy(l.swingEnd);
+     gaitWorldTarget.copy(l.footAnchor);
+   }else{
+     if(l.previousPhase<stanceFraction){
+       l.swingStart.copy(l.footAnchor);
+       gaitFootOffset.set(l.hip.position.x+l.thighB[0]+l.shinB[0],.155,.35);
+       l.swingEnd.copy(gaitFootOffset);robot.localToWorld(l.swingEnd);
+     }
+     const t=(phase-stanceFraction)/(1-stanceFraction);
+     const smooth=t*t*(3-2*t);
+     gaitWorldTarget.copy(l.swingStart).lerp(l.swingEnd,smooth);
+     gaitWorldTarget.y+=.115*Math.sin(Math.PI*t);
+   }
+   l.previousPhase=phase;
+   gaitLocalTarget.copy(gaitWorldTarget);
+   robot.worldToLocal(gaitLocalTarget);
+   solveLegIK(l,gaitLocalTarget,dt);
  }
 }
 function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);controls.enabled=!inventory.classList.contains('open')&&!paused&&!devConsole.classList.contains('open');controls.update();if(!paused&&!ended&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);const wantsMove=len>0;
@@ -402,7 +437,7 @@ if(wantsMove){
  const desiredHeading=Math.atan2(mx,mz);
  robot.rotation.y+=Math.atan2(Math.sin(desiredHeading-robot.rotation.y),Math.cos(desiredHeading-robot.rotation.y))*Math.min(1,dt*6);
 }
-walkTime+=dt*4.15*(gaitVelocity/1.55);
+walkTime+=dt*6.0*(gaitVelocity/1.55);
 animateGait(dt,gaitWeight>.06);
 const transfer=Math.sin(walkTime);
 const load=Math.abs(transfer);
