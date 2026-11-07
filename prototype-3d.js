@@ -7,6 +7,7 @@ import {installReferenceAssets} from './reference-assets.js?v=etna1';
 import { applyArtDirection } from './station-art.js?v=etna1';
 
 import {createMakerOpening} from './maker-opening.js?v=menu1';
+import {createWorkshopSystem} from './workshop-system.js?v=workshop1';
 
 let opening,mainMenu;
 let menuLaunch=null;try{menuLaunch=consumeLaunch(sessionStorage)}catch{}
@@ -169,7 +170,7 @@ for(const z of [-10.6,10.6])for(let x=-12;x<=12;x+=3){if(z<0&&x>9)continue;box(s
 // Scrap and tools surrounding MU-1's waking area.
 const scrap=new THREE.Group();scrap.position.set(-10,0,7);scene.add(scrap);
 box(scrap,3.6,.22,2.8,deckRust,0,.12,0);
-for(let i=0;i<6;i++){const x=Math.sin(i*2.17)*1.5,z=Math.cos(i*3.71)*1.05;const piece=box(scrap,.22+(i%4)*.16,.12+(i%3)*.14,.35+(i%5)*.12,i%3?deckSteel:deckRust,x,.35+(i%4)*.13,z);piece.rotation.y=i*.72;piece.rotation.z=(i%3-1)*.18}
+for(let i=0;i<6;i++){const x=Math.sin(i*2.17)*1.5,z=Math.cos(i*3.71)*1.05,w=.22+(i%4)*.16,h=.12+(i%3)*.14,d=.35+(i%5)*.12;const piece=box(scrap,w,h,d,i%3?deckSteel:deckRust,x,.23+h/2,z);piece.rotation.y=i*.72}
 for(let i=0;i<2;i++){const t=cylinder(scrap,.055,.055,.7,deckCream,-1.2+i*.52,.5,-.7,0,Math.PI/2);t.rotation.y=i*.2}
 // Repainted bulkhead skins, warning panels, and riveted service cladding.
 const olivePaint=wornOliveMat,sandPaint=wornSandMat,inkBlack=mat(0x282b25,.92,.12),hazardPaint=mat(0xb17943,.94,.08);
@@ -516,15 +517,17 @@ addTechnicalInk(scene);
 const shadow=new THREE.Mesh(new THREE.CircleGeometry(.92,32),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.56}));
 shadow.rotation.x=-Math.PI/2;shadow.position.y=.018;robot.add(shadow);
 
-let interactionPulse=0;let charge=60,hasArm=false,armEquipped=false,caseOpen=false,hasNote=false,hasCell=false,usedCell=false,powerOn=false,ended=false,paused=false,doorOpening=false,doorOpen=false,target=null,selected=null,walkTime=0;
+let interactionPulse=0;let cellCount=0,workshop;let charge=60,hasArm=false,armEquipped=false,caseOpen=false,hasNote=false,hasCell=false,usedCell=false,powerOn=false,ended=false,paused=false,doorOpening=false,doorOpen=false,target=null,selected=null,walkTime=0;
 const keys={w:false,a:false,s:false,d:false};
 const logMessages=[];const task=document.querySelector('#task'),toast=document.querySelector('#toast'),inventory=document.querySelector('#inventory');
 let terminalBooted=false,terminalOpen=false;
 const terminalUI=createTerminalBrowser({
  onClose(){terminalOpen=false;Object.keys(keys).forEach(k=>keys[k]=false)},
  onBoot(){terminalBooted=true;saveProgress()},onCommand:terminalCommand,onSave:saveProgress,
- readNote:()=>hasNote,sound:playSound
+ readNote:()=>hasNote,sound:playSound,onSpec:()=>workshop.releaseSpec()
 });
+function setCellCount(n){cellCount=Math.max(0,Math.floor(n));hasCell=cellCount>0;usedCell=!hasCell;updateInventory()}
+workshop=createWorkshopSystem({THREE,scene,robot,interactables,notify,sound:playSound,save:saveProgress,cellCount:()=>cellCount,setCellCount,onCraftArm(){hasArm=true;armEquipped=true;removeObject(arm);updateInventory();refreshDirective()}});
 function updateTerminalStatus(){terminalUI.setStatus('AUXILIARY GRID: '+(powerOn?'ONLINE':'OFFLINE')+' / DOOR: '+(doorOpen?'OPEN':doorOpening?'OPENING':'SEALED')+' / MU-1 LINK: ACTIVE')}
 function showTerminal(){Object.keys(keys).forEach(k=>keys[k]=false);terminalOpen=true;updateTerminalStatus();terminalUI.show()}
 function hideTerminal(){terminalUI.hide()}
@@ -559,14 +562,14 @@ function updateInventory(){
  const entries=[];
  if(hasNote)entries.push({type:'note',name:'MAINTENANCE NOTE',draggable:false});
  if(hasArm)entries.push({type:'arm',name:'INDUSTRIAL MANIPULATOR',description:'Olive articulated industrial service arm. Heavy-duty gripper for physical switches and mechanical releases.',stats:'CLASS  TOOL ARM  /  MOUNT  RIGHT  /  GRIP  85 N  /  STATUS  '+(armEquipped?'EQUIPPED':'STOWED'),draggable:!armEquipped});
- if(hasCell&&!usedCell)entries.push({type:'cell',name:'PORTABLE POWER PACK',description:'Sealed auxiliary energy cartridge. Restores MU-1 internal charge when consumed with Q.',stats:'CLASS  CONSUMABLE  /  CHARGE  +55%  /  USE  Q',draggable:false});
+ if(cellCount>0)entries.push({type:'cell',name:'PORTABLE POWER PACK',description:'Sealed auxiliary energy cartridge. Restores MU-1 internal charge when consumed with Q.',stats:'CLASS  CONSUMABLE  /  CHARGE  +55%  /  USE  Q',draggable:false});
  document.querySelector('#item-count').textContent=String(entries.length).padStart(2,'0')+' / 20';
- document.querySelector('#cell-hot').textContent=usedCell?'USED':hasCell?'READY':'EMPTY';
- document.querySelector('#cell-hot').classList.toggle('filled',hasCell||usedCell);
+ document.querySelector('#cell-hot').textContent=String(cellCount)+' ×';
+ document.querySelector('#cell-hot').classList.toggle('filled',cellCount>0);
  document.querySelector('#arm-slot').textContent=armEquipped?'FACTORY MANIPULATOR':'EMPTY';
  document.querySelector('#arm-slot').nextElementSibling.textContent=armEquipped?'COMPONENT INSTALLED':hasArm?'CLICK OR DRAG TO INSTALL':'RECOVER COMPONENT FIRST';
  document.querySelector('#arm-hot').innerHTML=armEquipped?itemIcon('arm'):'';
- document.querySelector('#cell-icon').innerHTML=hasCell||usedCell?itemIcon('cell'):'';
+ document.querySelector('#cell-icon').innerHTML=cellCount>0?itemIcon('cell'):'';
  mountedArm.visible=hasArm&&armEquipped;previewMountedArm.visible=hasArm&&armEquipped;
  chooseInspection(itemType);
  const grid=document.querySelector('#inventory-items');grid.replaceChildren();
@@ -606,9 +609,10 @@ function removeObject(o){if(selected===o)selected=null;scene.remove(o);const i=i
 function nearest(){let best=null,d=Infinity;for(const o of interactables){const n=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(n<d){d=n;best=o}}return d<1.8?best:null}
 function interact(){if(opening?.active)return;if(ended||pickup||inventory.classList.contains('open'))return;const o=(selected&&interactables.includes(selected)&&Math.hypot(robot.position.x-selected.userData.x,robot.position.z-selected.userData.z)<1.8?selected:null)||nearest();if(!o){notify('NO SERVICE OBJECT IN REACH');return}const dist=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(dist>1.8){target=new THREE.Vector3(o.userData.x,0,o.userData.z);notify('MOVING TO '+o.userData.name);return}
 const id=o.userData.name;interactionPulse=1;
+if(o.userData.workshopType){workshop.handle(o);return;}
 if(id==='MAINTENANCE NOTE'){hasNote=true;removeObject(o);updateInventory();saveProgress();notify('NOTE RECOVERED · THE PASSWORD IS ETNA');showNote();}
 else if(id==='LOCK-SERVICE MANIPULATOR'){if(hasArm)return;beginPickup(o)}
-else if(id==='SEALED SERVICE CASE'){if(!armEquipped){notify('MECHANICAL RELEASE REQUIRED');say('CASE LOCK CANNOT BE OPERATED WITHOUT A MANIPULATOR.');return}if(!caseOpen){caseOpen=true;lidPivot.rotation.x=-1.35;cell.visible=true;say('SERVICE CASE RELEASED.');task.textContent='Recover the portable power cell from the open case.';notify('LOCK RELEASED')}else if(!hasCell){hasCell=true;cell.visible=false;say('PORTABLE POWER CELL RECOVERED.');task.textContent='Use the power cell to restore internal charge.';updateInventory();notify('POWER CELL ACQUIRED')}}
+else if(id==='SEALED SERVICE CASE'){if(!armEquipped){notify('MECHANICAL RELEASE REQUIRED');say('CASE LOCK CANNOT BE OPERATED WITHOUT A MANIPULATOR.');return}if(!caseOpen){caseOpen=true;lidPivot.rotation.x=-1.35;cell.visible=true;say('SERVICE CASE RELEASED.');task.textContent='Recover the portable power cell from the open case.';notify('LOCK RELEASED')}else if(!hasCell){setCellCount(cellCount+1);cell.visible=false;say('PORTABLE POWER CELL RECOVERED.');task.textContent='Use the power cell to restore internal charge.';updateInventory();notify('POWER CELL ACQUIRED')}}
 else if(id==='AUXILIARY POWER DISTRIBUTION'){if(!armEquipped){notify('MANIPULATOR REQUIRED TO THROW SWITCH');return}setStationPower(true);say('GENERATOR SWITCH ENGAGED. TERMINAL POWER AVAILABLE.');task.textContent='Access the powered terminal.';notify('GENERATOR ONLINE')}
 else if(id==='CONTROL TERMINAL'){if(!powerOn){notify('TERMINAL OFFLINE');return}showTerminal()}else if(id==='MAINTENANCE EXIT'){if(doorOpen)finishDemo();else notify('DOOR SEALED · USE TERMINAL')}
 }
@@ -661,7 +665,7 @@ if(cmd==='help')consoleLog('help | charge [0-100] | heal | arm | cell | power | 
 else if(cmd==='charge'&&Number.isFinite(n)){charge=THREE.MathUtils.clamp(n,0,100);updateCharge();consoleLog('CHARGE = '+charge)}
 else if(cmd==='heal'){charge=100;updateCharge();consoleLog('CHARGE RESTORED')}
 else if(cmd==='arm'){hasArm=true;armEquipped=true;const i=interactables.indexOf(arm);if(i>=0)removeObject(arm);updateInventory();consoleLog('MANIPULATOR RECOVERED + EQUIPPED')}
-else if(cmd==='cell'){hasCell=true;usedCell=false;updateInventory();consoleLog('POWER CELL ADDED')}
+else if(cmd==='cell'){setCellCount(cellCount+1);consoleLog('POWER CELL ADDED')}
 else if(cmd==='power'){setStationPower(true);consoleLog('AUXILIARY POWER ENABLED')}
 else if(cmd==='unlock'){armEquipped=true;caseOpen=true;lidPivot.rotation.x=-1.35;cell.visible=true;updateInventory();consoleLog('SERVICE CASE UNLOCKED')}
 else if(cmd==='teleport'&&p.length>=2){robot.position.set(THREE.MathUtils.clamp(Number(p[0]),-8,8),0,THREE.MathUtils.clamp(Number(p[1]),-6,6));consoleLog('UNIT TELEPORTED')}
@@ -672,17 +676,25 @@ else consoleLog('UNKNOWN COMMAND. Type help.')}
 let godMode=false;document.querySelector('#console-form').addEventListener('submit',e=>{e.preventDefault();const value=consoleInput.value;consoleLog('> '+value);runCommand(value);consoleInput.value=''});
 window.addEventListener('keydown',e=>{if(mainMenu?.active)return;const k=e.key.toLowerCase();if(opening?.active){if(k==='escape'&&opening.elapsed>0)setPaused(!paused);return;}if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){terminalUI.key(e);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
 if(k==='f2'){e.preventDefault();devConsole.classList.add('open');devConsole.setAttribute('aria-hidden','false');consoleInput.focus();return}
+if(workshop.isOpen){if(k==='escape'||k==='c'){workshop.close();return}return}
 if(k==='i'&&inventory.classList.contains('open')){closeInventory();return}
 if(ended)return;
 if(k==='escape'){if(inventory.classList.contains('open')){closeInventory();return}if(deathScreen.classList.contains('open'))return;setPaused(!paused);return}
-if(paused||ended||inventory.classList.contains('open'))return;
+if(paused||ended||inventory.classList.contains('open')||workshop.isOpen)return;
 if(k in keys){keys[k]=true;e.preventDefault()}
-if(k==='i'){openInventory();return}if(k==='e')interact();if(k==='q'&&hasCell&&!usedCell){usedCell=true;charge=Math.min(100,charge+55);updateCharge();updateInventory();say('POWER CELL CONSUMED. INTERNAL CHARGE RESTORED.');task.textContent='Restore auxiliary power distribution.';notify('CHARGE +55')}});
+if(k==='i'){openInventory();return}if(k==='c'){workshop.open();return}if(k==='e')interact();if(k==='q'&&cellCount>0){setCellCount(cellCount-1);charge=Math.min(100,charge+55);updateCharge();workshop.updateUI();say('FUEL CELL CONSUMED. INTERNAL CHARGE RESTORED.');notify('CHARGE +55 · '+cellCount+' CELLS LEFT');saveProgress()}});
 window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k in keys)keys[k]=false});
 window.addEventListener('blur',()=>Object.keys(keys).forEach(k=>keys[k]=false));
 function triggerDeath(){if(godMode||deathScreen.classList.contains('open'))return;ended=true;Object.keys(keys).forEach(k=>keys[k]=false);deathScreen.classList.add('open');deathScreen.setAttribute('aria-hidden','false');task.textContent='UNIT POWER DEPLETED.';say('CRITICAL: UNIT POWER DEPLETED.');}
 function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);const aspect=w/h,view=8;camera.left=-view*aspect;camera.right=view*aspect;camera.top=view;camera.bottom=-view;camera.updateProjectionMatrix();opening?.resize(w,h)}
 window.addEventListener('resize',resize);resize();
+
+const hintBox=document.createElement('aside');hintBox.id='hint-box';hintBox.hidden=true;hintBox.innerHTML='<strong>MAINTENANCE GUIDANCE</strong><button aria-label="Close hints">×</button><p></p><small>H CLOSE · C WORKSHOP · § VIEW</small>';document.querySelector('#viewport').append(hintBox);
+const hintButton=document.createElement('button');hintButton.id='hint-toggle';hintButton.textContent='?';hintButton.title='Gameplay hints (H)';document.querySelector('#viewport').append(hintButton);
+function toggleHint(){hintBox.hidden=!hintBox.hidden;hintBox.querySelector('p').textContent=!hasArm?'Find the service arm near the repair bay. Approach and press E.':!armEquipped?'Press I and equip the recovered arm.':!powerOn?'Restore auxiliary power with your manipulator.':!terminalBooted?'Find the maintenance note to log in at the terminal.':workshop.hint()}
+hintButton.onclick=toggleHint;hintBox.querySelector('button').onclick=()=>hintBox.hidden=true;
+window.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='h'&&!mainMenu?.active&&!terminalOpen&&!workshop.isOpen&&!inventory.classList.contains('open'))toggleHint()});
+
 const clock=new THREE.Clock();
 // Smaller, lower stance: the Maintenance Unit should feel compact and grounded.
 robot.scale.setScalar(.84);
@@ -711,7 +723,7 @@ const itemRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true});itemRend
 const itemModel=new THREE.Group();itemScene.add(itemModel);
 let itemType=null,itemYaw=.4,itemDragging=false,itemLastX=0;
 function ownsInspectionItem(type){
- return type==='note'?hasNote:type==='arm'?hasArm:type==='cell'?hasCell&&!usedCell:false;
+ return type==='note'?hasNote:type==='arm'?hasArm:type==='cell'?cellCount>0:false;
 }
 function chooseInspection(type){
  itemType=ownsInspectionItem(type)?type:null;itemYaw=.4;itemDragging=false;itemModel.clear();
@@ -960,13 +972,13 @@ function playSound(kind){
 function saveProgress(){
  if(opening?.active||mainMenu?.active)return;
  if(resettingProgress)return;
- try{const progress={version:1,charge,hasArm,armEquipped,caseOpen,hasNote,hasCell,usedCell,powerOn,doorOpen,terminalBooted,x:robot.position.x,z:robot.position.z,heading:robot.rotation.y};if(mainMenu)mainMenu.record(progress);else localStorage.setItem(SAVE_KEY,JSON.stringify(progress));return true}catch{return false}
+ try{const progress={version:1,charge,hasArm,armEquipped,caseOpen,hasNote,hasCell,usedCell,cellCount,workshop:workshop.serialize(),powerOn,doorOpen,terminalBooted,x:robot.position.x,z:robot.position.z,heading:robot.rotation.y};if(mainMenu)mainMenu.record(progress);else localStorage.setItem(SAVE_KEY,JSON.stringify(progress));return true}catch{return false}
 }
 function restoreProgress(){
  try{
   const p=JSON.parse(localStorage.getItem(SAVE_KEY));if(!p||p.version!==1)return;
   const flag=k=>p[k]===true;
-  hasNote=flag('hasNote');if(hasNote)removeObject(maintenanceNote);hasArm=flag('hasArm');armEquipped=hasArm&&flag('armEquipped');caseOpen=flag('caseOpen');hasCell=caseOpen&&flag('hasCell');usedCell=hasCell&&flag('usedCell');
+  hasNote=flag('hasNote');if(hasNote)removeObject(maintenanceNote);hasArm=flag('hasArm');armEquipped=hasArm&&flag('armEquipped');caseOpen=flag('caseOpen');setCellCount(Number.isInteger(p.cellCount)?p.cellCount:(flag('hasCell')&&!flag('usedCell')?1:0));workshop.restore(p.workshop);
   charge=Number.isFinite(p.charge)?THREE.MathUtils.clamp(p.charge,1,100):60;
   if(Number.isFinite(p.x)&&Number.isFinite(p.z))robot.position.set(THREE.MathUtils.clamp(p.x,-12.5,12.5),0,THREE.MathUtils.clamp(p.z,-9.5,9.5));
   if(Number.isFinite(p.heading))robot.rotation.y=p.heading;
@@ -1002,7 +1014,7 @@ const desiredFocus=new THREE.Vector3(robot.position.x,1.25,robot.position.z);
 const followDelta=desiredFocus.sub(controls.target).multiplyScalar(1-Math.exp(-dt*4));
 controls.target.add(followDelta);camera.position.add(followDelta);
 controls.update();if(inventory.classList.contains('open')){renderInventoryPreview();renderItemInspection(dt)}if(!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){const mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0),len=Math.hypot(mx,mz);const wantsMove=len>0&&!pickup;
-const targetSpeed=wantsMove?2.25:0;
+const targetSpeed=wantsMove?2.25*Math.max(.72,1-(workshop.mass()+cellCount*1.8)*.006):0;
 // Inertial acceleration and braking make the chassis feel mechanically heavy.
 gaitVelocity=THREE.MathUtils.damp(gaitVelocity,targetSpeed,wantsMove?6.2:8.5,dt);
 gaitWeight=THREE.MathUtils.damp(gaitWeight,wantsMove?1:0,wantsMove?3.0:5.0,dt);
