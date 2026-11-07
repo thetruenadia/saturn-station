@@ -11,16 +11,14 @@
 <main id="game">
   <div id="viewport">
     <div id="loading">INITIALISING SYSTEMS...</div>
-    <div class="brand"><span class="sigil">S</span><span>SATURN STATION<small>MAINTENANCE DECK B-7</small></span></div>
     <div class="top-right"><span class="unit-id">SRV-09</span><span class="status-dot"></span><button id="fullscreen" title="Toggle fullscreen">⛶</button></div>
     <div class="readout"><span>CHARGE</span><strong id="charge">20%</strong><i><em id="charge-bar"></em></i><small>INTEGRITY&nbsp; <b>100%</b></small></div>
     <div class="task-readout"><small>ACTIVE DIRECTIVE</small><p id="task">Recover the loose manipulator arm.</p></div>
     <div class="hint" id="hint">WASD MOVE&nbsp; · &nbsp;DRAG TO ROTATE&nbsp; · &nbsp;E INTERACT&nbsp; · &nbsp;ESC PAUSE</div>
     <div id="toast" role="status"></div>
     <div id="hotbar" aria-label="Quick access">
-      <div class="hot-slot active"><kbd>1</kbd><span class="slot-icon">⌁</span><small>ARM</small><b id="arm-hot">EMPTY</b></div>
-      <div class="hot-slot"><kbd>2</kbd><span class="slot-icon">▣</span><small>POWER</small><b id="cell-hot">EMPTY</b></div>
-      <div class="hot-slot"><kbd>3</kbd><span class="slot-icon">◇</span><small>UTILITY</small><b>EMPTY</b></div>
+      <div class="hot-slot"><kbd>1</kbd></div><div class="hot-slot"><kbd>2</kbd></div><div class="hot-slot"><kbd>3</kbd></div>
+      <div class="hot-slot power-slot"><kbd>Q</kbd><span class="slot-icon">▣</span><small>POWER CELL</small><b id="cell-hot">EMPTY</b></div>
       <div class="hotbar-note">I&nbsp; INVENTORY <span>Q&nbsp; USE CELL</span></div>
     </div>
     <section id="pause-screen" class="system-screen" aria-hidden="true"><div class="system-card"><small>SRV-09 / SYSTEM INTERRUPT</small><h1>PAUSED</h1><p>Unit processes suspended.</p><button id="resume-game">RESUME</button><button id="pause-restart">RESTART DEMO</button></div></section>
@@ -31,7 +29,7 @@ Type help for commands.</pre><form id="console-form"><span>&gt;</span><input id=
       <div class="inventory-window">
         <header><div><small>SRV-09 / CONFIGURATION</small><h1>UNIT INVENTORY</h1></div><button id="close-inventory" aria-label="Close inventory">×</button></header>
         <div class="inventory-content">
-          <div class="unit-diagram"><div class="diagram-label">PERSONAL MAINTENANCE UNIT</div><div class="unit-silhouette"><span>SRV<br>09</span></div><div class="equipment-slots">
+          <div class="unit-diagram"><div class="diagram-label">PERSONAL MAINTENANCE UNIT</div><div class="unit-silhouette" id="unit-preview"><span class="preview-caption">SRV-09 / IDLE</span></div><div class="equipment-slots">
             <div class="equip-slot" data-slot="arm"><small>ARM / MANIPULATOR</small><strong id="arm-slot">EMPTY</strong><span>DRAG COMPONENT HERE</span></div>
             <div class="equip-slot locked"><small>SECONDARY MOUNT</small><strong>UNASSIGNED</strong></div>
           </div></div>
@@ -72,6 +70,6 @@ Type help for commands.</pre><form id="console-form"><span>&gt;</span><input id=
   });
 })();
 </script>
-<script type="module" src="prototype-3d.js?v=dbc06e9c" onerror="document.getElementById('loading').textContent='FAILED TO LOAD GAME MODULE. Check your connection and reload.'"></script>
+<script type="module" src="prototype-3d.js?v=ui20261107" onerror="document.getElementById('loading').textContent='FAILED TO LOAD GAME MODULE. Check your connection and reload.'"></script>
 </body>
 </html>
