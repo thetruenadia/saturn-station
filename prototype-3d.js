@@ -175,7 +175,7 @@ for(const side of [-1,1]){
 label(shell,'ば',-.52,.38,-1.414,0,.15);
 label(shell,'の',-.03,-.05,1.195,0,.085,0xb6b49e);
 // Front-right primary optic: deeply recessed into a thick metal collar.
-const optic=new THREE.Group();optic.position.set(.61,-.065,.94);shell.add(optic);
+const optic=new THREE.Group();optic.position.set(.67,-.065,.94);optic.rotation.y=Math.PI/2;shell.add(optic);
 const opticCup=new THREE.Mesh(new THREE.CylinderGeometry(.19,.22,.16,20),jointMetal);opticCup.rotation.x=Math.PI/2;optic.add(opticCup);
 const opticRim=new THREE.Mesh(new THREE.TorusGeometry(.148,.035,10,32),rawSteel);opticRim.position.z=.09;optic.add(opticRim);
 const lens=new THREE.Mesh(new THREE.SphereGeometry(.105,20,16),opticGlass);lens.position.z=.105;optic.add(lens);
