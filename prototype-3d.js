@@ -1,5 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
+import { applyArtDirection } from './station-art.js?v=1';
 
 const viewport=document.querySelector('#viewport');
 const scene=new THREE.Scene();
@@ -15,7 +16,7 @@ viewport.appendChild(renderer.domElement);
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.target.set(0,0,0);controls.enableDamping=true;controls.dampingFactor=.07;controls.enablePan=false;
 controls.minPolarAngle=.55;controls.maxPolarAngle=1.25;controls.minZoom=.65;controls.maxZoom=5.5;
-camera.zoom=1.8;camera.updateProjectionMatrix();
+camera.zoom=1.55;camera.updateProjectionMatrix();
 scene.add(new THREE.HemisphereLight(0xc9c4aa,0x453c30,2.15));
 const keyLight=new THREE.DirectionalLight(0xf1d9b1,2.5);keyLight.position.set(-5,12,7);keyLight.castShadow=true;keyLight.shadow.mapSize.set(2048,2048);keyLight.shadow.camera.left=-12;keyLight.shadow.camera.right=12;keyLight.shadow.camera.top=12;keyLight.shadow.camera.bottom=-12;scene.add(keyLight);
 const emergency=new THREE.PointLight(0xc87937,19,15,2);emergency.position.set(4,4,-3);scene.add(emergency);
@@ -28,10 +29,13 @@ function wornPaint(hex,seed){
  const c=document.createElement('canvas');c.width=c.height=256;const ctx=c.getContext('2d');
  ctx.fillStyle='#'+new THREE.Color(hex).getHexString();ctx.fillRect(0,0,256,256);
  let n=seed;const rnd=()=>{n=(1664525*n+1013904223)>>>0;return n/4294967296};
- for(let i=0;i<4400;i++){ctx.fillStyle=rnd()>.5?'#f0e5be10':'#191b1820';ctx.fillRect(rnd()*256,rnd()*256,2+rnd()*18,.5+rnd()*2)}
+ for(let i=0;i<4400;i++){ctx.fillStyle=rnd()>.5?'#f0e5be10':'#191b1820';ctx.fillRect(rnd()*256,rnd()*256,.5+rnd()*4,.5+rnd()*3)}
  for(let i=0;i<130;i++){const x=rnd()*256,y=rnd()*256;ctx.strokeStyle=rnd()>.5?'#272c2780':'#a9774b70';ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+2+rnd()*12,y-rnd()*5);ctx.stroke()}
+ // Broad pigment variation, edge chips and pooled grime suggest painted illustration.
+ for(let i=0;i<26;i++){const x=rnd()*256,y=rnd()*256,r=12+rnd()*65;const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,i%2?'#d9cba324':'#25312c32');g.addColorStop(1,'#25312c00');ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2)}
+ for(let i=0;i<75;i++){const x=rnd()>.5?rnd()*256:(rnd()>.5?rnd()*16:240+rnd()*16),y=rnd()*256;ctx.fillStyle=i%3?'#333c3290':'#aa815998';ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+2+rnd()*9,y+1);ctx.lineTo(x+1+rnd()*5,y+2+rnd()*4);ctx.closePath();ctx.fill()}
  const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
- return new THREE.MeshStandardMaterial({map:tex,roughness:.92,metalness:.16});
+ return new THREE.MeshStandardMaterial({map:tex,roughness:.97,metalness:.08});
 }
 const wornOliveMat=wornPaint(0x707661,11),wornSandMat=wornPaint(0xa3987b,22),wornRustMat=wornPaint(0x655347,33),wornSteelMat=wornPaint(0x505a53,44);
 const floor=box(scene,28,.35,22,floorMat,0,-.2,0,false);
@@ -575,7 +579,7 @@ for(const side of [-1,1])for(let i=0;i<3;i++){
 }
 robot.position.set(-9,0,6);controls.target.set(-9,1.3,6);camera.position.set(3,16,18);controls.update();robot.rotation.y=Math.PI*.18;
 // Selective ink outlines: hard structural silhouettes, not a black wireframe on every triangle.
-const inkMaterial=new THREE.LineBasicMaterial({color:0x171c19,transparent:true,opacity:.42,depthWrite:false});
+const inkMaterial=new THREE.LineBasicMaterial({color:0x1c2928,transparent:true,opacity:.6,depthWrite:false});
 const inkMeshes=[];
 function addTechnicalInk(root){
  root.traverse(o=>{
@@ -587,6 +591,7 @@ function addTechnicalInk(root){
   edge.renderOrder=1;edge.scale.setScalar(1.003);o.add(edge);inkMeshes.push(edge);
  });
 }
+const stationArt=applyArtDirection({THREE,scene,robot,terminal,exchanger,box,cylinder,pipeBetween,wornPaint,label});
 addTechnicalInk(scene);
 const shadow=new THREE.Mesh(new THREE.CircleGeometry(.92,32),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.56}));
 shadow.rotation.x=-Math.PI/2;shadow.position.y=.018;robot.add(shadow);
@@ -898,7 +903,7 @@ const oldEmitters=new Map();scene.traverse(o=>{if(o.isMesh){for(const m of (Arra
 scene.updateMatrixWorld(true);
 const roofMaterials=new Map(),roofPosition=new THREE.Vector3();
 scene.traverse(o=>{
- if(!o.isMesh||Array.isArray(o.material)||o.material.transparent||o.material.emissiveIntensity>.1)return;
+ if(!o.isMesh||Array.isArray(o.material)||o.material.transparent||(o.material.emissive?.getHex()>0&&o.material.emissiveIntensity>.1))return;
  o.getWorldPosition(roofPosition);if(roofPosition.y<5.5)return;
  if(!roofMaterials.has(o.material)){const m=o.material.clone();m.transparent=true;m.opacity=.16;m.depthWrite=false;roofMaterials.set(o.material,m)}
  o.material=roofMaterials.get(o.material);o.children.forEach(c=>{if(c.isLineSegments)c.visible=false});
@@ -1012,7 +1017,7 @@ function restoreProgress(){
 window.addEventListener('pagehide',saveProgress);
 function updateStationSystems(dt){
  const active=!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open');
- updateLighting(dt);animatePickup(dt);
+ updateLighting(dt);animatePickup(dt);stationArt.updateOcclusion(camera,dt);
  if(active){systemTime+=dt;saveElapsed+=dt;stepElapsed+=dt;if(gaitVelocity>.35&&!pickup&&stepElapsed>.56){playSound('step');stepElapsed=0}if(saveElapsed>2){saveElapsed=0;saveProgress()}}
  if(humGain&&audio)humGain.gain.setTargetAtTime(active?(powerOn?.16:.035):0,audio.currentTime,.25);
  if(musicGain&&audio){const audible=!document.hidden&&(!paused||settingsPanel.open)&&!ended;musicGain.gain.setTargetAtTime(audible?musicVolume/100*.12:0,audio.currentTime,.15);const chords=[[110,164.81,220],[98,146.83,196],[87.31,130.81,174.61],[98,146.83,220]],chord=chords[Math.floor(audio.currentTime/12)%chords.length];musicVoices.forEach((voice,i)=>voice.frequency.setTargetAtTime(chord[i],audio.currentTime,2))}
