@@ -37,7 +37,7 @@ function crate(x,z){const g=new THREE.Group();g.position.set(x,0,z);box(g,1,.8,1
 crate(-7,3);crate(7,4);crate(6,-5);
 // Maintenance deck B-7: dense, abandoned industrial infrastructure.
 // Massive machinery is kept to the walls and high ceiling to preserve navigation.
-const industrial=new THREE.Group();scene.add(industrial);
+const industrial=new THREE.Group();industrial.position.set(0,0,-3.3);scene.add(industrial);
 const iron=mat(0x343a35,.9,.48),oxidised=mat(0x514638,.97,.3);
 const conduit=mat(0x252d2a,.83,.58),insulation=mat(0x171d1b,.98,.1);
 const fadedSage=mat(0x465449,.91,.28),warning=mat(0x8a7748,.87,.2);
@@ -181,6 +181,19 @@ for(let i=0;i<19;i++){const x=Math.sin(i*2.17)*1.5,z=Math.cos(i*3.71)*1.05;const
 for(let i=0;i<5;i++){const t=cylinder(scrap,.055,.055,.7,deckCream,-1.2+i*.52,.5,-.7,0,Math.PI/2);t.rotation.y=i*.2}
 for(let i=0;i<6;i++){const x=-12+i*4.5;box(scene,.23,7,.3,deckSteel,x,7.1,-8);box(scene,.45,.28,17,deckRust,x,7.3,0)}
 for(let i=0;i<5;i++){const z=-8+i*4;box(scene,1.6,2.4,1.3,deckSteel,12.1,1.2,z);box(scene,1.2,.65,.09,deckRust,11.24,1.8,z)}
+// A deep overhead service bridge and wall-mounted pressure tanks establish scale.
+for(let x=-12;x<=12;x+=2){box(scene,1.72,.18,2.3,deckSteel,x,6.15,7.8);box(scene,.14,.95,.15,deckCream,x,6.7,6.7)}
+box(scene,25,.13,.12,deckRust,0,7.16,6.7);
+for(const x of [-12.2,12.2])for(const z of [-7,-2,3,8]){
+ const tank=cylinder(scene,.85,.85,3.4,deckSteel,x,3.8,z);
+ for(const y of [2.5,4.9])cylinder(scene,.92,.92,.13,deckRust,x,y,z);
+ box(scene,1.95,.17,1.95,deckRust,x,1.9,z);
+}
+for(let i=0;i<8;i++){
+ const x=-11.5+i*3.2;
+ industrialTube([[x,7.7,-10],[x,7.9,-5],[x,7.4,0],[x,7.6,5]],.085+(i%3)*.045,i%3===0?oxidised:conduit);
+}
+for(let i=0;i<10;i++){const z=-9+i*2;box(scene,.8,.04,1.3,deckRust,0,.09,z);box(scene,.58,.04,.06,deckCream,0,.12,z-.4)}
 // Terminal is physically separated from the generator and exit.
 const terminal=new THREE.Group();terminal.position.set(5,0,-7);scene.add(terminal);
 box(terminal,1.8,1.2,1.05,deckRust,0,.6,0);box(terminal,1.5,1.65,.6,deckSteel,0,1.9,-.15);
@@ -258,6 +271,17 @@ function wedge(parent,name,rings,material){
 }
 // Sculpted low, elongated body: the front is +Z, rear service boom is -Z.
 const shell=new THREE.Group();shell.position.set(0,2.48,0);body.add(shell);
+// Equipable lock-service arm, anchored to the chassis and initially hidden.
+const mountedArm=new THREE.Group();mountedArm.name='mounted-service-arm';mountedArm.position.set(.91,-.13,.33);shell.add(mountedArm);
+const armMount=mat(0x343b34,.85,.28),armPaint=mat(0x667865,.86,.16),armJointPaint=mat(0x292d29,.7,.4);
+cylinder(mountedArm,.2,.2,.26,armJointPaint,0,0,0,Math.PI/2);
+const upperArm=box(mountedArm,.2,.53,.24,armPaint,.15,-.3,.1);upperArm.rotation.z=.34;
+cylinder(mountedArm,.15,.15,.27,armMount,.26,-.57,.1,Math.PI/2);
+const foreArm=box(mountedArm,.22,.56,.2,armPaint,.37,-.85,.14);foreArm.rotation.z=-.2;
+box(mountedArm,.34,.18,.25,armJointPaint,.43,-1.14,.16);
+for(const side of [-1,1]){const finger=box(mountedArm,.075,.29,.085,armPaint,.43+side*.12,-1.33,.16);finger.rotation.z=side*.22}
+mountedArm.visible=false;
+
 // Main load-bearing chassis is narrow in height and extended along the travel axis.
 wedge(shell,'Main low-profile cast wedge',[
  [-1.02,.49,-.23,.26,-.06],[-.77,.58,-.27,.35,-.04],
@@ -419,13 +443,17 @@ shadow.rotation.x=-Math.PI/2;shadow.position.y=.018;robot.add(shadow);
 let charge=60,hasArm=false,armEquipped=false,caseOpen=false,hasCell=false,usedCell=false,powerOn=false,ended=false,paused=false,doorOpening=false,doorOpen=false,target=null,selected=null,walkTime=0;
 const keys={w:false,a:false,s:false,d:false};
 const logMessages=[];const task=document.querySelector('#task'),toast=document.querySelector('#toast'),inventory=document.querySelector('#inventory');
-const terminalPanel=document.createElement('section');terminalPanel.id='station-terminal';terminalPanel.style.cssText='display:none;position:fixed;z-index:80;inset:12% 18%;background:#0b1511f5;border:2px solid #718b6c;box-shadow:0 0 0 100vmax #0009;padding:30px;color:#bce5b6;font:15px/1.8 monospace;white-space:pre-line;overflow:auto';
+const terminalPanel=document.createElement('section');terminalPanel.id='station-terminal';terminalPanel.style.cssText='display:none;position:fixed;z-index:80;inset:10% 18%;background:repeating-linear-gradient(0deg,#0002 0px,#0002 1px,transparent 2px,transparent 5px),linear-gradient(145deg,#15241d,#08120f 75%);border:9px solid #343b32;outline:2px solid #8a8b6d;box-shadow:0 0 0 100vmax #000b,inset 0 0 75px #000a,0 12px 55px #000;padding:clamp(15px,3vw,38px);color:#b7dfae;text-shadow:0 0 8px #4e9d6650;font:clamp(12px,1.4vw,16px)/1.85 monospace;letter-spacing:.045em;white-space:pre-line;overflow:auto';
 terminalPanel.innerHTML='<div style="font-size:12px;letter-spacing:.2em;color:#879d83">SATURN STATION // LOCAL CONTROL INTERFACE</div><pre id="terminal-output" style="white-space:pre-wrap;font:inherit;margin:25px 0">SYSTEM READY\n\nPRESS ENTER TO BOOT TERMINAL</pre><div style="font-size:12px;color:#859b85">ENTER BOOT · 1 OPEN DOOR · 2 CLOSE DOOR · 3 POWER OFF · ESC EXIT</div>';document.body.append(terminalPanel);
 let terminalBooted=false,terminalOpen=false;
 const terminalOutput=terminalPanel.querySelector('#terminal-output');
-function showTerminal(){terminalOpen=true;terminalPanel.style.display='block';terminalOutput.textContent=terminalBooted?'LOCAL CONTROL // READY\n1  OPEN DOOR\n2  CLOSE DOOR\n3  TURN OFF POWER':'SYSTEM READY\n\nPRESS ENTER TO BOOT TERMINAL';Object.keys(keys).forEach(k=>keys[k]=false)}
+terminalPanel.setAttribute('role','dialog');terminalPanel.setAttribute('aria-label','Station control terminal');
+const terminalStatus=document.createElement('div');terminalStatus.style.cssText='margin-top:28px;border-top:1px solid #5a765b;padding-top:13px;color:#7e9b7c;font-size:11px;letter-spacing:.16em';terminalPanel.append(terminalStatus);
+function updateTerminalStatus(){terminalStatus.textContent='AUXILIARY GRID: '+(powerOn?'ONLINE':'OFFLINE')+'   /   DOOR: '+(doorOpen?'OPEN':'SEALED')+'   /   MU-1 LINK: ACTIVE'}
+
+function showTerminal(){updateTerminalStatus();terminalOpen=true;terminalPanel.style.display='block';terminalOutput.textContent=terminalBooted?'LOCAL CONTROL // READY\n1  OPEN DOOR\n2  CLOSE DOOR\n3  TURN OFF POWER':'SYSTEM READY\n\nPRESS ENTER TO BOOT TERMINAL';Object.keys(keys).forEach(k=>keys[k]=false)}
 function hideTerminal(){terminalOpen=false;terminalPanel.style.display='none'}
-function terminalKey(k){if(k==='escape'){hideTerminal();return}if(k==='enter'){terminalBooted=true;terminalOutput.textContent='BOOT COMPLETE\nLOCAL CONTROL // READY\n\n1  OPEN DOOR\n2  CLOSE DOOR\n3  TURN OFF POWER';return}if(!terminalBooted){terminalOutput.textContent='PRESS ENTER TO BOOT TERMINAL';return}if(k==='1'){if(!powerOn){terminalOutput.textContent='ERROR: GENERATOR OFFLINE';return}doorOpening=true;hatch.userData.openStarted=performance.now();terminalOutput.textContent='COMMAND 01: OPEN DOOR\nACTUATOR ENGAGED';task.textContent='Door opening. Explore the exit.'}else if(k==='2'){doorOpening=false;doorOpen=false;hatchDoor.rotation.z=0;terminalOutput.textContent='COMMAND 02: CLOSE DOOR\nDOOR SEALED'}else if(k==='3'){powerOn=false;phosphor.intensity=13;terminalScreen.material=terminalDark;terminalLamp.material=terminalDark;terminalBooted=false;hideTerminal();task.textContent='Restore generator power to use the terminal.';notify('GENERATOR POWER OFF')}}
+function terminalKey(k){if(k==='escape'){hideTerminal();return}if(k==='enter'){terminalBooted=true;terminalOutput.textContent='BOOT COMPLETE\nLOCAL CONTROL // READY\n\n1  OPEN DOOR\n2  CLOSE DOOR\n3  TURN OFF POWER';return}if(!terminalBooted){terminalOutput.textContent='PRESS ENTER TO BOOT TERMINAL';return}if(k==='1'){if(!powerOn){terminalOutput.textContent='ERROR: GENERATOR OFFLINE';return}doorOpening=true;hatch.userData.openStarted=performance.now();terminalOutput.textContent='COMMAND 01: OPEN DOOR\nACTUATOR ENGAGED';updateTerminalStatus();task.textContent='Door opening. Explore the exit.'}else if(k==='2'){doorOpening=false;doorOpen=false;hatchDoor.rotation.z=0;terminalOutput.textContent='COMMAND 02: CLOSE DOOR\nDOOR SEALED';updateTerminalStatus()}else if(k==='3'){powerOn=false;phosphor.intensity=13;terminalScreen.material=terminalDark;terminalLamp.material=terminalDark;terminalBooted=false;updateTerminalStatus();hideTerminal();task.textContent='Restore generator power to use the terminal.';notify('GENERATOR POWER OFF')}}
 
 function say(s){logMessages.push(s);if(logMessages.length>8)logMessages.shift()}
 let toastTimer;function notify(s){toast.textContent=s;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600)}
@@ -434,7 +462,7 @@ function updateInventory(){document.querySelector('#item-count').textContent=has
 const list=document.querySelector('#inventory-items');list.innerHTML='';if(!hasArm){list.innerHTML='<p class="empty-inventory">No components recovered.</p>'}else{const item=document.createElement('div');item.className='inventory-item';item.draggable=true;item.innerHTML='<strong>LOCK-SERVICE MANIPULATOR</strong><small>ARTICULATED TOOL ARM · MECHANICAL LOCK RELEASE</small>';item.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain','lock-arm');e.dataTransfer.effectAllowed='move'});list.appendChild(item)}}
 function openInventory(){inventory.classList.add('open');inventory.setAttribute('aria-hidden','false');updateInventory();target=null}
 function closeInventory(){inventory.classList.remove('open');inventory.setAttribute('aria-hidden','true')}
-const armSlot=document.querySelector('[data-slot="arm"]');armSlot.addEventListener('dragover',e=>{e.preventDefault();armSlot.classList.add('drag-over')});armSlot.addEventListener('dragleave',()=>armSlot.classList.remove('drag-over'));armSlot.addEventListener('drop',e=>{e.preventDefault();armSlot.classList.remove('drag-over');if(e.dataTransfer.getData('text/plain')==='lock-arm'&&hasArm){armEquipped=true;updateInventory();say('LOCK-SERVICE ARM INSTALLED.');notify('COMPONENT INSTALLED');task.textContent='Activate the generator switch.'}});
+const armSlot=document.querySelector('[data-slot="arm"]');armSlot.addEventListener('dragover',e=>{e.preventDefault();armSlot.classList.add('drag-over')});armSlot.addEventListener('dragleave',()=>armSlot.classList.remove('drag-over'));armSlot.addEventListener('drop',e=>{e.preventDefault();armSlot.classList.remove('drag-over');if(e.dataTransfer.getData('text/plain')==='lock-arm'&&hasArm){armEquipped=true;mountedArm.visible=true;previewMountedArm.visible=true;updateInventory();say('LOCK-SERVICE ARM INSTALLED.');notify('COMPONENT INSTALLED');task.textContent='Activate the generator switch.'}});
 document.querySelector('#close-inventory').addEventListener('click',closeInventory);
 document.querySelector('#fullscreen').addEventListener('click',()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()});
 function removeObject(o){if(selected===o)selected=null;scene.remove(o);const i=interactables.indexOf(o);if(i>=0)interactables.splice(i,1)}
@@ -528,6 +556,8 @@ previewLight.position.set(-3,7,5);previewScene.add(previewLight);
 const previewRobot=robot.clone(true);
 previewRobot.position.set(0,0,0);previewRobot.rotation.set(0,-.3,0);
 previewScene.add(previewRobot);
+const previewMountedArm=previewRobot.getObjectByName('mounted-service-arm');
+
 const previewRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
 previewRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
 previewRenderer.outputColorSpace=THREE.SRGBColorSpace;
