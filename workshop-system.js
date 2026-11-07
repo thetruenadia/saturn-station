@@ -1,5 +1,5 @@
 // Workshop prototype: seeded salvage, lockers, loose pickups and physical specification recovery.
-export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sound,save,cellCount,setCellCount}){
+export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sound,save,cellCount,setCellCount,onCraftArm}){
  const catalogue={
   motor:{name:'SERVO MOTOR',mass:2.4,value:48,color:0x8c987f},
   gear:{name:'REDUCTION GEARS',mass:1.1,value:20,color:0xa8a797},
@@ -28,6 +28,10 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sou
  }
  // Keep the lockers beside the workshop route, with clear player approach space.
  makeLocker(0,-10.9,1.15);makeLocker(1,8.9,1.2);
+ const workbench=new THREE.Group();workbench.position.set(-9,0,2.2);scene.add(workbench);
+ cube(workbench,1.2,.18,.8,steel,0,.95,0);cube(workbench,.12,.88,.1,shell,-.42,.47,0);cube(workbench,.12,.88,.1,shell,.42,.47,0);
+ cube(workbench,.48,.28,.38,brass,0,1.15,0);
+ workbench.userData={name:'MAINTENANCE CLAW WORKBENCH',x:-9,z:2.2,workshopType:'bench'};interactables.push(workbench);
  const terminalShard=new THREE.Group();terminalShard.position.set(-6.8,.65,-2.45);
  const shardMat=new THREE.MeshStandardMaterial({color:0x69bc9c,emissive:0x164e45,emissiveIntensity:.5,metalness:.65,roughness:.38});
  cube(terminalShard,.35,.48,.12,shardMat,0,0,0);cube(terminalShard,.27,.10,.14,steel,0,.29,0);
@@ -86,7 +90,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sou
   const text=document.createElement('p');text.textContent=specUnlocked?'SERVICE ARM / SPECIFICATION ACQUIRED':'LOCKED · Recover the fabrication shard from the terminal.';spec.append(text);
   if(specUnlocked){const requirements=document.createElement('p');requirements.textContent=Object.entries(recipe).map(([type,n])=>n+' × '+catalogue[type].name).join(' · ');spec.append(requirements);
    const can=Object.entries(recipe).every(([type,n])=>inventory.filter(x=>x.type===type).length>=n);
-   const btn=document.createElement('button');btn.textContent='FABRICATE SERVICE ARM';btn.disabled=!can;btn.onclick=()=>{for(const [type,n] of Object.entries(recipe)){for(let j=0;j<n;j++)inventory.splice(inventory.findIndex(x=>x.type===type),1)}notify('SERVICE ARM FABRICATED · BLUEPRINT VERIFIED');sound('equip');updateUI();save();};spec.append(btn);
+   const btn=document.createElement('button');btn.textContent='FABRICATE SERVICE ARM';btn.disabled=!can;btn.onclick=()=>{for(const [type,n] of Object.entries(recipe)){for(let j=0;j<n;j++)inventory.splice(inventory.findIndex(x=>x.type===type),1)}onCraftArm();notify('SERVICE ARM FABRICATED · BLUEPRINT VERIFIED');sound('equip');updateUI();save();};spec.append(btn);
   }
   const locker=panel.querySelector('#workshop-locker');locker.replaceChildren();
   if(activeLocker<0){locker.textContent='Open a locker with E to inspect its contents.';return;}
@@ -96,6 +100,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sou
  function open(locker=-1){activeLocker=locker;screenOpen=true;panel.hidden=false;updateUI();panel.querySelector('#workshop-close').focus()}
  function close(){screenOpen=false;panel.hidden=true;activeLocker=-1}
  function handle(o){
+  if(o.userData.workshopType==='bench'){open();sound('select');return true}
   if(o.userData.workshopType==='locker'){opened[o.userData.index]=true;open(o.userData.index);sound('select');return true}
   if(o.userData.workshopType==='shard'){specUnlocked=true;specReleased=false;setShardVisible();notify('FABRICATION SPEC UNLOCKED');sound('collect');updateUI();save();return true}
   if(o.userData.workshopType==='loose'){
