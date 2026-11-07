@@ -194,7 +194,8 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  @media(max-width:750px){#workshop-panel{right:8px;top:10%;bottom:10%}.workshop-window{width:min(520px,85vw)}.workshop-columns{grid-template-columns:1fr}#workshop-panel.mini .workshop-window{width:min(290px,65vw)}}
  `;document.head.append(css);
  const previewCanvas=panel.querySelector('#workshop-preview-3d');
- const previewRenderer=new THREE.WebGLRenderer({canvas:previewCanvas,antialias:true,alpha:true});
+ const previewRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});
+ const previewCtx=previewCanvas.getContext('2d');
  previewRenderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
  const previewScene=new THREE.Scene();previewScene.add(new THREE.AmbientLight(0xffffff,2));
  const previewLamp=new THREE.DirectionalLight(0xe8f4db,2.2);previewLamp.position.set(2,4,5);previewScene.add(previewLamp);
@@ -238,8 +239,8 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
    // Render each icon from the actual Three.js model via the shared preview renderer.
    const model=makePartModel(new THREE.Group(),item.type,1);model.rotation.y=.42;
    const slotScene=new THREE.Scene();slotScene.add(new THREE.AmbientLight(0xffffff,2));slotScene.add(new THREE.DirectionalLight(0xffffff,2));
-   slotScene.add(model);const slotRenderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
-   slotRenderer.setSize(110,86,false);slotRenderer.render(slotScene,previewCamera);slotRenderer.dispose();
+   slotScene.add(model);previewRenderer.setSize(110,86,false);previewCamera.aspect=110/86;previewCamera.updateProjectionMatrix();previewRenderer.render(slotScene,previewCamera);
+   canvas.getContext('2d').drawImage(previewRenderer.domElement,0,0,110,86);
   }
   if(!inventory.length)list.textContent='NO RECOVERED COMPONENTS';
   const spec=panel.querySelector('#workshop-spec');spec.replaceChildren();
@@ -252,7 +253,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   card.onclick=()=>{selectedSpec=true;showPreview('motor');card.classList.add('selected')};
   card.onkeydown=e=>{if(e.key==='Enter'&&craftAvailable()){e.preventDefault();fabricate()}};
   card.onpointerdown=()=>{if(craftAvailable()){craftHolding=true;craftProgress=0}};
-  card.onpointerup=releaseHold;card.onpointerleave=releaseHold;
+  card.onpointerup=()=>{if(craftProgress<1.25)releaseHold()};card.onpointerleave=releaseHold;
   spec.append(card);
   panel.querySelector('#workshop-locker').textContent=activeLocker<0?'':'Locker '+(106+activeLocker)+' · '+lockerContents[activeLocker].length+' physical pieces remain';
  }
@@ -276,8 +277,8 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  }
  function releaseSpec(){if(specUnlocked)return 'SPEC ALREADY RECOVERED';if(specReleased)return 'SHARD WAITING AT TERMINAL OUTPUT';specReleased=true;setShardVisible();notify('FABRICATION SHARD EJECTED');save();return 'FABRICATION SHARD EJECTED · RECOVER FROM TERMINAL OUTPUT'}
  function serialize(){return {seed,inventory,lockerContents,opened,specReleased,specUnlocked,loose:loose.map(o=>({x:o.userData.x,z:o.userData.z,item:o.userData.item,kind:o.userData.kind}))}}
- function restore(data){if(!data||typeof data!=='object'){startFresh();return;}seed=Number.isInteger(data.seed)?data.seed:12345;inventory=Array.isArray(data.inventory)?data.inventory.filter(i=>catalogue[i.type]).slice(0,20):[];lockerContents=Array.isArray(data.lockerContents)?Array.from({length:4},(_,i)=>data.lockerContents[i]||[]):[[],[],[],[]];opened=Array.isArray(data.opened)?data.opened.slice(0,4):[false,false,false,false];specReleased=!!data.specReleased;specUnlocked=!!data.specUnlocked;for(const o of [...loose])removeLoose(o);for(const p of Array.isArray(data.loose)?data.loose:[]){if(Number.isFinite(p.x)&&Number.isFinite(p.z))createLoose(p.item,p.x,p.z,p.kind)}setShardVisible();refreshLockerModels();updateUI()}
- function update(dt){if(screenOpen&&mode==='craft'){previewAngle+=dt*.5;previewModel.rotation.y=previewAngle;const width=previewCanvas.clientWidth,height=previewCanvas.clientHeight;if(width&&height){previewRenderer.setSize(width,height,false);previewCamera.aspect=width/height;previewCamera.updateProjectionMatrix();previewRenderer.render(previewScene,previewCamera)}if(craftHolding&&craftAvailable()){craftProgress+=dt;const bar=panel.querySelector('.workshop-hold i');if(bar)bar.style.width=Math.min(100,craftProgress/1.25*100)+'%';if(craftProgress>=1.25)fabricate()}}for(let i=0;i<lockerDoors.length;i++){const desired=opened[i]?-1.55:0;lockerDoors[i].rotation.y=THREE.MathUtils.damp(lockerDoors[i].rotation.y,desired,7,dt)}for(const o of loose){if(o.position.y<=0&&o.userData.velocity===undefined)continue;const v=(o.userData.velocity||0)-9.8*dt;o.position.y+=v*dt;if(o.position.y<=0){o.position.y=0;const bounce=-v*.16;if(bounce>.24)o.userData.velocity=bounce;else delete o.userData.velocity}else o.userData.velocity=v}}
+ function restore(data){if(!data||typeof data!=='object'){startFresh();return;}seed=Number.isInteger(data.seed)?data.seed:12345;inventory=Array.isArray(data.inventory)?data.inventory.filter(i=>catalogue[i.type]).slice(0,20):[];lockerContents=Array.isArray(data.lockerContents)?Array.from({length:4},(_,i)=>data.lockerContents[i]||[]):[[],[],[],[]];opened=Array.isArray(data.opened)?data.opened.slice(0,4):[false,false,false,false];specReleased=!!data.specReleased;specUnlocked=!!data.specUnlocked;for(const o of [...loose])removeLoose(o);for(const p of Array.isArray(data.loose)?data.loose:[]){if(Number.isFinite(p.x)&&Number.isFinite(p.z))createLoose(p.item,p.x,p.z,p.kind)}setShardVisible();refreshLockerModels();for(let i=0;i<4;i++)if(opened[i])setLockerOpen(i);updateUI()}
+ function update(dt){if(screenOpen&&mode==='craft'){previewAngle+=dt*.5;previewModel.rotation.y=previewAngle;const width=previewCanvas.clientWidth,height=previewCanvas.clientHeight;if(width&&height){previewRenderer.setSize(width,height,false);previewCamera.aspect=width/height;previewCamera.updateProjectionMatrix();previewRenderer.render(previewScene,previewCamera);previewCanvas.width=width;previewCanvas.height=height;previewCtx.drawImage(previewRenderer.domElement,0,0,width,height)}if(craftHolding&&craftAvailable()){craftProgress+=dt;const bar=panel.querySelector('.workshop-hold i');if(bar)bar.style.width=Math.min(100,craftProgress/1.25*100)+'%';if(craftProgress>=1.25)fabricate()}}for(let i=0;i<lockerDoors.length;i++){const desired=opened[i]?-1.55:0;lockerDoors[i].rotation.y=THREE.MathUtils.damp(lockerDoors[i].rotation.y,desired,7,dt)}for(const o of loose){if(o.position.y<=0&&o.userData.velocity===undefined)continue;const v=(o.userData.velocity||0)-9.8*dt;o.position.y+=v*dt;if(o.position.y<=0){o.position.y=0;const bounce=-v*.16;if(bounce>.24)o.userData.velocity=bounce;else delete o.userData.velocity}else o.userData.velocity=v}}
  function hint(){if(!specUnlocked)return specReleased?'Collect the ejected spec shard beside the terminal.':'Explore the terminal files to release a fabrication specification.';return 'You can fabricate the service arm at the maintenance workshop using recovered parts.'}
  startFresh();
  return {open,close,handle,releaseSpec,serialize,restore,hint,updateUI,update,mass,get isOpen(){return screenOpen&&mode==='craft'},get miniOpen(){return screenOpen&&mode==='locker'},get specUnlocked(){return specUnlocked}};
