@@ -560,7 +560,7 @@ const terminalUI=createTerminalBrowser({
  readNote:()=>hasNote,sound:playSound,onSpec:()=>workshop.releaseSpec()
 });
 function setCellCount(n){cellCount=Math.max(0,Math.floor(n));hasCell=cellCount>0;usedCell=!hasCell;updateInventory()}
-workshop=createWorkshopSystem({THREE,scene,robot,interactables,colliders:referenceAssets.colliders,notify,sound:playSound,save:saveProgress,cellCount:()=>cellCount,setCellCount,onCraftArm(){if(hasArm)return false;hasArm=true;armEquipped=true;removeObject(arm);updateInventory();refreshDirective();return true},onDismantle(){if(!hasArm)return false;hasArm=false;armEquipped=false;updateInventory();refreshDirective();return true}});
+workshop=createWorkshopSystem({THREE,scene,robot,interactables,colliders:referenceAssets.colliders,notify,sound:playSound,save:saveProgress,cellCount:()=>cellCount,setCellCount,onCraftArm(){if(hasArm)return false;hasArm=true;armEquipped=true;removeObject(arm);updateInventory();refreshDirective();return true},onDismantle(){if(!hasArm)return false;hasArm=false;armEquipped=false;updateInventory();refreshDirective();return true},armModel:mountedArm});
 function updateTerminalStatus(){terminalUI.setStatus('AUXILIARY GRID: '+(powerOn?'ONLINE':'OFFLINE')+' / DOOR: '+(doorOpen?'OPEN':doorOpening?'OPENING':'SEALED')+' / MU-1 LINK: ACTIVE')}
 function showTerminal(){Object.keys(keys).forEach(k=>keys[k]=false);terminalOpen=true;updateTerminalStatus();terminalUI.show()}
 function hideTerminal(){terminalUI.hide()}
@@ -709,7 +709,7 @@ else consoleLog('UNKNOWN COMMAND. Type help.')}
 let godMode=false;document.querySelector('#console-form').addEventListener('submit',e=>{e.preventDefault();const value=consoleInput.value;consoleLog('> '+value);runCommand(value);consoleInput.value=''});
 window.addEventListener('keydown',e=>{if(mainMenu?.active)return;const k=e.key.toLowerCase();if(opening?.active){if(k==='escape'&&opening.elapsed>0)setPaused(!paused);return;}if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){terminalUI.key(e);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
 if(k==='f2'){e.preventDefault();devConsole.classList.add('open');devConsole.setAttribute('aria-hidden','false');consoleInput.focus();return}
-if(workshop.isOpen||workshop.miniOpen){if(k==='escape'||k==='c'){workshop.close();return}if(workshop.isOpen)return}
+if(workshop.isOpen||workshop.miniOpen){if(k==='escape'){workshop.close();return}if(k==='c'){if(workshop.miniOpen)workshop.open();else workshop.close();return}if(workshop.isOpen)return}
 if(k==='i'&&inventory.classList.contains('open')){closeInventory();return}
 if(ended)return;
 if(k==='escape'){if(inventory.classList.contains('open')){closeInventory();return}if(deathScreen.classList.contains('open'))return;setPaused(!paused);return}
