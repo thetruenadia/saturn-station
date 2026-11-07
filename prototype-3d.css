@@ -127,3 +127,6 @@ body:has(#game-settings[open]) #pause-screen{visibility:hidden}
 .boot-skip{position:absolute;right:24px;bottom:24px;z-index:1;pointer-events:auto;background:#101813e8;color:#f0e7c8;border:1px solid #b8b38b;padding:12px 16px;font:12px monospace;letter-spacing:.1em;cursor:pointer}
 .boot-skip kbd{display:inline-block;margin-right:8px;padding:3px 7px;border:1px solid currentColor;border-radius:3px;font:inherit}
 .boot-skip:focus-visible{outline:3px solid #f5d88d;outline-offset:4px}
+
+/* Contextual maintenance guidance */
+#hint-toggle{position:absolute;bottom:100px;right:24px;z-index:8;width:35px;height:35px;border:1px solid #8fa48b80;border-radius:6px;background:#0c1b18d9;color:#cde3c7;font:20px IBM Plex Mono,monospace;cursor:pointer}#hint-box{position:absolute;right:24px;bottom:143px;z-index:8;max-width:min(330px,80vw);padding:18px 16px;background:#0a1614ef;border:1px solid #7a948180;color:#dbe8d5;box-shadow:0 8px 35px #0008;font:12px/1.6 IBM Plex Mono,monospace}#hint-box[hidden]{display:none}#hint-box strong{color:#9ccbb0;font-size:11px;letter-spacing:.12em}#hint-box p{margin:12px 0}#hint-box small{color:#839b8b;font-size:9px}#hint-box button{float:right;background:none;color:#dbe8d5;border:0;cursor:pointer}
