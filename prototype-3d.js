@@ -102,7 +102,7 @@ for(const z of [-5.9,-3.8,-1.6,1.1,3.6]){
 for(const side of [-1,1]){
  const x=side*7.65;
  box(industrial,1.55,.13,11.6,iron,x,.085,-.1,false);
- for(let z=-5.65;z<5.6;z+=.29)box(industrial,1.45,.018,.055,rawSteel,x,.17,z,false);
+ for(let z=-5.65;z<5.6;z+=.29)box(industrial,1.45,.018,.055,edgeMat,x,.17,z,false);
  for(let z=-5.5;z<=5.5;z+=1.8){
   pipeBetween(industrial,[side*6.8,.17,z],[side*6.8,1.1,z],.035,warning);
  }
