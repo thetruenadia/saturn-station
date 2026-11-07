@@ -1,6 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
-import { applyArtDirection } from './station-art.js?v=analogue2';
+import { applyArtDirection } from './station-art.js?v=blue-crt3';
 
 const viewport=document.querySelector('#viewport');
 const scene=new THREE.Scene();
@@ -191,21 +191,48 @@ box(lidPivot,1.7,.17,1.32,caseBody,0,0,.58);
 for(const x of [-.72,.72])box(lidPivot,.12,.22,1.34,caseMetal,x,.05,.58);
 for(let x=-.5;x<=.5;x+=.25)box(lidPivot,.07,.03,1.04,caseAccent,x,.1,.58);
 const cell=new THREE.Group();cell.position.set(0,.86,0);caseGroup.add(cell);
-const cellShell=mat(0xa9a48a,.7,.18),cellRubber=mat(0x242b29,.88,.15),cellCopper=mat(0xa97639,.55,.7);
-box(cell,.7,.32,.45,cellShell,0,0,0);
-for(const x of [-.3,.3])box(cell,.11,.4,.49,cellRubber,x,0,0);
-for(let i=0;i<4;i++)box(cell,.05,.22,.46,cellCopper,-.19+i*.13,0,0);
-for(const x of [-.19,.19])cylinder(cell,.07,.07,.12,cellCopper,x,.2,0);
-box(cell,.31,.1,.045,screenMat,0,.02,.24);
+// Tan field cartridge: moulded asymmetric shell, recessed buttons and rotary caps.
+const cellShell=wornPaint(0xb5a07a,94),cellRubber=mat(0x20231e,.7,.25),cellCopper=mat(0x967247,.55,.5);
+function assetLabel(parent,text,w,h,x,y,z,background='#aa956f',ink='#292c25'){
+ const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;
+ const ctx=canvas.getContext('2d');ctx.fillStyle=background;ctx.fillRect(0,0,512,256);
+ ctx.fillStyle=ink;ctx.font='bold 31px monospace';ctx.textAlign='center';
+ text.split('\n').forEach((line,i)=>ctx.fillText(line,256,44+i*39,480));
+ const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+ const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:texture,roughness:.9}));mesh.position.set(x,y,z);parent.add(mesh);return mesh;
+}
+const cartridgeOutline=new THREE.Shape();
+cartridgeOutline.moveTo(-.29,-.52);cartridgeOutline.lineTo(.12,-.52);cartridgeOutline.lineTo(.15,-.43);cartridgeOutline.lineTo(.28,-.40);cartridgeOutline.lineTo(.28,-.02);cartridgeOutline.lineTo(.23,.07);cartridgeOutline.lineTo(.23,.51);cartridgeOutline.lineTo(-.25,.51);cartridgeOutline.lineTo(-.25,-.12);cartridgeOutline.lineTo(-.30,-.21);cartridgeOutline.closePath();
+const cartridge=new THREE.Mesh(new THREE.ExtrudeGeometry(cartridgeOutline,{depth:.20,bevelEnabled:true,bevelSegments:3,steps:1,bevelSize:.035,bevelThickness:.035}),cellShell);cartridge.position.z=-.1;cartridge.castShadow=true;cell.add(cartridge);
+box(cell,.19,.4,.018,cellCopper,-.145,.25,.141);
+assetLabel(cell,'CAUTION\nFUEL CELL\nSEALED UNIT\nFC / 55',.18,.35,-.145,.26,.155,'#947447');
+// Right-side recessed triangular controls and central pill button.
+for(const [y,up] of [[.34,true],[.1,false]]){
+ const shape=new THREE.Shape();shape.moveTo(-.055,up?-.035:.035);shape.lineTo(.055,up?-.035:.035);shape.lineTo(0,up?.055:-.055);shape.closePath();
+ const recess=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:.018,bevelEnabled:true,bevelSize:.013,bevelThickness:.008,bevelSegments:2,steps:1}),cellRubber);recess.position.set(.125,y,.14);cell.add(recess);
+ const button=recess.clone();button.material=cellCopper;button.scale.set(.77,.77,1);button.position.z=.16;cell.add(button);
+}
+box(cell,.13,.07,.025,cellRubber,.125,.22,.15);box(cell,.10,.045,.025,cellCopper,.125,.22,.17);
+for(const [x,y,r] of [[-.015,-.095,.09],[.16,-.30,.115],[-.16,-.32,.085]]){
+ cylinder(cell,r,r,.035,cellRubber,x,y,.16,Math.PI/2);
+ cylinder(cell,r*.76,r*.76,.044,x===-.015?cellRubber:cellShell,x,y,.19,Math.PI/2);
+ if(x!==-.015)box(cell,r*1.5,.025,.045,cellCopper,x,y,.22);
+ for(let i=0;i<8;i++){const a=i*Math.PI/4;box(cell,.013,.018,.012,cellCopper,x+Math.cos(a)*r*.87,y+Math.sin(a)*r*.87,.189)}
+}
+cylinder(cell,.025,.025,.03,mat(0x247b9a,.3,.5),-.19,-.43,.18,Math.PI/2);
+cylinder(cell,.07,.07,.09,cellShell,-.17,-.57,0);
+cylinder(cell,.065,.065,.055,cellCopper,-.08,.57,0);
+const cellLoop=new THREE.Mesh(new THREE.TorusGeometry(.07,.012,6,18),cellCopper);cellLoop.position.set(.08,.57,0);cell.add(cellLoop);
+cell.rotation.x=-Math.PI/2;
 cell.visible=false;
 scene.add(caseGroup);caseGroup.userData={name:'SEALED SERVICE CASE',x:-5,z:2};interactables.push(caseGroup);
-const generator=new THREE.Group();generator.position.set(-7,0,-4);box(generator,1,.7,.8,edgeMat,0,.35,0);box(generator,.7,.9,.6,wallMat,0,1.1,0);box(generator,.48,.22,.05,screenMat,0,1.25,.33);
+const generator=new THREE.Group();generator.position.set(5,0,-7);box(generator,1,.7,.8,edgeMat,0,.35,0);box(generator,.7,.9,.6,wallMat,0,1.1,0);box(generator,.48,.22,.05,screenMat,0,1.25,.33);
 const generatorLever=new THREE.Group();generatorLever.position.set(.37,1.35,.35);generator.add(generatorLever);
 cylinder(generatorLever,.16,.16,.15,rustMat,0,0,0,Math.PI/2);
 const leverHandle=box(generatorLever,.09,.65,.09,edgeMat,0,.35,.04);leverHandle.rotation.z=-.34;
 cylinder(generatorLever,.16,.16,.16,greenMat,-.11,.7,.04);
 for(let i=0;i<6;i++)box(generator,.12,.08,.58,edgeMat,-.35+i*.14,.48,.12);
-scene.add(generator);generator.userData={name:'AUXILIARY POWER DISTRIBUTION',x:-7,z:-4};interactables.push(generator);
+scene.add(generator);generator.userData={name:'AUXILIARY POWER DISTRIBUTION',x:5,z:-7};interactables.push(generator);
 // Sliding double-leaf pressure bulkhead with a visible rectangular doorway.
 const hatch=new THREE.Group();hatch.position.set(11.4,0,-10.6);scene.add(hatch);
 const doorFrame=mat(0x343c34,.83,.35),doorPaint=mat(0x88876a,.88,.22),doorInset=mat(0x42483e,.8,.34),doorWarning=mat(0xc19b4b,.87,.2);
@@ -307,23 +334,43 @@ const pathPaint=mat(0xb1a16e,.98,.05);
 for(let z=-7;z<=8;z+=1.25)for(const x of [3.8,8.2])box(scene,.12,.024,.75,pathPaint,x,.1,z);
 for(let x=-11;x<=-4;x+=1.2)box(scene,.7,.024,.12,pathPaint,x,.1,3.6);
 for(let i=0;i<4;i++){const x=-10+i*.68;box(scene,.38,2.8,.48,wornOliveMat,x,1.4,-5.8);box(scene,.48,.13,.56,wornRustMat,x,2.8,-5.8)}
-const generatorLight=new THREE.PointLight(0xffc17b,18,10,2);generatorLight.position.set(-7,4,-4);scene.add(generatorLight);
+const generatorLight=new THREE.PointLight(0xffc17b,18,10,2);generatorLight.position.set(5,4,-7);scene.add(generatorLight);
 const benchLight=new THREE.PointLight(0xffd99b,12,10,2);benchLight.position.set(-9,3.5,4);scene.add(benchLight);
 // Terminal is physically separated from the generator and exit.
-const terminal=new THREE.Group();terminal.position.set(5,0,-7);scene.add(terminal);
-box(terminal,1.8,1.2,1.05,deckRust,0,.6,0);
-box(terminal,1.64,1.58,.72,deckSteel,0,1.85,-.15);
-for(const x of [-.75,.75])box(terminal,.14,1.65,.83,deckCream,x,1.85,-.15);
-box(terminal,1.66,.17,.78,deckRust,0,2.72,-.15);
-const terminalBezel=box(terminal,1.4,1.02,.13,deckCream,0,2.1,.23);
-box(terminal,1.62,.22,.78,deckRust,0,1.36,.36);
-for(let i=0;i<4;i++)cylinder(terminal,.055,.055,.09,deckCream,-.53+i*.34,1.44,.76,Math.PI/2);
-const terminalDark=new THREE.MeshStandardMaterial({color:0x101b17,emissive:0x030907,emissiveIntensity:.2});
-const terminalLit=new THREE.MeshStandardMaterial({color:0x3d8765,emissive:0x5ad69a,emissiveIntensity:1.4});
-const terminalScreen=box(terminal,1.16,.77,.08,terminalDark,0,2.12,.21);
-const terminalLamp=box(terminal,.18,.08,.07,terminalDark,.55,1.42,.2);
-for(let i=0;i<5;i++)box(terminal,.18,.045,.09,deckCream,-.5+i*.25,1.34,.4);
-terminal.userData={name:'CONTROL TERMINAL',x:5,z:-7};interactables.push(terminal);
+const terminal=new THREE.Group();terminal.position.set(-7,0,-4);scene.add(terminal);
+const rackCream=wornPaint(0xb7b398,95),rackBlue=wornPaint(0x29486c,96),rackBlack=mat(0x141b1b,.72,.3),rackHandle=mat(0x8d9281,.5,.65);
+box(terminal,2.05,.15,1.15,rackBlack,0,.08,0);
+box(terminal,1.96,2.03,1.03,rackCream,0,1.14,0);
+for(const x of [-.94,.94])box(terminal,.10,2.15,1.12,rackHandle,x,1.16,0);
+for(let row=0;row<3;row++){
+ const y=.47+row*.65;box(terminal,1.77,.60,.045,rackCream,0,y,.545);
+ box(terminal,1.77,.025,.025,rackBlack,0,y-.31,.57);
+ for(const x of [-.8,.8])box(terminal,.045,.42,.12,rackHandle,x,y,.64);
+ if(row>0){box(terminal,.40,.35,.07,rackBlack,-.48,y,.60);box(terminal,.26,.025,.025,rackHandle,-.48,y,.645)}
+ for(let i=0;i<(row===0?7:3);i++)cylinder(terminal,.025,.025,.035,rackBlack,.03+i*.095,y-.12,.60,Math.PI/2);
+ assetLabel(terminal,row===2?'380 EVENT GENERATOR':row===1?'340 PROCESSOR':'CONTROL / POWER UNIT',1.18,.10,-.08,y+.20,.575,'#b7b398');
+}
+box(terminal,2.12,1.55,1.16,rackBlue,0,2.94,0);
+box(terminal,2.19,.09,1.2,rackCream,0,3.76,0);
+// Deep dark bezel and a slightly convex-looking glass display.
+box(terminal,1.30,1.13,.10,rackBlack,-.29,3.02,.61);
+const terminalDark=new THREE.MeshStandardMaterial({color:0x061912,emissive:0x021009,emissiveIntensity:.2,roughness:.24});
+const crtCanvas=document.createElement('canvas');crtCanvas.width=512;crtCanvas.height=384;
+const crt=crtCanvas.getContext('2d');crt.fillStyle='#031b14';crt.fillRect(0,0,512,384);crt.fillStyle='#5effb4';crt.font='17px monospace';
+['SATURN STATION // LOCAL CONTROL','================================','AUXILIARY GRID      ONLINE','MU-1 SERVICE LINK   CONNECTED','','01  BULKHEAD ACTUATOR','02  PRESSURE SEAL','03  POWER DISTRIBUTION','','> AWAITING LOCAL INPUT_'].forEach((line,i)=>crt.fillText(line,18,30+i*31));
+crt.fillStyle='#00000055';for(let y=0;y<384;y+=4)crt.fillRect(0,y,512,1);
+const crtTexture=new THREE.CanvasTexture(crtCanvas);crtTexture.colorSpace=THREE.SRGBColorSpace;
+const terminalLit=new THREE.MeshStandardMaterial({map:crtTexture,emissiveMap:crtTexture,emissive:0x71ffb4,emissiveIntensity:1.6,roughness:.25});
+const terminalScreen=box(terminal,1.10,.88,.045,terminalDark,-.29,3.04,.68);
+for(const x of [.47,.72]){box(terminal,.21,1.12,.055,rackBlack,x,3.03,.61);box(terminal,.026,.96,.025,rackHandle,x,3.03,.648);box(terminal,.045,.24,.055,rackBlack,x+.055,2.99,.69)}
+box(terminal,1.32,.12,.43,rackBlack,-.29,2.38,.78);
+for(let row=0;row<2;row++)for(let i=0;i<10;i++)box(terminal,.103,.035,.115,rackCream,-.84+i*.12,2.46,.70+row*.14);
+const terminalLamp=box(terminal,.065,.065,.04,terminalDark,.55,2.40,.62);
+cylinder(terminal,.035,.035,.045,mat(0xa8442d),.72,2.4,.64,Math.PI/2);
+assetLabel(terminal,'WAVETERM / STATION B-7',1.65,.10,0,3.62,.594,'#29486c','#cec9aa');
+const rackCable=new THREE.CatmullRomCurve3([new THREE.Vector3(-.35,1.85,.65),new THREE.Vector3(-.15,1.3,.78),new THREE.Vector3(-.30,.4,.85),new THREE.Vector3(-.8,.22,.7)]);
+terminal.add(new THREE.Mesh(new THREE.TubeGeometry(rackCable,24,.027,7,false),rackHandle));
+terminal.userData={name:'CONTROL TERMINAL',x:-7,z:-4};interactables.push(terminal);
 // The existing hatch stays at the exit and is controlled exclusively by the terminal.
 // SRV-09 silhouette-first reconstruction for 0.2.
 // Proportions follow the supplied sprite/blueprint: broad, heavy upper chassis,
@@ -617,7 +664,7 @@ function updateCharge(){document.querySelector('#charge').textContent=String(Mat
 function itemIcon(type){
  const base='<svg viewBox="0 0 96 72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
  if(type==='arm')return base+'<g transform="rotate(-20 48 36)" stroke="#1c211d" stroke-width="3"><rect x="34" y="3" width="29" height="17" rx="5" fill="#b7a13f"/><circle cx="49" cy="21" r="9" fill="#7a8176"/><rect x="40" y="26" width="19" height="25" rx="4" fill="#d0a84a"/><path d="M40 30h19M40 40h19" stroke="#222"/><circle cx="49" cy="52" r="7" fill="#838b80"/><path d="M43 57v12m12-12v12" stroke="#c1c6b9" stroke-width="6"/></g></svg>';
- return base+'<g stroke="#262d2b" stroke-width="3"><rect x="15" y="20" width="66" height="35" rx="6" fill="#b5ad8d"/><rect x="15" y="20" width="12" height="35" fill="#333c39"/><rect x="69" y="20" width="12" height="35" fill="#333c39"/><path d="M32 25v24m9-24v24m9-24v24m9-24v24" stroke="#b7803b" stroke-width="5"/><rect x="40" y="14" width="16" height="8" rx="2" fill="#a9773c"/></g></svg>';
+ return base+'<g stroke="#403c30" stroke-width="1.5"><path d="M31 7Q27 7 27 12V38L23 44V64Q23 68 29 68H60Q67 68 67 61V37L63 31V12Q63 7 58 7Z" fill="#b5a07a"/><rect x="30" y="13" width="15" height="26" rx="1" fill="#947447"/><path d="M33 18h9m-9 4h9m-9 4h9m-9 4h9" stroke-width="1"/><path d="M50 18l5-7 5 7Zm0 12 5 7 5-7Z" fill="#967247"/><rect x="51" y="22" width="9" height="5" rx="2" fill="#967247"/><circle cx="46" cy="44" r="7" fill="#20231e"/><circle cx="57" cy="57" r="8" fill="#967247"/><circle cx="34" cy="57" r="6" fill="#c2ac86"/><path d="M29 57h10m13 0h10"/><circle cx="29" cy="64" r="2" fill="#247b9a"/><path d="M36 7V3h14v4" fill="none"/></g></svg>';
 }
 function updateInventory(){
  const entries=[];
@@ -771,6 +818,7 @@ function chooseInspection(type){
   return;
  }
  const model=(type==='arm'?mountedArm:cell).clone(true);model.visible=true;
+ if(type==='cell')model.rotation.x=0;
  model.position.set(0,type==='arm'?1.7:.75,0);model.scale.setScalar(type==='arm'?1.2:2.1);itemModel.add(model);
  document.querySelector('#inspection-title').textContent=type==='arm'?'INDUSTRIAL MANIPULATOR':'PORTABLE POWER PACK';
  document.querySelector('#inspection-description').textContent=type==='arm'?'Interchangeable yellow-and-black industrial gripper. Used for heavy mechanical releases and service switches.':'Sealed auxiliary energy cartridge for MU-1. Consume with Q to restore internal charge.';
