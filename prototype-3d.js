@@ -616,7 +616,7 @@ function itemIcon(type){
 function updateInventory(){
  const entries=[];
  if(hasArm)entries.push({type:'arm',name:'INDUSTRIAL MANIPULATOR',description:'Yellow-and-black interchangeable factory arm. Heavy-duty gripper for physical switches and mechanical releases.',stats:'CLASS  TOOL ARM  /  MOUNT  RIGHT  /  GRIP  85 N  /  STATUS  '+(armEquipped?'EQUIPPED':'STOWED'),draggable:!armEquipped});
- if(hasCell)entries.push({type:'cell',name:'PORTABLE POWER PACK',description:'Sealed auxiliary energy cartridge. Restores MU-1 internal charge when consumed with Q.',stats:'CLASS  CONSUMABLE  /  CHARGE  +55%  /  USE  Q',draggable:false});
+ if(hasCell&&!usedCell)entries.push({type:'cell',name:'PORTABLE POWER PACK',description:'Sealed auxiliary energy cartridge. Restores MU-1 internal charge when consumed with Q.',stats:'CLASS  CONSUMABLE  /  CHARGE  +55%  /  USE  Q',draggable:false});
  document.querySelector('#item-count').textContent=String(entries.length).padStart(2,'0')+' / 20';
  document.querySelector('#cell-hot').textContent=hasCell?'READY':usedCell?'USED':'EMPTY';
  document.querySelector('#cell-hot').classList.toggle('filled',hasCell||usedCell);
@@ -624,6 +624,7 @@ function updateInventory(){
  document.querySelector('#arm-slot').nextElementSibling.textContent=armEquipped?'COMPONENT INSTALLED':'DRAG COMPONENT HERE';
  document.querySelector('#arm-hot').innerHTML=armEquipped?itemIcon('arm'):'';
  document.querySelector('#cell-icon').innerHTML=hasCell||usedCell?itemIcon('cell'):'';
+ chooseInspection(itemType);
  const grid=document.querySelector('#inventory-items');grid.replaceChildren();
  for(let i=0;i<20;i++){
   const entry=entries[i],slot=document.createElement('div');
@@ -642,7 +643,7 @@ function updateInventory(){
   grid.append(slot);
  }
 }
-function openInventory(){inventory.classList.add('open');inventory.setAttribute('aria-hidden','false');updateInventory();if(hasArm||hasCell)chooseInspection(hasArm?'arm':'cell');else{document.querySelector('#inspection-title').textContent='NO ITEM SELECTED';document.querySelector('#inspection-description').textContent='Select an occupied slot to inspect its equipment.';document.querySelector('#inspection-specs').textContent='';itemModel.clear()}target=null}
+function openInventory(){inventory.classList.add('open');inventory.setAttribute('aria-hidden','false');updateInventory();target=null}
 function closeInventory(){inventory.classList.remove('open');inventory.setAttribute('aria-hidden','true')}
 const armSlot=document.querySelector('[data-slot="arm"]');armSlot.addEventListener('dragover',e=>{e.preventDefault();armSlot.classList.add('drag-over')});armSlot.addEventListener('dragleave',()=>armSlot.classList.remove('drag-over'));armSlot.addEventListener('drop',e=>{e.preventDefault();armSlot.classList.remove('drag-over');if(e.dataTransfer.getData('text/plain')==='lock-arm'&&hasArm){armEquipped=true;mountedArm.visible=true;previewMountedArm.visible=true;updateInventory();say('LOCK-SERVICE ARM INSTALLED.');notify('COMPONENT INSTALLED');task.textContent='Activate the generator switch.'}});
 document.querySelector('#close-inventory').addEventListener('click',closeInventory);
@@ -747,9 +748,18 @@ const itemLight=new THREE.DirectionalLight(0xffe0ae,3);itemLight.position.set(-3
 const itemCamera=new THREE.PerspectiveCamera(32,1,.1,30);itemCamera.position.set(3,2.6,4.2);itemCamera.lookAt(0,.7,0);
 const itemRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true});itemRenderer.setPixelRatio(Math.min(devicePixelRatio,2));itemRenderer.outputColorSpace=THREE.SRGBColorSpace;itemHost.appendChild(itemRenderer.domElement);
 const itemModel=new THREE.Group();itemScene.add(itemModel);
-let itemType='arm',itemYaw=.4,itemDragging=false,itemLastX=0;
+let itemType=null,itemYaw=.4,itemDragging=false,itemLastX=0;
+function ownsInspectionItem(type){
+ return type==='arm'?hasArm:type==='cell'?hasCell&&!usedCell:false;
+}
 function chooseInspection(type){
- itemType=type;itemYaw=.4;itemModel.clear();
+ itemType=ownsInspectionItem(type)?type:null;itemYaw=.4;itemDragging=false;itemModel.clear();
+ if(!itemType){
+  document.querySelector('#inspection-title').textContent='NO ITEM SELECTED';
+  document.querySelector('#inspection-description').textContent='Select an occupied slot to inspect its equipment.';
+  document.querySelector('#inspection-specs').textContent='';
+  return;
+ }
  const model=(type==='arm'?mountedArm:cell).clone(true);model.visible=true;
  model.position.set(0,type==='arm'?1.7:.75,0);model.scale.setScalar(type==='arm'?1.2:2.1);itemModel.add(model);
  document.querySelector('#inspection-title').textContent=type==='arm'?'INDUSTRIAL MANIPULATOR':'PORTABLE POWER PACK';
@@ -760,6 +770,7 @@ itemHost.addEventListener('pointerdown',e=>{itemDragging=true;itemLastX=e.client
 itemHost.addEventListener('pointermove',e=>{if(itemDragging){itemYaw+=(e.clientX-itemLastX)*.012;itemLastX=e.clientX}});
 itemHost.addEventListener('pointerup',()=>itemDragging=false);itemHost.addEventListener('pointercancel',()=>itemDragging=false);
 function renderItemInspection(dt){
+ if(itemType&&!ownsInspectionItem(itemType))chooseInspection(null);
  if(!itemDragging)itemYaw+=dt*.35;itemModel.rotation.y=itemYaw;
  const w=itemHost.clientWidth,h=itemHost.clientHeight;if(!w||!h)return;
  itemRenderer.setSize(w,h,false);itemCamera.aspect=w/h;itemCamera.updateProjectionMatrix();itemRenderer.render(itemScene,itemCamera);
