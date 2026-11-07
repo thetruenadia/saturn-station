@@ -507,12 +507,43 @@ function addTechnicalInk(root){
   edge.renderOrder=1;edge.scale.setScalar(1.003);o.add(edge);inkMeshes.push(edge);
  });
 }
-const maintenanceNote=new THREE.Group();maintenanceNote.position.set(5,1.25,-10.15);scene.add(maintenanceNote);
-assetLabel(maintenanceNote,'MAINTENANCE NOTE\nLOCAL ACCESS\nPASSWORD: ETNA',.65,.44,0,0,0,'#c2b68e','#353a2d');
-maintenanceNote.userData={name:'MAINTENANCE NOTE',x:5,z:-10.15};interactables.push(maintenanceNote);
+// Place the access note on a dedicated reading stand beside the control terminal,
+// rather than on the distant exit wall. Keep the interactive anchor at floor level.
+const maintenanceNote=new THREE.Group();maintenanceNote.position.set(-10,0,-3.4);scene.add(maintenanceNote);
+box(maintenanceNote,.76,.12,.47,edgeMat,0,.7,0);
+box(maintenanceNote,.10,.67,.10,edgeMat,0,.33,0);
+const noteFace=assetLabel(maintenanceNote,'MAINTENANCE NOTE\nLOCAL ACCESS\nPASSWORD: ETNA',.74,.49,0,.99,.13,'#c2b68e','#353a2d');
+noteFace.rotation.x=-.32;
+maintenanceNote.userData={name:'MAINTENANCE NOTE',x:-10,z:-3.4};interactables.push(maintenanceNote);
 const stationArt=applyArtDirection({THREE,scene,robot,terminal,terminalScreen,terminalLamp,terminalLit,exchanger,box,cylinder,pipeBetween,wornPaint,label});
 const referenceAssets=installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatch,hatchDoor,leftLeaf,rightLeaf,mountedArm,arm,box,cylinder,wornPaint,stationArt,generator,generatorLever});
 addTechnicalInk(scene);
+// Very faint proximity outlines, attached to the actual object silhouette.
+// They remain depth-tested and fade in only as MU-1 approaches an interactable.
+const interactionOutlines=interactables.map(object=>{
+ const material=new THREE.LineBasicMaterial({color:0xb6d9b0,transparent:true,opacity:0,depthWrite:false,depthTest:true,blending:THREE.AdditiveBlending});
+ let count=0;
+ object.traverse(mesh=>{
+  if(!mesh.isMesh||count>=16||mesh.geometry.type==='SphereGeometry'||mesh.geometry.type==='TubeGeometry')return;
+  if(mesh.material?.transparent||mesh.material?.emissiveIntensity>1)return;
+  const geometry=mesh.geometry;
+  if(!geometry.attributes?.position||geometry.attributes.position.count>1800)return;
+  geometry.computeBoundingBox();
+  const dimensions=new THREE.Vector3();geometry.boundingBox.getSize(dimensions);
+  if(dimensions.length()<.32)return;
+  const edges=new THREE.LineSegments(new THREE.EdgesGeometry(geometry,44),material);
+  edges.scale.setScalar(1.012);edges.renderOrder=2;mesh.add(edges);count++;
+ });
+ return {object,material};
+});
+function updateInteractionOutlines(dt,hidden){
+ for(const {object,material} of interactionOutlines){
+  const distance=Math.hypot(robot.position.x-object.userData.x,robot.position.z-object.userData.z);
+  const visible=interactables.includes(object)&&!hidden;
+  const strength=visible?THREE.MathUtils.smoothstep(2.8-distance,0,1.35):0;
+  material.opacity=THREE.MathUtils.damp(material.opacity,strength*.22,9,dt);
+ }
+}
 const shadow=new THREE.Mesh(new THREE.CircleGeometry(.92,32),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.56}));
 shadow.rotation.x=-Math.PI/2;shadow.position.y=.018;robot.add(shadow);
 
@@ -1034,7 +1065,7 @@ body.rotation.x=THREE.MathUtils.damp(body.rotation.x,chassisPitch,7,dt);
 }
 if(!paused&&!ended&&!godMode&&charge>0){charge=Math.max(0,charge-dt*.1);updateCharge();if(charge===0){notify('POWER DEPLETED');triggerDeath()}}
 if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);leftLeaf.position.x=-1.85*t;rightLeaf.position.x=1.85*t;if(t>=1){doorOpening=false;doorOpen=true;updateTerminalStatus();task.textContent='Exit door open. Terminal remains available.';notify('DOOR OPEN')}}
-updateStationSystems(dt);renderer.render(scene,camera);updateNearbyUI()}
+updateStationSystems(dt);updateInteractionOutlines(dt,paused||ended||terminalOpen||inventory.classList.contains('open')||devConsole.classList.contains('open'));renderer.render(scene,camera);updateNearbyUI()}
 opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();if(menuLaunch?.mode!=='resume'){doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;}updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
 mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound});
 const returnMenuButton=document.createElement('button');returnMenuButton.textContent='MAIN MENU';returnMenuButton.addEventListener('click',()=>{hideTerminal();closeInventory();saveProgress();setPaused(true);mainMenu.show()});document.querySelector('#pause-restart').after(returnMenuButton);
