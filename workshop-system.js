@@ -1,5 +1,5 @@
 // Workshop prototype: seeded salvage, lockers, loose pickups and physical specification recovery.
-export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sound,save,cellCount,setCellCount,onCraftArm,onDismantle}){
+export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,notify,sound,save,cellCount,setCellCount,onCraftArm,onDismantle}){
  const catalogue={
   motor:{name:'SERVO MOTOR',mass:2.4,value:48,color:0x8c987f},
   gear:{name:'REDUCTION GEARS',mass:1.1,value:20,color:0xa8a797},
@@ -24,7 +24,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,notify,sou
   cube(root,.08,.55,.10,brass,.33,1.08,.47);
   for(let i=0;i<4;i++)cube(root,.64,.026,.035,shell,-.06,1.58-i*.12,.46);
   root.userData={name:'SALVAGE LOCKER '+(index+1),x,z,workshopType:'locker',index};
-  interactables.push(root);return root;
+  interactables.push(root);colliders.push([x,z,.58,.38]);return root;
  }
  // Keep the lockers beside the workshop route, with clear player approach space.
  makeLocker(0,-10.9,1.15);makeLocker(1,8.9,1.2);
