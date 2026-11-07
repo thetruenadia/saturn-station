@@ -90,7 +90,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  function makePartModel(parent,type,scale=.85){
   const group=new THREE.Group();group.scale.setScalar(scale);parent.add(group);
   const tone=new THREE.MeshStandardMaterial({color:catalogue[type]?.color||0x807e6f,roughness:.72,metalness:.55});
-  if(type==='motor'){
+  if(type==='card'){cube(group,.48,.3,.025,tone,0,0,0);cube(group,.24,.13,.03,brass,.08,.08,.02)}else if(type==='camera'){cube(group,.45,.3,.25,steel,0,0,0)}else if(type==='tin'){group.add(new THREE.Mesh(new THREE.CylinderGeometry(.17,.17,.3,14),tone))}else if(type==='motor'){
    const core=new THREE.Mesh(new THREE.CylinderGeometry(.20,.20,.58,16),tone);core.rotation.z=Math.PI/2;group.add(core);
    for(let i=-3;i<=3;i++)cube(group,.035,.45,.43,steel,i*.075,0,0);
    const axle=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.93,12),brass);axle.rotation.z=Math.PI/2;group.add(axle);
@@ -209,23 +209,17 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   panel.querySelector('#workshop-preview-label').textContent=type==='arm'?'INDUSTRIAL MANIPULATOR':type?catalogue[type].name:'SELECT A COMPONENT';
  }
  function stacked(items){const groups=new Map();for(const item of items){const key=item.type;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item)}return [...groups.values()]}
- function craftAvailable(){return specUnlocked&&Object.entries(recipe).every(([type,n])=>inventory.filter(x=>x.type===type).length>=n)}
+ function craftAvailable(){return specUnlocked&&!probeInstalled&&Math.hypot(robot.position.x-workbench.position.x,robot.position.z-workbench.position.z)<2.5&&Object.entries(recipe).every(([type,n])=>inventory.filter(x=>x.type===type).length>=n)}
  function fabricate(){
   if(!craftAvailable())return;
-  if(!onCraftArm()){notify('SERVICE ARM ALREADY INSTALLED');return}
+  if(!onCraftProbe()){notify('ACCESS PROBE ALREADY INSTALLED');return}
   for(const [type,n] of Object.entries(recipe))for(let j=0;j<n;j++)inventory.splice(inventory.findIndex(x=>x.type===type),1);
-  notify('SERVICE ARM FABRICATED');sound('equip');craftProgress=0;craftHolding=false;updateUI();save();
+  probeInstalled=true;notify('ACCESS PROBE INSTALLED');sound('equip');craftProgress=0;craftHolding=false;updateUI();save();
  }
  function releaseHold(){craftHolding=false;craftProgress=0;const bar=panel.querySelector('.workshop-hold i');if(bar)bar.style.width='0%'}
  panel.querySelector('#workshop-close').onclick=close;
  panel.querySelector('#workshop-drop-cell').onclick=dropFuelCell;
- panel.querySelector('#workshop-dismantle-arm').onclick=()=>{
-  if(inventory.length>16){notify('FREE FOUR SALVAGE SLOTS FIRST');return}
-  if(!onDismantle()){notify('NO SERVICE ARM AVAILABLE TO DISMANTLE');return}
-  specUnlocked=true;setShardVisible();
-  for(const type of ['motor','gear','plate','wire'])inventory.push({id:'reclaimed-'+Math.floor(next()*1000000),type,rarity:'COMMON'});
-  notify('ARM DISMANTLED · PARTIAL SALVAGE');updateUI();save();
- };
+ panel.querySelector('#workshop-dismantle-arm').onclick=()=>notify('DISMANTLE THE BROKEN CLAW ON THE REPAIR BAY FLOOR');
  function updateUI(){
   panel.querySelector('#workshop-status').textContent='SALVAGE '+inventory.length+'/20 · '+(mass()+cellCount()*1.8).toFixed(1)+' KG · FUEL CELLS '+cellCount();
   const list=panel.querySelector('#workshop-items');list.replaceChildren();
@@ -245,9 +239,9 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   if(!inventory.length)list.textContent='NO RECOVERED COMPONENTS';
   const spec=panel.querySelector('#workshop-spec');spec.replaceChildren();
   const card=document.createElement('button');card.className='workshop-spec-card'+(specUnlocked?' unlocked':'')+(selectedSpec?' selected':'');card.type='button';
-  const name=document.createElement('strong');name.textContent='INDUSTRIAL MANIPULATOR';
+  const name=document.createElement('strong');name.textContent='DOOR ACCESS PROBE';
   const detail=document.createElement('small');detail.textContent=specUnlocked?'SPECIFICATION ACQUIRED · '+Object.entries(recipe).map(([t,n])=>n+'× '+catalogue[t].name).join(' · '):'UNKNOWN SPECIFICATION · TERMINAL ACCESS REQUIRED';
-  const status=document.createElement('small');status.textContent=craftAvailable()?'READY TO CRAFT · HOLD OR SELECT + ENTER':specUnlocked?'INSUFFICIENT COMPONENTS':'SPEC LOCKED';
+  const status=document.createElement('small');status.textContent=craftAvailable()?'READY TO CRAFT · HOLD OR SELECT + ENTER':specUnlocked?'COMPONENTS REQUIRED · USE WORKBENCH':'SPEC LOCKED';
   const hold=document.createElement('span');hold.className='workshop-hold';const bar=document.createElement('i');hold.append(bar);
   card.append(name,detail,status,hold);
   card.onclick=()=>{selectedSpec=true;showPreview('arm');card.classList.add('selected')};
@@ -267,7 +261,8 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  function handle(o){
   if(o.userData.workshopType==='bench'){open();sound('select');return true}
   if(o.userData.workshopType==='locker'){setLockerOpen(o.userData.index);open(o.userData.index);sound('select');save();return true}
-  if(o.userData.workshopType==='locker-loot'){const index=o.userData.index;const contents=lockerContents[index];const n=contents.findIndex(x=>x.id===o.userData.itemId);if(n<0)return true;if(inventory.length>=20){notify('SALVAGE CAPACITY FULL');return true}inventory.push(contents.splice(n,1)[0]);refreshLockerModels();notify('PHYSICAL COMPONENT RECOVERED');sound('collect');updateUI();save();return true}
+  if(o.userData.workshopType==='locker-loot'){const index=o.userData.index;const contents=lockerContents[index];const n=contents.findIndex(x=>x.id===o.userData.itemId);if(n<0)return true;if(inventory.length>=20){notify('SALVAGE CAPACITY FULL');return true}const found=contents.splice(n,1)[0];inventory.push(found);if(found.type==='card')onAccessCard(true);refreshLockerModels();notify(found.type==='card'?'WORKER CARD · PASSWORD ETNA':'ITEM RECOVERED');sound('collect');updateUI();save();return true}
+  if(o.userData.workshopType==='broken-claw'){if(clawSalvaged)return true;if(inventory.length>16){notify('SALVAGE INVENTORY FULL');return true}clawSalvaged=true;for(const type of ['gear','chip','wire'])inventory.push(generate(type));scene.remove(o);const i=interactables.indexOf(o);if(i>=0)interactables.splice(i,1);notify('BROKEN CLAW DISMANTLED · COMPONENTS SALVAGED');updateUI();save();return true}
   if(o.userData.workshopType==='shard'){specUnlocked=true;specReleased=false;setShardVisible();notify('FABRICATION SPEC UNLOCKED');sound('collect');updateUI();save();return true}
   if(o.userData.workshopType==='loose'){
    if(o.userData.kind==='cell'){setCellCount(cellCount()+1);notify('FUEL CELL RECOVERED · 1.8 KG')}else if(inventory.length<20){inventory.push(o.userData.item);notify('COMPONENT RECOVERED')}else{notify('SALVAGE INVENTORY FULL');return true}
