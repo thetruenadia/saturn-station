@@ -27,7 +27,10 @@ function cylinder(parent,r1,r2,h,material,x,y,z,rx=0,rz=0){const o=new THREE.Mes
 const floor=box(scene,28,.35,22,floorMat,0,-.2,0,false);
 // No prototype grid: a practical metal maintenance deck replaces it.
 // Dollhouse cutaway: north and west are solid; south/east walls are open to the camera.
-box(scene,28,8,.55,wallMat,0,3.8,-11,false);
+// The north bulkhead has a genuine opening at the exit.
+box(scene,23.7,8,.55,wallMat,-2.15,3.8,-11,false);
+box(scene,.4,8,.55,wallMat,13.8,3.8,-11,false);
+box(scene,4.1,4.4,.65,wallMat,11.8,5.8,-11,false);
 box(scene,.55,8,22,wallMat,-14,3.8,0,false);
 for(let x=-12;x<=12;x+=4)box(scene,.38,.85,.38,wallMat,x,.45,10.9,false);
 for(let z=-9;z<=9;z+=4)box(scene,.38,.85,.38,wallMat,13.9,.45,z,false);
@@ -162,18 +165,35 @@ for(const s of [-1,1]){const finger=cylinder(claw,.035,.045,.28,greenMat,s*.07,0
 const armGlow=new THREE.PointLight(0x8dff7a,1.3,1.8);armGlow.position.set(.45,.55,0);arm.add(armGlow);scene.add(arm);
 arm.userData={name:'LOCK-SERVICE MANIPULATOR',x:6,z:5};interactables.push(arm);
 // A sealed service case. The power cell is visible only after its lid is released.
+// Ribbed field-service chest with hinged heavy lid and separate removable power pack.
 const caseGroup=new THREE.Group();caseGroup.position.set(-5,0,2);
-box(caseGroup,1.45,.55,1.15,mat(0x292d25,.92,.25),0,.28,0);
-for(let s of [-1,1])box(caseGroup,.08,.62,.08,rustMat,s*.63,.3,.52);
-const lidPivot=new THREE.Group();lidPivot.position.set(0,.58,-.53);caseGroup.add(lidPivot);
-box(lidPivot,1.48,.13,.16,edgeMat,0,0,.52);
-const lidTop=box(lidPivot,1.45,.13,1.08,mat(0x514632,.94,.2),0,.02,0);
-for(let x of [-.48,.48])box(lidPivot,.07,.15,.08,rustMat,x,0,.1);
-const cell=new THREE.Group();cell.position.set(0,.7,0);box(cell,.5,.3,.36,greenMat,0,0,0);box(cell,.28,.12,.04,screenMat,0,.02,.2);cylinder(cell,.08,.08,.12,rustMat,.29,0,0,0,0);cell.visible=false;caseGroup.add(cell);
+const caseBody=mat(0x6e715d,.88,.23),caseMetal=mat(0x292d28,.67,.55),caseAccent=mat(0xb48a45,.9,.12);
+box(caseGroup,1.65,.65,1.24,caseBody,0,.36,0);
+for(const x of [-.7,.7]){box(caseGroup,.1,.78,1.32,caseMetal,x,.38,0);for(const z of [-.44,.44])cylinder(caseGroup,.05,.05,.06,caseAccent,x,.48,z,Math.PI/2)}
+for(const z of [-.45,.45])box(caseGroup,1.58,.12,.09,caseMetal,0,.42,z);
+box(caseGroup,.48,.22,.11,caseMetal,0,.4,.66);box(caseGroup,.18,.12,.08,caseAccent,0,.41,.73);
+const lidPivot=new THREE.Group();lidPivot.position.set(0,.72,-.58);caseGroup.add(lidPivot);
+box(lidPivot,1.7,.17,1.32,caseBody,0,0,.58);
+for(const x of [-.72,.72])box(lidPivot,.12,.22,1.34,caseMetal,x,.05,.58);
+for(let x=-.5;x<=.5;x+=.25)box(lidPivot,.07,.03,1.04,caseAccent,x,.1,.58);
+const cell=new THREE.Group();cell.position.set(0,.86,0);caseGroup.add(cell);
+const cellShell=mat(0xa9a48a,.7,.18),cellRubber=mat(0x242b29,.88,.15),cellCopper=mat(0xa97639,.55,.7);
+box(cell,.7,.32,.45,cellShell,0,0,0);
+for(const x of [-.3,.3])box(cell,.11,.4,.49,cellRubber,x,0,0);
+for(let i=0;i<4;i++)box(cell,.05,.22,.46,cellCopper,-.19+i*.13,0,0);
+for(const x of [-.19,.19])cylinder(cell,.07,.07,.12,cellCopper,x,.2,0);
+box(cell,.31,.1,.045,screenMat,0,.02,.24);
+cell.visible=false;
 scene.add(caseGroup);caseGroup.userData={name:'SEALED SERVICE CASE',x:-5,z:2};interactables.push(caseGroup);
-const generator=new THREE.Group();generator.position.set(-7,0,-4);box(generator,1,.7,.8,edgeMat,0,.35,0);box(generator,.7,.9,.6,wallMat,0,1.1,0);box(generator,.48,.22,.05,screenMat,0,1.25,.33);scene.add(generator);generator.userData={name:'AUXILIARY POWER DISTRIBUTION',x:-7,z:-4};interactables.push(generator);
+const generator=new THREE.Group();generator.position.set(-7,0,-4);box(generator,1,.7,.8,edgeMat,0,.35,0);box(generator,.7,.9,.6,wallMat,0,1.1,0);box(generator,.48,.22,.05,screenMat,0,1.25,.33);
+const generatorLever=new THREE.Group();generatorLever.position.set(.37,1.35,.35);generator.add(generatorLever);
+cylinder(generatorLever,.16,.16,.15,rustMat,0,0,0,Math.PI/2);
+const leverHandle=box(generatorLever,.09,.65,.09,edgeMat,0,.35,.04);leverHandle.rotation.z=-.34;
+cylinder(generatorLever,.16,.16,.16,greenMat,-.11,.7,.04);
+for(let i=0;i<6;i++)box(generator,.12,.08,.58,edgeMat,-.35+i*.14,.48,.12);
+scene.add(generator);generator.userData={name:'AUXILIARY POWER DISTRIBUTION',x:-7,z:-4};interactables.push(generator);
 // Sliding double-leaf pressure bulkhead with a visible rectangular doorway.
-const hatch=new THREE.Group();hatch.position.set(11,0,-3);scene.add(hatch);
+const hatch=new THREE.Group();hatch.position.set(11.4,0,-10.6);scene.add(hatch);
 const doorFrame=mat(0x343c34,.83,.35),doorPaint=mat(0x88876a,.88,.22),doorInset=mat(0x42483e,.8,.34),doorWarning=mat(0xc19b4b,.87,.2);
 box(hatch,4.2,.55,.7,doorFrame,0,3.35,0);
 for(const x of [-2.0,2.0]){box(hatch,.5,3.4,.7,doorFrame,x,1.7,0);box(hatch,.14,2.85,.74,doorWarning,x*.87,1.72,0)}
@@ -188,12 +208,12 @@ for(const [leaf,side] of [[leftLeaf,-1],[rightLeaf,1]]){
  for(const y of [1.03,1.72,2.4])for(const x of [side*.4,side*1.5])cylinder(leaf,.055,.055,.04,doorFrame,x,y,.27,Math.PI/2);
  box(leaf,.16,.95,.45,doorWarning,side*.14,1.65,.12);
 }
-hatch.userData={name:'MAINTENANCE EXIT',x:11,z:-3};interactables.push(hatch);
+hatch.userData={name:'MAINTENANCE EXIT',x:11.4,z:-10.6};interactables.push(hatch);
 // Expanded maintenance chamber: functional repair bay and terminal alcove.
 const deckSteel=mat(0x3c443e,.94,.14),deckRust=mat(0x625142,.95,.12),deckCream=mat(0x9b9477,.88,.09);
 for(let z=-10;z<=10;z+=2){box(scene,27,.07,.16,deckSteel,0,.035,z);for(let x=-13;x<=13;x+=3.3)box(scene,.22,.045,1.8,deckRust,x,.052,z+.85)}
 for(const x of [-13.5,13.5])for(let z=-9;z<=9;z+=3){box(scene,.35,7,.42,deckSteel,x,3.5,z);box(scene,.7,.16,.7,deckRust,x,6.7,z)}
-for(const z of [-10.6,10.6])for(let x=-12;x<=12;x+=3){box(scene,.35,7,.4,deckSteel,x,3.5,z)}
+for(const z of [-10.6,10.6])for(let x=-12;x<=12;x+=3){if(z<0&&x>9)continue;box(scene,.35,7,.4,deckSteel,x,3.5,z)}
 // Scrap and tools surrounding MU-1's waking area.
 const scrap=new THREE.Group();scrap.position.set(-10,0,7);scene.add(scrap);
 box(scrap,3.6,.22,2.8,deckRust,0,.12,0);
@@ -216,7 +236,7 @@ for(let i=0;i<8;i++){
 for(let i=0;i<10;i++){const z=-9+i*2;box(scene,.8,.04,1.3,deckRust,0,.09,z);box(scene,.58,.04,.06,deckCream,0,.12,z-.4)}
 // Repainted bulkhead skins, warning panels, and riveted service cladding.
 const olivePaint=mat(0x777a61,.94,.12),sandPaint=mat(0xa69a7a,.98,.08),inkBlack=mat(0x282b25,.92,.12),hazardPaint=mat(0xb17943,.94,.08);
-for(let x=-12;x<=12;x+=3.5){
+for(let x=-12;x<=7.5;x+=3.5){
  box(scene,3.12,3.2,.11,x%2===0?olivePaint:sandPaint,x,3.1,-10.65);
  box(scene,3.1,.11,.18,inkBlack,x,1.48,-10.53);
  for(const y of [1.7,4.5])for(const dx of [-1.38,1.38])cylinder(scene,.055,.055,.06,inkBlack,x+dx,y,-10.52,Math.PI/2);
@@ -260,7 +280,13 @@ for(const y of [1.95,6.75])box(scene,8,.34,.45,doorFrame,5,y,-10.38);
 for(let i=0;i<9;i++){const x=1.3+i*.92;box(scene,.09,4.5,.1,oxidisedCopper,x,4.35,-10.25)}
 // Terminal is physically separated from the generator and exit.
 const terminal=new THREE.Group();terminal.position.set(5,0,-7);scene.add(terminal);
-box(terminal,1.8,1.2,1.05,deckRust,0,.6,0);box(terminal,1.5,1.65,.6,deckSteel,0,1.9,-.15);
+box(terminal,1.8,1.2,1.05,deckRust,0,.6,0);
+box(terminal,1.64,1.58,.72,deckSteel,0,1.85,-.15);
+for(const x of [-.75,.75])box(terminal,.14,1.65,.83,deckCream,x,1.85,-.15);
+box(terminal,1.66,.17,.78,deckRust,0,2.72,-.15);
+const terminalBezel=box(terminal,1.4,1.02,.13,deckCream,0,2.1,.23);
+box(terminal,1.62,.22,.78,deckRust,0,1.36,.36);
+for(let i=0;i<4;i++)cylinder(terminal,.055,.055,.09,deckCream,-.53+i*.34,1.44,.76,Math.PI/2);
 const terminalDark=new THREE.MeshStandardMaterial({color:0x101b17,emissive:0x030907,emissiveIntensity:.2});
 const terminalLit=new THREE.MeshStandardMaterial({color:0x3d8765,emissive:0x5ad69a,emissiveIntensity:1.4});
 const terminalScreen=box(terminal,1.16,.77,.08,terminalDark,0,2.12,.21);
@@ -542,13 +568,40 @@ function updateTerminalStatus(){terminalStatus.textContent='AUXILIARY GRID: '+(p
 
 function showTerminal(){updateTerminalStatus();terminalOpen=true;terminalPanel.style.display='block';terminalOutput.textContent=terminalBooted?'LOCAL CONTROL // READY\n1  OPEN DOOR\n2  CLOSE DOOR\n3  TURN OFF POWER':'SYSTEM READY\n\nPRESS ENTER TO BOOT TERMINAL';Object.keys(keys).forEach(k=>keys[k]=false)}
 function hideTerminal(){terminalOpen=false;terminalPanel.style.display='none'}
-function terminalKey(k){if(k==='escape'){hideTerminal();return}if(k==='enter'){terminalBooted=true;terminalOutput.textContent='BOOT COMPLETE\nLOCAL CONTROL // READY\n\n1  OPEN DOOR\n2  CLOSE DOOR\n3  TURN OFF POWER';return}if(!terminalBooted){terminalOutput.textContent='PRESS ENTER TO BOOT TERMINAL';return}if(k==='1'){if(!powerOn){terminalOutput.textContent='ERROR: GENERATOR OFFLINE';return}doorOpening=true;hatch.userData.openStarted=performance.now();terminalOutput.textContent='COMMAND 01: OPEN DOOR\nACTUATOR ENGAGED';updateTerminalStatus();task.textContent='Door opening. Explore the exit.'}else if(k==='2'){doorOpening=false;doorOpen=false;leftLeaf.position.x=0;rightLeaf.position.x=0;terminalOutput.textContent='COMMAND 02: CLOSE DOOR\nDOOR SEALED';updateTerminalStatus()}else if(k==='3'){powerOn=false;phosphor.intensity=13;terminalScreen.material=terminalDark;terminalLamp.material=terminalDark;terminalBooted=false;updateTerminalStatus();hideTerminal();task.textContent='Restore generator power to use the terminal.';notify('GENERATOR POWER OFF')}}
+function terminalKey(k){if(k==='escape'){hideTerminal();return}if(k==='enter'){terminalBooted=true;terminalOutput.textContent='BOOT COMPLETE\nLOCAL CONTROL // READY\n\n1  OPEN DOOR\n2  CLOSE DOOR\n3  TURN OFF POWER';return}if(!terminalBooted){terminalOutput.textContent='PRESS ENTER TO BOOT TERMINAL';return}if(k==='1'){if(!powerOn){terminalOutput.textContent='ERROR: GENERATOR OFFLINE';return}doorOpening=true;hatch.userData.openStarted=performance.now();terminalOutput.textContent='COMMAND 01: OPEN DOOR\nACTUATOR ENGAGED';updateTerminalStatus();task.textContent='Door opening. Explore the exit.'}else if(k==='2'){doorOpening=false;doorOpen=false;leftLeaf.position.x=0;rightLeaf.position.x=0;terminalOutput.textContent='COMMAND 02: CLOSE DOOR\nDOOR SEALED';updateTerminalStatus()}else if(k==='3'){powerOn=false;generatorLever.rotation.z=0;phosphor.intensity=13;terminalScreen.material=terminalDark;terminalLamp.material=terminalDark;terminalBooted=false;updateTerminalStatus();hideTerminal();task.textContent='Restore generator power to use the terminal.';notify('GENERATOR POWER OFF')}}
 
 function say(s){logMessages.push(s);if(logMessages.length>8)logMessages.shift()}
 let toastTimer;function notify(s){toast.textContent=s;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600)}
 function updateCharge(){document.querySelector('#charge').textContent=String(Math.ceil(charge)).padStart(2,'0')+'%';document.querySelector('#charge-bar').style.width=Math.max(0,charge)+'%'}
-function updateInventory(){document.querySelector('#item-count').textContent=hasArm?'01':'00';document.querySelector('#cell-hot').textContent=hasCell?'READY':usedCell?'USED':'EMPTY';document.querySelector('#cell-hot').classList.toggle('filled',hasCell||usedCell);document.querySelector('#arm-slot').textContent=armEquipped?'LOCK-SERVICE ARM':'EMPTY';document.querySelector('#arm-slot').nextElementSibling.textContent=armEquipped?'COMPONENT INSTALLED':'DRAG COMPONENT HERE';
-const list=document.querySelector('#inventory-items');list.innerHTML='';if(!hasArm){list.innerHTML='<p class="empty-inventory">No components recovered.</p>'}else{const item=document.createElement('div');item.className='inventory-item';item.draggable=true;item.innerHTML='<strong>LOCK-SERVICE MANIPULATOR</strong><small>ARTICULATED TOOL ARM · MECHANICAL LOCK RELEASE</small>';item.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain','lock-arm');e.dataTransfer.effectAllowed='move'});list.appendChild(item)}}
+function itemIcon(type){
+ const base='<svg viewBox="0 0 96 72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
+ if(type==='arm')return base+'<g transform="rotate(-20 48 36)" stroke="#1c211d" stroke-width="3"><rect x="34" y="3" width="29" height="17" rx="5" fill="#b7a13f"/><circle cx="49" cy="21" r="9" fill="#7a8176"/><rect x="40" y="26" width="19" height="25" rx="4" fill="#d0a84a"/><path d="M40 30h19M40 40h19" stroke="#222"/><circle cx="49" cy="52" r="7" fill="#838b80"/><path d="M43 57v12m12-12v12" stroke="#c1c6b9" stroke-width="6"/></g></svg>';
+ return base+'<g stroke="#262d2b" stroke-width="3"><rect x="15" y="20" width="66" height="35" rx="6" fill="#b5ad8d"/><rect x="15" y="20" width="12" height="35" fill="#333c39"/><rect x="69" y="20" width="12" height="35" fill="#333c39"/><path d="M32 25v24m9-24v24m9-24v24m9-24v24" stroke="#b7803b" stroke-width="5"/><rect x="40" y="14" width="16" height="8" rx="2" fill="#a9773c"/></g></svg>';
+}
+function updateInventory(){
+ document.querySelector('#item-count').textContent=String(Number(hasArm)+Number(hasCell)).padStart(2,'0');
+ document.querySelector('#cell-hot').textContent=hasCell?'READY':usedCell?'USED':'EMPTY';
+ document.querySelector('#cell-hot').classList.toggle('filled',hasCell||usedCell);
+ document.querySelector('#arm-slot').textContent=armEquipped?'FACTORY MANIPULATOR':'EMPTY';
+ document.querySelector('#arm-slot').nextElementSibling.textContent=armEquipped?'COMPONENT INSTALLED':'DRAG COMPONENT HERE';
+ document.querySelector('#arm-hot').innerHTML=armEquipped?itemIcon('arm'):'';
+ document.querySelector('#cell-icon').innerHTML=hasCell||usedCell?itemIcon('cell'):'';
+ const list=document.querySelector('#inventory-items');list.replaceChildren();
+ function item(type,name,description,stats,draggable){
+  const node=document.createElement('div');node.className='inventory-item';node.draggable=draggable;
+  const picture=document.createElement('div');picture.className='item-illustration';picture.innerHTML=itemIcon(type);
+  const info=document.createElement('div');info.className='item-info';
+  const heading=document.createElement('strong');heading.textContent=name;
+  const detail=document.createElement('small');detail.textContent=description;
+  const properties=document.createElement('p');properties.className='item-stats';properties.textContent=stats;
+  info.append(heading,detail,properties);node.append(picture,info);
+  if(draggable)node.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain','lock-arm');e.dataTransfer.effectAllowed='move'});
+  list.append(node);
+ }
+ if(hasArm)item('arm','INDUSTRIAL MANIPULATOR','Yellow-and-black interchangeable factory arm. Heavy-duty gripper for physical switches and mechanical releases.','CLASS  TOOL ARM  /  MOUNT  RIGHT  /  GRIP  85 N  /  STATUS  '+(armEquipped?'EQUIPPED':'STOWED'),!armEquipped);
+ if(hasCell)item('cell','PORTABLE POWER PACK','Sealed auxiliary energy cartridge. Restores MU-1 internal charge when consumed with Q.','CLASS  CONSUMABLE  /  CHARGE  +55%  /  USE  Q',false);
+ if(!hasArm&&!hasCell)list.innerHTML='<p class="empty-inventory">No components recovered.</p>';
+}
 function openInventory(){inventory.classList.add('open');inventory.setAttribute('aria-hidden','false');updateInventory();target=null}
 function closeInventory(){inventory.classList.remove('open');inventory.setAttribute('aria-hidden','true')}
 const armSlot=document.querySelector('[data-slot="arm"]');armSlot.addEventListener('dragover',e=>{e.preventDefault();armSlot.classList.add('drag-over')});armSlot.addEventListener('dragleave',()=>armSlot.classList.remove('drag-over'));armSlot.addEventListener('drop',e=>{e.preventDefault();armSlot.classList.remove('drag-over');if(e.dataTransfer.getData('text/plain')==='lock-arm'&&hasArm){armEquipped=true;mountedArm.visible=true;previewMountedArm.visible=true;updateInventory();say('LOCK-SERVICE ARM INSTALLED.');notify('COMPONENT INSTALLED');task.textContent='Activate the generator switch.'}});
@@ -560,7 +613,7 @@ function interact(){if(ended||inventory.classList.contains('open'))return;const 
 const id=o.userData.name;interactionPulse=1;
 if(id==='LOCK-SERVICE MANIPULATOR'){if(hasArm)return;hasArm=true;removeObject(o);updateInventory();say('LOOSE MANIPULATOR RECOVERED.');task.textContent='Inspect the recovered component in your inventory.';notify('COMPONENT RECOVERED');setTimeout(()=>notify('NEW COMPONENT STORED  ·  I TO INSPECT'),850)}
 else if(id==='SEALED SERVICE CASE'){if(!armEquipped){notify('MECHANICAL RELEASE REQUIRED');say('CASE LOCK CANNOT BE OPERATED WITHOUT A MANIPULATOR.');return}if(!caseOpen){caseOpen=true;lidPivot.rotation.x=-1.35;cell.visible=true;say('SERVICE CASE RELEASED.');task.textContent='Recover the portable power cell from the open case.';notify('LOCK RELEASED')}else if(!hasCell){hasCell=true;cell.visible=false;say('PORTABLE POWER CELL RECOVERED.');task.textContent='Use the power cell to restore internal charge.';updateInventory();notify('POWER CELL ACQUIRED')}}
-else if(id==='AUXILIARY POWER DISTRIBUTION'){if(!armEquipped){notify('MANIPULATOR REQUIRED TO THROW SWITCH');return}powerOn=true;phosphor.intensity=24;terminalScreen.material=terminalLit;terminalLamp.material=terminalLit;say('GENERATOR SWITCH ENGAGED. TERMINAL POWER AVAILABLE.');task.textContent='Access the powered terminal.';notify('GENERATOR ONLINE')}
+else if(id==='AUXILIARY POWER DISTRIBUTION'){if(!armEquipped){notify('MANIPULATOR REQUIRED TO THROW SWITCH');return}powerOn=true;generatorLever.rotation.z=.75;phosphor.intensity=24;terminalScreen.material=terminalLit;terminalLamp.material=terminalLit;say('GENERATOR SWITCH ENGAGED. TERMINAL POWER AVAILABLE.');task.textContent='Access the powered terminal.';notify('GENERATOR ONLINE')}
 else if(id==='CONTROL TERMINAL'){if(!powerOn){notify('TERMINAL OFFLINE');return}showTerminal()}else if(id==='MAINTENANCE EXIT'){notify(doorOpen?'EXIT OPEN · TERMINAL CONTROLS DOOR':'DOOR SEALED · USE TERMINAL')}
 }
 // Nearby item readout and small projected E key above interactable objects.
