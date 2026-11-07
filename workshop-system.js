@@ -9,7 +9,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  };
  const rarities=[{name:'COMMON',chance:.62,multiplier:1},{name:'UNCOMMON',chance:.27,multiplier:1.6},{name:'RARE',chance:.095,multiplier:2.7},{name:'EXCEPTIONAL',chance:.015,multiplier:4.5}];
  const recipe={motor:1,gear:2,chip:1,plate:2,wire:2};
- let seed=0,inventory=[],lockerContents=[[],[]],opened=[false,false],specReleased=false,specUnlocked=false,loose=[],activeLocker=-1,screenOpen=false;
+ let seed=0,inventory=[],lockerContents=[[],[],[],[]],opened=[false,false,false,false],specReleased=false,specUnlocked=false,loose=[],activeLocker=-1,screenOpen=false;
  const shell=new THREE.MeshStandardMaterial({color:0x767f70,metalness:.55,roughness:.65});
  const steel=new THREE.MeshStandardMaterial({color:0x313c3b,metalness:.68,roughness:.55});
  const brass=new THREE.MeshStandardMaterial({color:0xb5a168,metalness:.5,roughness:.56});
@@ -17,17 +17,48 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
   mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
  }
+ // Cream-painted factory lockers: four numbered individual compartments in one bank.
+ const lockerDoors=[],lockerShelves=[];
+ const agedCream=new THREE.MeshStandardMaterial({color:0xb2ad97,metalness:.23,roughness:.91});
+ const agedDark=new THREE.MeshStandardMaterial({color:0x6b685c,metalness:.38,roughness:.88});
+ const numbered=new THREE.MeshStandardMaterial({color:0x913e35,roughness:.94});
+ function numberPlaque(root,n){
+  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=128;
+  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,256,128);ctx.fillStyle='#913e35';ctx.font='bold 74px Georgia,serif';ctx.textAlign='center';ctx.fillText(String(n),128,86);
+  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+  const plate=new THREE.Mesh(new THREE.PlaneGeometry(.37,.19),new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide}));
+  plate.position.set(.42,1.49,.075);root.add(plate);
+ }
  function makeLocker(index,x,z){
   const root=new THREE.Group();root.position.set(x,0,z);scene.add(root);
-  cube(root,1.12,2.15,.70,shell,0,1.075,0);
-  cube(root,.96,1.85,.08,steel,0,1.09,.40);
-  cube(root,.08,.55,.10,brass,.33,1.08,.47);
-  for(let i=0;i<4;i++)cube(root,.64,.026,.035,shell,-.06,1.58-i*.12,.46);
-  root.userData={name:'SALVAGE LOCKER '+(index+1),x,z,workshopType:'locker',index};
-  interactables.push(root);colliders.push([x,z,.58,.38]);return root;
+  // Doors face +Z; each frame stands on short legs, clear of the floor.
+  cube(root,.96,2.12,.66,agedCream,0,1.13,0);
+  cube(root,.82,1.88,.08,agedDark,0,1.16,.30);
+  cube(root,.79,.06,.59,agedCream,0,.29,0);
+  for(const y of [.65,1.22,1.78])cube(root,.75,.035,.47,agedCream,0,y,-.02);
+  for(const side of [-1,1])cube(root,.095,.28,.64,agedDark,side*.39,.17,0);
+  const pivot=new THREE.Group();pivot.position.set(-.43,0,.37);root.add(pivot);
+  const door=new THREE.Group();door.position.set(.43,0,0);pivot.add(door);
+  cube(door,.86,1.94,.068,agedCream,0,1.16,0);
+  // Narrow, irregular lower scuffs and riveted hinges.
+  for(let i=0;i<10;i++){const x=-.32+(i*37%65)/100,y=.28+(i*29%23)/100;cube(door,.06+(i%3)*.025,.01+(i%2)*.02,.008,agedDark,x,y,.041)}
+  for(const y of [.45,1.1,1.92]){const hinge=cube(door,.075,.16,.11,agedDark,-.45,y,.055);hinge.rotation.y=.1}
+  for(const y of [.40,1.78])for(const x of [-.26,.26]){
+   const hole=new THREE.Mesh(new THREE.CylinderGeometry(.027,.027,.009,12),steel);hole.rotation.x=Math.PI/2;hole.position.set(x,y,.048);door.add(hole);
+  }
+  const knob=new THREE.Mesh(new THREE.CylinderGeometry(.042,.042,.08,12),agedDark);
+  knob.rotation.x=Math.PI/2;knob.position.set(.32,1.08,.11);door.add(knob);
+  numberPlaque(door,106+index);
+  // Faded raised lip across the bank, and stamped identification at each door.
+  cube(root,.99,.095,.77,agedDark,0,2.24,0);
+  root.userData={name:'SALVAGE LOCKER '+(106+index),x,z,workshopType:'locker',index};
+  interactables.push(root);colliders.push([x,z,.48,.35]);
+  lockerDoors.push(pivot);
+  const shelf=new THREE.Group();shelf.position.set(0,.69,.09);root.add(shelf);lockerShelves.push(shelf);
+  return root;
  }
- // Keep the lockers beside the workshop route, with clear player approach space.
- makeLocker(0,-10.9,1.15);makeLocker(1,8.9,1.2);
+ // One shared four-door bank, positioned away from the central repair route.
+ for(let i=0;i<4;i++)makeLocker(i,7.15+i*.98,1.15);
  const workbench=new THREE.Group();workbench.position.set(-9,0,2.2);scene.add(workbench);
  cube(workbench,1.2,.18,.8,steel,0,.95,0);cube(workbench,.12,.88,.1,shell,-.42,.47,0);cube(workbench,.12,.88,.1,shell,.42,.47,0);
  cube(workbench,.48,.28,.38,brass,0,1.15,0);
@@ -45,18 +76,59 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  }
  function startFresh(){
   seed=(Math.floor(Math.random()*4294967295)>>>0)||12345;
-  inventory=[];opened=[false,false];specReleased=false;specUnlocked=false;loose=[];
-  lockerContents=[Array.from({length:5},generate),Array.from({length:4},generate)];setShardVisible();updateUI();
+  inventory=[];opened=[false,false,false,false];specReleased=false;specUnlocked=false;loose=[];
+  lockerContents=[Array.from({length:3},generate),Array.from({length:2},generate),Array.from({length:3},generate),Array.from({length:2},generate)];
+  refreshLockerModels();setShardVisible();updateUI();
  }
  function describe(item){
   const base=catalogue[item.type],rarity=rarities.find(x=>x.name===item.rarity)||rarities[0];
   return base.name+' · '+item.rarity+' · '+base.mass.toFixed(1)+' KG · '+Math.round(base.value*rarity.multiplier)+' CR';
  }
  function mass(){return inventory.reduce((n,p)=>n+catalogue[p.type].mass,0)}
+ // Reuse the same recognisable mechanical silhouettes for stored and dropped salvage.
+ function makePartModel(parent,type,scale=.85){
+  const group=new THREE.Group();group.scale.setScalar(scale);parent.add(group);
+  const tone=new THREE.MeshStandardMaterial({color:catalogue[type]?.color||0x807e6f,roughness:.72,metalness:.55});
+  if(type==='motor'){
+   const core=new THREE.Mesh(new THREE.CylinderGeometry(.20,.20,.58,16),tone);core.rotation.z=Math.PI/2;group.add(core);
+   for(let i=-3;i<=3;i++)cube(group,.035,.45,.43,steel,i*.075,0,0);
+   const axle=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.93,12),brass);axle.rotation.z=Math.PI/2;group.add(axle);
+   for(const side of [-1,1])cube(group,.14,.12,.18,steel,side*.2,-.26,0);
+  }else if(type==='gear'){
+   const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.23,.23,.11,12),steel);wheel.rotation.x=Math.PI/2;group.add(wheel);
+   for(let i=0;i<12;i++){const a=i*Math.PI/6;const tooth=cube(group,.10,.12,.13,tone,Math.sin(a)*.23,Math.cos(a)*.23,0);tooth.rotation.z=-a}
+   const hub=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.15,16),brass);hub.rotation.x=Math.PI/2;group.add(hub);
+  }else if(type==='chip'){
+   cube(group,.47,.07,.36,tone,0,0,0);cube(group,.20,.065,.18,steel,0,.06,0);
+   for(let i=0;i<5;i++)for(const s of [-1,1])cube(group,.025,.045,.07,brass,-.2+i*.1,.015,s*.21);
+  }else if(type==='plate'){
+   cube(group,.52,.075,.40,tone,0,0,0);for(const x of [-.19,.19])for(const z of [-.13,.13])cube(group,.055,.022,.055,steel,x,.049,z);
+   cube(group,.45,.06,.32,steel,.09,-.07,.07);
+  }else if(type==='wire'){
+   for(let i=0;i<4;i++){
+    const material=new THREE.MeshStandardMaterial({color:i%2?0x754f39:0x394d45,roughness:.83});
+    const points=[new THREE.Vector3(-.30,0,i*.07-.11),new THREE.Vector3(-.08,.13,i*.07-.11),new THREE.Vector3(.14,-.10,i*.07-.11),new THREE.Vector3(.31,0,i*.07-.11)];
+    group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),14,.019,6,false),material));
+   }
+   for(const x of [-.32,.32])cube(group,.07,.16,.30,steel,x,0,0);
+  }else cube(group,.35,.25,.35,tone,0,0,0);
+  return group;
+ }
+ function refreshLockerModels(){
+  lockerShelves.forEach((shelf,index)=>{
+   shelf.clear();
+   const items=lockerContents[index]||[];
+   for(let i=0;i<Math.min(items.length,3);i++){
+    const part=makePartModel(shelf,items[i].type,.60);
+    part.position.set(-.23+(i%2)*.45,Math.floor(i/2)*.44,.02);
+   }
+  });
+ }
+
  function createLoose(item,x,z,kind='component'){
   const root=new THREE.Group();root.position.set(x,0,z);
   const material=kind==='cell'?brass:catalogue[item.type]&&new THREE.MeshStandardMaterial({color:catalogue[item.type].color,metalness:.58,roughness:.5})||shell;
-  cube(root,.36,.22,.36,material,0,.16,0);cube(root,.25,.08,.25,steel,0,.32,0);
+  if(kind==='cell'){cube(root,.36,.22,.36,material,0,.16,0);cube(root,.25,.08,.25,steel,0,.32,0)}else{const part=makePartModel(root,item.type,1);part.position.y=.28}
   root.userData={name:kind==='cell'?'DROPPED FUEL CELL':catalogue[item.type].name,x,z,workshopType:'loose',item,kind};
   scene.add(root);interactables.push(root);loose.push(root);return root;
  }
@@ -95,7 +167,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   }
   const locker=panel.querySelector('#workshop-locker');locker.replaceChildren();
   if(activeLocker<0){locker.textContent='Open a locker with E to inspect its contents.';return;}
-  lockerContents[activeLocker].forEach((item,i)=>{const row=document.createElement('div');row.className='workshop-row';const info=document.createElement('span');info.textContent=describe(item);const button=document.createElement('button');button.textContent='TAKE';button.disabled=inventory.length>=20;button.onclick=()=>{inventory.push(item);lockerContents[activeLocker].splice(i,1);notify('SALVAGE RECOVERED');sound('collect');updateUI();save()};row.append(info,button);locker.append(row)});
+  lockerContents[activeLocker].forEach((item,i)=>{const row=document.createElement('div');row.className='workshop-row';const info=document.createElement('span');info.textContent=describe(item);const button=document.createElement('button');button.textContent='TAKE';button.disabled=inventory.length>=20;button.onclick=()=>{inventory.push(item);lockerContents[activeLocker].splice(i,1);refreshLockerModels();notify('SALVAGE RECOVERED');sound('collect');updateUI();save()};row.append(info,button);locker.append(row)});
   if(!lockerContents[activeLocker].length)locker.textContent='Locker empty.';
  }
  function open(locker=-1){activeLocker=locker;screenOpen=true;panel.hidden=false;updateUI();panel.querySelector('#workshop-close').focus()}
@@ -112,8 +184,8 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  }
  function releaseSpec(){if(specUnlocked)return 'SPEC ALREADY RECOVERED';if(specReleased)return 'SHARD WAITING AT TERMINAL OUTPUT';specReleased=true;setShardVisible();notify('FABRICATION SHARD EJECTED');save();return 'FABRICATION SHARD EJECTED · RECOVER FROM TERMINAL OUTPUT'}
  function serialize(){return {seed,inventory,lockerContents,opened,specReleased,specUnlocked,loose:loose.map(o=>({x:o.userData.x,z:o.userData.z,item:o.userData.item,kind:o.userData.kind}))}}
- function restore(data){if(!data||typeof data!=='object'){startFresh();return;}seed=Number.isInteger(data.seed)?data.seed:12345;inventory=Array.isArray(data.inventory)?data.inventory.filter(i=>catalogue[i.type]).slice(0,20):[];lockerContents=Array.isArray(data.lockerContents)&&data.lockerContents.length===2?data.lockerContents:[[],[]];opened=Array.isArray(data.opened)?data.opened:[false,false];specReleased=!!data.specReleased;specUnlocked=!!data.specUnlocked;for(const o of [...loose])removeLoose(o);for(const p of Array.isArray(data.loose)?data.loose:[]){if(Number.isFinite(p.x)&&Number.isFinite(p.z))createLoose(p.item,p.x,p.z,p.kind)}setShardVisible();updateUI()}
- function update(dt){for(const o of loose){if(o.position.y<=0&&o.userData.velocity===undefined)continue;const v=(o.userData.velocity||0)-9.8*dt;o.position.y+=v*dt;if(o.position.y<=0){o.position.y=0;const bounce=-v*.16;if(bounce>.24)o.userData.velocity=bounce;else delete o.userData.velocity}else o.userData.velocity=v}}
+ function restore(data){if(!data||typeof data!=='object'){startFresh();return;}seed=Number.isInteger(data.seed)?data.seed:12345;inventory=Array.isArray(data.inventory)?data.inventory.filter(i=>catalogue[i.type]).slice(0,20):[];lockerContents=Array.isArray(data.lockerContents)?Array.from({length:4},(_,i)=>data.lockerContents[i]||[]):[[],[],[],[]];opened=Array.isArray(data.opened)?data.opened.slice(0,4):[false,false,false,false];specReleased=!!data.specReleased;specUnlocked=!!data.specUnlocked;for(const o of [...loose])removeLoose(o);for(const p of Array.isArray(data.loose)?data.loose:[]){if(Number.isFinite(p.x)&&Number.isFinite(p.z))createLoose(p.item,p.x,p.z,p.kind)}setShardVisible();refreshLockerModels();updateUI()}
+ function update(dt){for(let i=0;i<lockerDoors.length;i++){const desired=opened[i]?-1.55:0;lockerDoors[i].rotation.y=THREE.MathUtils.damp(lockerDoors[i].rotation.y,desired,7,dt)}for(const o of loose){if(o.position.y<=0&&o.userData.velocity===undefined)continue;const v=(o.userData.velocity||0)-9.8*dt;o.position.y+=v*dt;if(o.position.y<=0){o.position.y=0;const bounce=-v*.16;if(bounce>.24)o.userData.velocity=bounce;else delete o.userData.velocity}else o.userData.velocity=v}}
  function hint(){if(!specUnlocked)return specReleased?'Collect the ejected spec shard beside the terminal.':'Explore the terminal files to release a fabrication specification.';return 'You can fabricate the service arm at the maintenance workshop using recovered parts.'}
  startFresh();
  return {open,close,handle,releaseSpec,serialize,restore,hint,updateUI,update,mass,get isOpen(){return screenOpen},get specUnlocked(){return specUnlocked}};
