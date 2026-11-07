@@ -172,9 +172,36 @@ for(const x of [-13.5,13.5])for(let z=-9;z<=9;z+=3){box(scene,.35,7,.42,deckStee
 for(const z of [-10.6,10.6])for(let x=-12;x<=12;x+=3){if(z<0&&x>9)continue;box(scene,.35,7,.4,deckSteel,x,3.5,z)}
 // Scrap and tools surrounding MU-1's waking area.
 const scrap=new THREE.Group();scrap.position.set(-10,0,7);scene.add(scrap);
+// Dense, grounded salvage from industrial motor and gear assemblies.
+const motorBlue=mat(0x3b626e,.84,.32),motorCream=mat(0x9e9986,.88,.22),motorRust=mat(0x795c47,.92,.25),motorShaft=mat(0x444c4c,.57,.66);
 box(scrap,3.6,.22,2.8,deckRust,0,.12,0);
-for(let i=0;i<6;i++){const x=Math.sin(i*2.17)*1.5,z=Math.cos(i*3.71)*1.05,w=.22+(i%4)*.16,h=.12+(i%3)*.14,d=.35+(i%5)*.12;const piece=box(scrap,w,h,d,i%3?deckSteel:deckRust,x,.23+h/2,z);piece.rotation.y=i*.72}
-for(let i=0;i<2;i++){const t=cylinder(scrap,.055,.055,.7,deckCream,-1.2+i*.52,.5,-.7,0,Math.PI/2);t.rotation.y=i*.2}
+function salvageMotor(x,z,paint,turn=0){
+ const unit=new THREE.Group();unit.position.set(x,.57,z);unit.rotation.y=turn;scrap.add(unit);
+ const housing=cylinder(unit,.29,.29,.71,paint,0,0,0,0,Math.PI/2);
+ // Fins grow out of a proper motor body, while feet sit on the scrap tray.
+ for(let i=-3;i<=3;i++)box(unit,.055,.63,.62,motorShaft,i*.085,0,0);
+ for(const side of [-1,1]){
+  const cap=cylinder(unit,.30,.30,.075,motorRust,side*.37,0,0,0,Math.PI/2);
+  cylinder(unit,.07,.07,.20,motorShaft,side*.47,0,0,0,Math.PI/2);
+  box(unit,.23,.12,.20,motorRust,side*.18,-.29,0);
+ }
+ box(unit,.34,.17,.28,motorCream,.06,.39,0);
+ return unit;
+}
+salvageMotor(-.95,-.48,motorBlue,.25);
+salvageMotor(.63,.45,motorCream,-.43);
+salvageMotor(.95,-.75,motorRust,.85);
+function salvageGear(x,z,scale=1){
+ const g=new THREE.Group();g.position.set(x,.40,z);g.scale.setScalar(scale);scrap.add(g);
+ cylinder(g,.28,.28,.14,motorShaft,0,0,0,Math.PI/2,0);
+ for(let i=0;i<12;i++){const a=i*Math.PI/6;const tooth=box(g,.11,.15,.12,motorRust,Math.sin(a)*.27,0,Math.cos(a)*.27);tooth.rotation.y=a}
+ cylinder(g,.09,.09,.19,motorCream,0,.04,0);
+}
+salvageGear(-.2,.72,.85);salvageGear(.08,-.68,.66);
+for(let i=0;i<3;i++){
+ const pts=[new THREE.Vector3(-1.3+i*.25,.31,.7),new THREE.Vector3(-.45+i*.16,.34,-.1),new THREE.Vector3(.25+i*.20,.40,.65)];
+ scrap.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),18,.022,6,false),i===0?motorRust:motorShaft));
+}
 // Repainted bulkhead skins, warning panels, and riveted service cladding.
 const olivePaint=wornOliveMat,sandPaint=wornSandMat,inkBlack=mat(0x282b25,.92,.12),hazardPaint=mat(0xb17943,.94,.08);
 for(let x=-12;x<=7.5;x+=3.5){
