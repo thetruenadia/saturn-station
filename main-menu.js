@@ -1,5 +1,5 @@
 import {listSaves,recordSave,newGame,loadSave,deleteSave,LAUNCH_KEY} from './menu-saves.js?v=menu1';
-export function createMainMenu({saveCurrent,sound}){
+export function createMainMenu({saveCurrent,sound,unlockAudio=()=>{}}){
  const frame=document.createElement('iframe');frame.id='station-main-menu';frame.title='Saturn Station main menu';frame.src='./station-menu.html?v=menu1';frame.hidden=true;
  frame.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:220;background:#000;display:none';document.body.append(frame);
  let active=false;
@@ -19,6 +19,6 @@ export function createMainMenu({saveCurrent,sound}){
   else if(action==='load')launch('resume',id);
   else if(action==='delete'){try{deleteSave(localStorage,id);send()}catch{frame.contentWindow?.postMessage({type:'saturn-menu-error',message:'Could not delete this save.'},location.origin)}}
  });
- frame.addEventListener('load',send);
+ frame.addEventListener('load',()=>{send();for(const event of ['pointerdown','keydown'])frame.contentDocument.addEventListener(event,unlockAudio,{capture:true});});
  return {show(){if(!active)saveCurrent();active=true;frame.hidden=false;frame.style.display='block';send();frame.contentWindow?.focus()},hide(){active=false;frame.hidden=true;frame.style.display='none'},get active(){return active},record(progress){recordSave(localStorage,progress)},startNew(){launch('new')}};
 }

@@ -39,3 +39,7 @@ Automated checks do not replace a full browser playthrough. The root `index.html
 ## Design decisions
 
 MU-1 is the canonical robot designation (SRV-09 is retired). Third-person movement is WASD with mouse camera rotation and wheel zoom; first-person mode may differ. Do not implement plug-in charging yet: it is reserved for a future installable modification.
+
+### Background music
+
+The supplied `main menu.m4a` plays as a loop in the menu and game. The original AAC asset is preferred; a 44.1 kHz stereo PCM WAV conversion supports browsers without AAC. Music starts on a click or keypress (including inside the embedded menu), respects MUSIC and SOUND controls, and pauses while the tab is hidden. Opening the menu keeps the same player; start/load currently reloads the game, so a recent session playback position is restored after that reload. Browser autoplay rules may require another gesture after navigation. No playback failure prevents gameplay.
