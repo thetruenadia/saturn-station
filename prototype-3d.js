@@ -1,3 +1,4 @@
+import {createBackgroundMusic} from './background-music.js';
 import {createMainMenu} from './main-menu.js?v=menu1';
 import {consumeLaunch} from './menu-saves.js?v=menu1';
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
@@ -982,10 +983,12 @@ function updateLighting(dt){
 }
 
 // Synthesised quiet mechanical sounds; audio starts only after a user gesture.
-let audio=null,audioMaster=null,hum=null,humGain=null,musicGain=null,musicVoices=[],soundEnabled=true;
+let audio=null,audioMaster=null,hum=null,humGain=null,soundEnabled=true;
 const SETTINGS_KEY='saturn-station-0.2-settings-v1';
 let musicVolume=35,brightness=100,settingsWasPaused=false;
 try{const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY));if(saved){if(Number.isFinite(saved.music))musicVolume=THREE.MathUtils.clamp(saved.music,0,100);if(Number.isFinite(saved.brightness))brightness=THREE.MathUtils.clamp(saved.brightness,50,180)}}catch{}
+const backgroundMusic=createBackgroundMusic({volume:musicVolume/100});
+soundEnabled=backgroundMusic.enabled;
 const settingsPanel=document.createElement('dialog');settingsPanel.id='game-settings';settingsPanel.setAttribute('aria-labelledby','settings-title');
 settingsPanel.innerHTML='<form method="dialog"><header><div><small>MU-1 / PREFERENCES</small><h1 id="settings-title">SETTINGS</h1></div><button aria-label="Close settings" value="close">×</button></header><label for="music-volume">MUSIC <output id="music-value" for="music-volume"></output></label><input id="music-volume" type="range" min="0" max="100" step="1"><p>Ambient station score. Set to zero to mute music.</p><label for="game-brightness">BRIGHTNESS <output id="brightness-value" for="game-brightness"></output></label><input id="game-brightness" type="range" min="50" max="180" step="5"><p>Adjusts the scene while keeping emergency and working lights distinct.</p><footer><span>Saved automatically on this device.</span><button value="done">DONE</button></footer></form>';
 document.body.append(settingsPanel);
@@ -994,7 +997,7 @@ function applySettings(){
  renderer.toneMappingExposure=1.15*brightness/100;
  musicSlider.value=String(musicVolume);brightnessSlider.value=String(brightness);
  settingsPanel.querySelector('#music-value').textContent=musicVolume+'%';settingsPanel.querySelector('#brightness-value').textContent=brightness+'%';
- if(musicGain&&audio)musicGain.gain.setTargetAtTime(musicVolume/100*.12,audio.currentTime,.08);
+ backgroundMusic.setVolume(musicVolume/100);
 }
 function persistSettings(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify({music:musicVolume,brightness}))}catch{}}
 musicSlider.addEventListener('input',()=>{musicVolume=Number(musicSlider.value);unlockAudio();applySettings();persistSettings()});
@@ -1005,18 +1008,16 @@ settingsPanel.addEventListener('cancel',e=>{e.preventDefault();settingsPanel.clo
 const settingsButton=document.createElement('button');settingsButton.id='settings-button';settingsButton.textContent='SETTINGS';settingsButton.addEventListener('click',openSettings);document.querySelector('.top-right').append(settingsButton);
 const pauseSettings=document.createElement('button');pauseSettings.textContent='SETTINGS';pauseSettings.addEventListener('click',openSettings);document.querySelector('#resume-game').after(pauseSettings);
 applySettings();
-const soundButton=document.createElement('button');soundButton.id='sound-toggle';soundButton.textContent='SOUND ON';soundButton.setAttribute('aria-pressed','true');
+const soundButton=document.createElement('button');soundButton.id='sound-toggle';soundButton.textContent=soundEnabled?'SOUND ON':'SOUND OFF';soundButton.setAttribute('aria-pressed',String(soundEnabled));
 document.querySelector('.top-right').append(soundButton);
 function unlockAudio(){
  if(!soundEnabled)return;
+ backgroundMusic.unlock();
  try{if(!audio){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;audio=new Audio();audioMaster=audio.createGain();audioMaster.gain.value=.13;audioMaster.connect(audio.destination);hum=audio.createOscillator();hum.type='sine';hum.frequency.value=55;humGain=audio.createGain();humGain.gain.value=.035;hum.connect(humGain).connect(audioMaster);hum.start();
- // A quiet generative ambient score has its own volume bus, separate from machinery and effects.
- musicGain=audio.createGain();musicGain.gain.value=musicVolume/100*.12;musicGain.connect(audioMaster);
- for(const [i,f] of [110,164.81,220].entries()){const voice=audio.createOscillator(),gain=audio.createGain();voice.type='sine';voice.frequency.value=f;voice.detune.value=i*3-3;gain.gain.value=.5;voice.connect(gain).connect(musicGain);voice.start();musicVoices.push(voice)}
  }if(audio.state==='suspended')audio.resume().catch(()=>{})}catch{}
 }
 window.addEventListener('pointerdown',unlockAudio);window.addEventListener('keydown',unlockAudio);
-soundButton.addEventListener('click',()=>{soundEnabled=!soundEnabled;soundButton.textContent=soundEnabled?'SOUND ON':'SOUND OFF';soundButton.setAttribute('aria-pressed',String(soundEnabled));if(soundEnabled)unlockAudio();if(audioMaster)audioMaster.gain.setTargetAtTime(soundEnabled?.13:0,audio.currentTime,.05)});
+soundButton.addEventListener('click',()=>{soundEnabled=!soundEnabled;backgroundMusic.setEnabled(soundEnabled);soundButton.textContent=soundEnabled?'SOUND ON':'SOUND OFF';soundButton.setAttribute('aria-pressed',String(soundEnabled));if(soundEnabled)unlockAudio();if(audioMaster)audioMaster.gain.setTargetAtTime(soundEnabled?.13:0,audio.currentTime,.05)});
 document.addEventListener('visibilitychange',()=>{if(audioMaster)audioMaster.gain.setTargetAtTime(soundEnabled&&!document.hidden?.13:0,audio.currentTime,.08);if(document.hidden)saveProgress()});
 function playSound(kind){
  if(!audio||!soundEnabled||audio.state!=='running')return;
@@ -1050,7 +1051,6 @@ function updateStationSystems(dt){
  terminalUI.update(dt);updateLighting(dt);animatePickup(dt);stationArt.updateOcclusion(camera,dt);
  if(active){systemTime+=dt;saveElapsed+=dt;stepElapsed+=dt;if(gaitVelocity>.35&&!pickup&&stepElapsed>.56){playSound('step');stepElapsed=0}if(saveElapsed>2){saveElapsed=0;saveProgress()}}
  if(humGain&&audio)humGain.gain.setTargetAtTime(active?(powerOn?.16:.035):0,audio.currentTime,.25);
- if(musicGain&&audio){const audible=!document.hidden&&(!paused||settingsPanel.open)&&!ended;musicGain.gain.setTargetAtTime(audible?musicVolume/100*.12:0,audio.currentTime,.15);const chords=[[110,164.81,220],[98,146.83,196],[87.31,130.81,174.61],[98,146.83,220]],chord=chords[Math.floor(audio.currentTime/12)%chords.length];musicVoices.forEach((voice,i)=>voice.frequency.setTargetAtTime(chord[i],audio.currentTime,2))}
 }
 
 // Robot centre uses a 0.42-unit clearance around solid floor props.
@@ -1105,7 +1105,7 @@ if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.
 if(firstPerson){firstPersonCamera.position.set(robot.position.x,2.15,robot.position.z);firstPersonCamera.lookAt(robot.position.x+Math.sin(lookHeading)*Math.cos(lookPitch),2.15+Math.sin(lookPitch),robot.position.z+Math.cos(lookHeading)*Math.cos(lookPitch));}
 doorAccessProbe.visible=workshop.hasProbe;workshop.update(dt);updateStationSystems(dt);renderer.render(scene,activeCamera());updateNearbyUI()}
 opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();if(menuLaunch?.mode!=='resume'){doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;}updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
-mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound});
+mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound,unlockAudio});
 const returnMenuButton=document.createElement('button');returnMenuButton.textContent='MAIN MENU';returnMenuButton.addEventListener('click',()=>{hideTerminal();closeInventory();saveProgress();setPaused(true);mainMenu.show()});document.querySelector('#pause-restart').after(returnMenuButton);
 if(menuLaunch?.mode==='resume')opening.skip();else if(!menuLaunch)mainMenu.show();
 resize();updateStationSystems(0);animate();document.querySelector('#loading').classList.add('hidden');document.querySelector('#charge').textContent='60%';document.querySelector('#charge-bar').style.width='60%';updateCharge();updateInventory();refreshDirective();say('MU-1 ONLINE.');
