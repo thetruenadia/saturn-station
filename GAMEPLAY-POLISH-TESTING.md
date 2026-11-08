@@ -48,3 +48,7 @@ Keep this PR unmerged pending those checks. No changes to main, version 0.1 or l
 ## Follow-up clarity pass
 
 The subsequent assisted browser run reached demo completion and verified installed-probe/open-door restoration. It also checked final service framing, the centred arm preview, ETNA and export, component collection, Enter fabrication and the new tutorial/pickup feedback. See [PLAYTEST-CLARITY.md](PLAYTEST-CLARITY.md) for current results and remaining checks; the initial timeout report above is historical. Current suite: 48 passing tests. Pointer hold, mobile layout, audible-output listening and a full ordinary walking route remain unverified.
+
+## Current manual assembly follow-up
+
+Manual ingredient staging and separate probe installation are now implemented and browser-tested. The card asset, five-slot HUD, top-centre directive, controls-only H help and stronger text hierarchy are included. See [ASSEMBLY-PLAYTEST.md](ASSEMBLY-PLAYTEST.md) for the current 53-test result, assisted browser sequence and remaining checks; earlier deferred-item and auto-install descriptions above are historical.

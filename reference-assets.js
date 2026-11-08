@@ -81,7 +81,7 @@ export function installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatc
  rounded(mountedArm,.24,.56,.25,.06,olive,.12,-.57,0);C(mountedArm,.18,.33,steel,.22,-.84,0,Math.PI/2);rounded(mountedArm,.21,.39,.22,.05,olive,.26,-1.08,0);
  for(const side of [-1,1]){B(mountedArm,.06,.25,.09,steel,.26+side*.11,-1.40,.02);B(mountedArm,.11,.05,.10,black,.26+side*.08,-1.52,.02);}
  beam(mountedArm,[-.09,-.32,-.08],[.10,-.81,-.08],.035,steel);cable(mountedArm,[[-.13,-.14,-.2],[-.21,-.65,-.25],[.14,-1.1,-.2],[.25,-1.33,-.16]],.025);
- const markers=arm.children.slice(0,3);arm.clear();if(markers.length)arm.add(...markers);const recovered=mountedArm.clone(true);recovered.visible=true;recovered.position.set(-.42,.33,0);recovered.rotation.z=Math.PI/2;recovered.scale.setScalar(.72);arm.add(recovered);
+ arm.clear();const recovered=mountedArm.clone(true);recovered.visible=true;recovered.position.set(-.42,.33,0);recovered.rotation.z=Math.PI/2;recovered.scale.setScalar(.72);arm.add(recovered);
  // The claw rests the heavy attachment on the deck; no invisible pedestal or hovering pickup.
  scene.updateMatrixWorld(true);const heldPoint=wrist.localToWorld(new THREE.Vector3(0,.34,0));arm.position.copy(heldPoint);arm.rotation.set(0,0,0);arm.updateMatrixWorld(true);
  const pickupBounds=new THREE.Box3().setFromObject(recovered);arm.position.y+=.09-pickupBounds.min.y;arm.updateMatrixWorld(true);

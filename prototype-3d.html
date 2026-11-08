@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#05090a">
 <title>Saturn Station // Prototype 0.2</title>
-<link rel="stylesheet" href="prototype-3d.css?v=india1">
+<link rel="stylesheet" href="prototype-3d.css?v=room2">
 <link rel="stylesheet" href="terminal-browser.css?v=polish1">
 </head>
 <body>
@@ -15,14 +15,14 @@
     <div class="top-right"><span class="unit-id">MU-1</span><span class="status-dot"></span><button id="fullscreen" title="Toggle fullscreen">⛶</button></div>
     <div class="readout"><span>CHARGE</span><strong id="charge">20%</strong><i><em id="charge-bar"></em></i><small>INTEGRITY&nbsp; <b>100%</b></small></div>
     <div class="task-readout"><small>ACTIVE DIRECTIVE</small><p id="task">Restore auxiliary power.</p></div>
-    <div class="hint" id="hint">WASD WALK&nbsp; · &nbsp;DRAG CAMERA · SCROLL ZOOM · R RESET&nbsp; · &nbsp;E INTERACT&nbsp; · &nbsp;§ VIEW&nbsp; · &nbsp;C WORKSHOP&nbsp; · &nbsp;H CONTROLS&nbsp; · &nbsp;ESC PAUSE</div>
+
     <div id="toast" role="status"></div>
     <aside id="nearby-panel" aria-label="Nearby objects"><small>NEARBY</small><div id="nearby-list"></div></aside>
     <div id="interaction-marker" aria-label="Press E to interact"><kbd>E</kbd></div>
-    <div id="hotbar" aria-label="Quick access">
-      <div class="hot-slot"><kbd>1</kbd><span id="arm-hot" class="hot-item-art"></span><small>MANIPULATOR</small></div><div class="hot-slot"><kbd>2</kbd></div><div class="hot-slot"><kbd>3</kbd></div>
-      <div class="hot-slot power-slot"><kbd>Q</kbd><span id="cell-icon" class="hot-item-art"></span><small>POWER CELL</small><b id="cell-hot">EMPTY</b></div>
-      <div class="hotbar-note">I&nbsp; INVENTORY <span>Q&nbsp; USE CELL</span></div>
+    <div id="hotbar" aria-label="Five quick access slots">
+      <div class="hot-slot"><kbd>1</kbd><span id="arm-hot" class="hot-item-art"></span><small>GRIPPER</small></div>
+      <div class="hot-slot"><kbd>2</kbd></div><div class="hot-slot"><kbd>3</kbd></div><div class="hot-slot"><kbd>4</kbd></div>
+      <div class="hot-slot power-slot"><kbd>Q</kbd><span id="cell-icon" class="hot-item-art"></span><small>FUEL CELL</small><b id="cell-hot">EMPTY</b></div>
     </div>
     <section id="pause-screen" class="system-screen" aria-hidden="true"><div class="system-card"><small>MU-1 / SYSTEM INTERRUPT</small><h1>PAUSED</h1><p>Unit processes suspended.</p><button id="resume-game">RESUME</button><button id="pause-restart">RESTART DEMO</button></div></section>
     <section id="death-screen" class="system-screen" aria-hidden="true"><div class="system-card"><small>MU-1 / CRITICAL FAILURE</small><h1>POWER DEPLETED</h1><p>Maintenance unit has shut down.</p><button id="death-restart">REBOOT UNIT</button></div></section>

@@ -1,4 +1,4 @@
-import {PROBE_RECIPE,stackParts,recipeStatus,canFabricate} from './workshop-rules.js?v=polish1';
+import {PROBE_RECIPE,stackParts,recipeStatus,canFabricate,placeIngredient,trayComplete} from './workshop-rules.js?v=room2';
 // Workshop prototype: seeded salvage, lockers, loose pickups and physical specification recovery.
 export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,notify,sound,save,cellCount,setCellCount,onCraftProbe,onAccessCard,armModel,isPowered=()=>true,onService=()=>true,onServiceEnd=()=>{},stationModel,salvageModel}){
  const catalogue={
@@ -11,8 +11,9 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   camera:{name:'BROKEN CAMERA',mass:.6,value:0,color:0x515d62},
   tin:{name:'RATION TIN',mass:.25,value:0,color:0xa9a78b}
  };
+ const staffCardTexture=new THREE.TextureLoader().load('./assets/worker-id.svg');staffCardTexture.colorSpace=THREE.SRGBColorSpace;
  const recipe=PROBE_RECIPE;
- let seed=0,inventory=[],lockerContents=[[],[],[],[]],opened=[false,false,false,false],specReleased=false,specUnlocked=false,probeInstalled=false,clawSalvaged=false,loose=[],activeLocker=-1,screenOpen=false,mode='craft',craftingUntil=0;
+ let seed=0,inventory=[],lockerContents=[[],[],[],[]],opened=[false,false,false,false],specReleased=false,specUnlocked=false,probeInstalled=false,probeCrafted=false,staged={},installPlaced=false,clawSalvaged=false,loose=[],activeLocker=-1,screenOpen=false,mode='craft',craftingUntil=0;
  const worldLoot=[];
  const shell=new THREE.MeshStandardMaterial({color:0x767f70,metalness:.55,roughness:.65});
  const steel=new THREE.MeshStandardMaterial({color:0x313c3b,metalness:.68,roughness:.55});
@@ -82,7 +83,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  function generate(type){const keys=['motor','gear','chip','plate','wire'];return {id:Math.floor(next()*1000000000).toString(36),type:type||keys[Math.floor(next()*keys.length)]};}
  function startFresh(){
   seed=(Math.floor(Math.random()*4294967295)>>>0)||12345;
-  inventory=[];opened=[false,false,false,false];specReleased=false;specUnlocked=false;probeInstalled=false;clawSalvaged=false;for(const loot of [...worldLoot])removeWorldLoot(loot);loose=[];
+  inventory=[];opened=[false,false,false,false];specReleased=false;specUnlocked=false;probeInstalled=false;probeCrafted=false;staged={};installPlaced=false;clawSalvaged=false;for(const loot of [...worldLoot])removeWorldLoot(loot);loose=[];
   lockerContents=[[generate('card'),generate('camera'),generate('tin')],[generate('motor'),generate('plate'),generate('wire')],[generate('gear'),generate('wire')],[generate(),generate()]];
   refreshLockerModels();setShardVisible();updateUI();
  }
@@ -94,10 +95,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  function makePartModel(parent,type,scale=.85){
   const group=new THREE.Group();group.scale.setScalar(scale);parent.add(group);
   const tone=new THREE.MeshStandardMaterial({color:catalogue[type]?.color||0x807e6f,roughness:.72,metalness:.55});
-  if(type==='card'){
-   cube(group,.48,.30,.035,tone,0,0,0);
-   function face(back){const canvas=document.createElement('canvas');canvas.width=512;canvas.height=320;const c=canvas.getContext('2d');c.fillStyle=back?'#c9ba75':'#d0d2bc';c.fillRect(0,0,512,320);c.fillStyle='#293e39';c.fillRect(0,0,512,66);c.fillStyle='#e3e1c8';c.font='bold 29px monospace';c.fillText(back?'B-7 / PERSONAL NOTE':'SATURN STATION / STAFF',18,44);c.fillStyle='#293e39';if(back){c.font='bold 52px monospace';c.fillText('PASSWORD: ETNA',20,175);c.font='24px monospace';c.fillText('LOCAL TERMINAL ACCESS',20,235)}else{c.fillRect(24,95,110,142);c.fillStyle='#a4aa95';c.fillRect(52,119,54,54);c.fillRect(40,185,80,36);c.fillStyle='#293e39';c.font='bold 28px monospace';c.fillText('WORKER ID',160,130);c.font='23px monospace';c.fillText('B-7 MAINTENANCE',160,176);c.fillText('TURN OVER',160,221);for(let i=0;i<30;i++)c.fillRect(25+i*9,265,3+i%3,28)}const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.47,.29),new THREE.MeshStandardMaterial({map:texture,roughness:.86}));mesh.position.z=back?-.021:.021;if(back)mesh.rotation.y=Math.PI;group.add(mesh)}face(false);face(true);
-  }else if(type==='camera'){cube(group,.45,.3,.25,steel,0,0,0)}else if(type==='tin'){group.add(new THREE.Mesh(new THREE.CylinderGeometry(.17,.17,.3,14),tone))}else if(type==='motor'){
+  if(type==='card'){cube(group,.48,.30,.035,tone,0,0,0);const texture=staffCardTexture;const face=new THREE.Mesh(new THREE.PlaneGeometry(.47,.29),new THREE.MeshBasicMaterial({map:texture}));face.position.z=.021;group.add(face);const back=face.clone();back.rotation.y=Math.PI;back.position.z=-.021;group.add(back);}else if(type==='camera'){cube(group,.45,.3,.25,steel,0,0,0)}else if(type==='tin'){group.add(new THREE.Mesh(new THREE.CylinderGeometry(.17,.17,.3,14),tone))}else if(type==='motor'){
    const core=new THREE.Mesh(new THREE.CylinderGeometry(.20,.20,.58,16),tone);core.rotation.z=Math.PI/2;group.add(core);
    for(let i=-3;i<=3;i++)cube(group,.035,.45,.43,steel,i*.075,0,0);
    const axle=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.93,12),brass);axle.rotation.z=Math.PI/2;group.add(axle);
@@ -179,7 +177,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  <div id="workshop-crafting"><div class="workshop-columns">
  <section><h2>RECOVERED SALVAGE</h2><div id="workshop-items"></div><div class="workshop-actions"><button id="workshop-drop-cell">DROP FUEL CELL</button><button id="workshop-dismantle-arm">DISMANTLE ARM</button></div></section>
  <section><h2>CRAFTING SPECS</h2><div id="workshop-spec"></div><div class="workshop-preview"><canvas id="workshop-preview-3d" aria-label="Three-dimensional component preview"></canvas><small id="workshop-preview-label">SELECT A COMPONENT</small></div></section>
- </div><p class="workshop-footer">SELECT A SPEC & PRESS ENTER, OR HOLD CRAFT · ESC TO CLOSE</p></div></div>`;
+ </div><p class="workshop-footer">PLACE PARTS → FABRICATE → INSTALL · ESC CLOSES WITHOUT USING PARTS</p></div></div>`;
  document.body.append(panel);
  const css=document.createElement('style');css.textContent=`
  #workshop-panel{position:fixed;right:16px;top:8%;bottom:9%;z-index:105;pointer-events:none;color:#d9e0d2;font:11px IBM Plex Mono,monospace}
@@ -196,7 +194,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  .workshop-spec-card.selected{background:#21372b!important}.workshop-spec-card small{font-size:9px}
  .workshop-hold{height:4px;background:#314139;display:block;margin-top:4px}.workshop-hold i{display:block;width:0;height:100%;background:#98e1a3}
  .workshop-preview{margin-top:15px;border:1px solid #50665d;background:#0d1715}.workshop-preview canvas{width:100%;height:145px;display:block}.workshop-preview small{display:block;padding:6px;color:#b9ceb8}
- .recipe-requirements{line-height:1.8;font-size:10px}.recipe-requirements .missing{color:#e7ad91}.recipe-requirements .available{color:#a6dfb0}.workshop-footer{font-size:9px;color:#9aac9c}.workshop-actions{display:flex;flex-wrap:wrap}
+ .context-tip{color:#c7dbab;border-left:3px solid #bdd78c;padding:10px;font-size:12px;line-height:1.6}.ingredient-slot{border:1px dashed #8c9d78;padding:10px;margin:8px 0}.ingredient-slot.loaded{border-style:solid;border-color:#9bc58c;background:#294332}.ingredient-slot span{display:block}.ingredient-slot button{margin:6px 5px 0 0;font-size:9px}#fabricate-probe,#stowed-probe,#probe-wrist-slot,#install-probe{display:block;width:100%;margin:10px 0;padding:12px}#probe-wrist-slot{border:2px dashed #b8cf91;min-height:65px}.recipe-requirements{line-height:1.8;font-size:10px}.recipe-requirements .missing{color:#e7ad91}.recipe-requirements .available{color:#a6dfb0}.workshop-footer{font-size:9px;color:#9aac9c}.workshop-actions{display:flex;flex-wrap:wrap}
  #workshop-panel.mini #workshop-mini p{color:#c3d5c2;line-height:1.5}#workshop-locker{font-size:10px;color:#8da391}
  @media(max-width:750px){#workshop-panel{right:8px;top:10%;bottom:10%}.workshop-window{width:min(520px,85vw)}.workshop-columns{grid-template-columns:1fr}#workshop-panel.mini .workshop-window{width:min(290px,65vw)}}
  `;document.head.append(css);
@@ -216,14 +214,20 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   panel.querySelector('#workshop-preview-label').textContent=type==='arm'?'ACCESS PROBE / STANDARD MANIPULATOR':type?catalogue[type].name:'SELECT A COMPONENT';
  }
  const stacked=stackParts;
- function craftAvailable(){return canFabricate({items:inventory,discovered:specUnlocked,installed:probeInstalled,powered:isPowered(),atStation:mode==='craft'&&screenOpen&&Math.hypot(robot.position.x-workbench.position.x,robot.position.z-workbench.position.z)<2.5})}
+ function craftAvailable(){return trayComplete(staged)&&canFabricate({items:inventory,discovered:specUnlocked,installed:probeCrafted,powered:isPowered(),atStation:mode==='craft'&&screenOpen&&Math.hypot(robot.position.x-workbench.position.x,robot.position.z-workbench.position.z)<2.5})}
  function fabricate(){
   if(!craftAvailable())return;
-  if(!onCraftProbe()){notify('ACCESS PROBE ALREADY INSTALLED');return}
   for(const [type,n] of Object.entries(recipe))for(let j=0;j<n;j++)inventory.splice(inventory.findIndex(x=>x.type===type),1);
-  probeInstalled=true;notify('ACCESS PROBE INSTALLED');sound('equip');craftProgress=0;craftHolding=false;updateUI();save();
+  probeCrafted=true;staged={};notify('ACCESS PROBE FABRICATED · PLACE IT IN THE WRIST SLOT TO INSTALL');sound('collect');craftProgress=0;craftHolding=false;updateUI();resetCraftView();save();
  }
+ function installProbe(){
+  if(!probeCrafted||probeInstalled||!installPlaced||!isPowered()||!screenOpen||mode!=='craft'||Math.hypot(robot.position.x-workbench.position.x,robot.position.z-workbench.position.z)>=2.5)return false;
+  if(!onCraftProbe())return false;
+  probeInstalled=true;installPlaced=false;notify('ACCESS PROBE INSTALLED · USE THE DOOR SOCKET');sound('equip');updateUI();resetCraftView();save();return true;
+ }
+ function loadPart(type){const next=placeIngredient(staged,inventory,type);if(next===staged){notify('NO MATCHING PART AVAILABLE OR SLOT FULL');return}staged=next;sound('select');updateUI()}
  function releaseHold(){craftHolding=false;craftProgress=0;const bar=panel.querySelector('.workshop-hold i');if(bar)bar.style.width='0%'}
+ function resetCraftView(){panel.querySelector('.workshop-window').scrollTop=0;panel.querySelector('.workshop-columns>section:last-child').scrollTop=0}
  panel.querySelector('#workshop-close').onclick=close;
  panel.querySelector('#workshop-drop-cell').onclick=dropFuelCell;
  panel.querySelector('#workshop-dismantle-arm').hidden=true;
@@ -234,10 +238,11 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   for(const stack of stacked(inventory)){
    const item=stack[0],row=document.createElement('div');row.className='workshop-row';
    const canvas=document.createElement('canvas');canvas.className='workshop-icon';canvas.width=110;canvas.height=86;
-   const text=document.createElement('span');text.className='workshop-item-label';text.textContent=describe(item)+' ×'+stack.length;
+   const text=document.createElement('span');text.className='workshop-item-label';const partName=document.createElement('strong');partName.textContent=catalogue[item.type].name+' ×'+stack.length;const partInfo=document.createElement('small');partInfo.textContent=catalogue[item.type].mass.toFixed(1)+' KG EACH';text.append(partName,partInfo);
    text.onclick=()=>showPreview(item.type);
    const button=document.createElement('button');button.textContent='DROP 1';button.onclick=()=>drop(item,inventory.findIndex(x=>x.id===item.id));
-   row.append(canvas,text,button);list.append(row);
+   row.draggable=!!recipe[item.type]&&!probeCrafted;row.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain',item.type));
+   if(recipe[item.type]&&!probeCrafted){const place=document.createElement('button');place.textContent='PLACE →';place.setAttribute('aria-label','Place '+catalogue[item.type].name);place.disabled=!specUnlocked;place.onclick=()=>loadPart(item.type);row.append(canvas,text,place,button)}else row.append(canvas,text,button);list.append(row);
    // Render each icon from the actual Three.js model via the shared preview renderer.
    const model=makePartModel(new THREE.Group(),item.type,1);model.rotation.y=.42;
    const slotScene=new THREE.Scene();slotScene.add(new THREE.AmbientLight(0xffffff,2));slotScene.add(new THREE.DirectionalLight(0xffffff,2));
@@ -246,18 +251,25 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   }
   if(!inventory.length)list.textContent='NO RECOVERED COMPONENTS';
   const spec=panel.querySelector('#workshop-spec');spec.replaceChildren();
-  const card=document.createElement('button');card.className='workshop-spec-card'+(specUnlocked?' unlocked':'')+(selectedSpec?' selected':'');card.type='button';
+  const card=document.createElement('div');card.tabIndex=0;card.setAttribute('role','group');card.className='workshop-spec-card'+(specUnlocked?' unlocked':'')+(selectedSpec?' selected':'');card.type='button';
   const name=document.createElement('strong');name.textContent='DOOR ACCESS PROBE';
-  const detail=document.createElement('small');detail.textContent=specUnlocked?'SPECIFICATION ACQUIRED · '+Object.entries(recipe).map(([t,n])=>n+'× '+catalogue[t].name).join(' · '):'UNKNOWN SPECIFICATION · TERMINAL ACCESS REQUIRED';
-  const requirements=document.createElement('div');requirements.className='recipe-requirements';if(specUnlocked&&!probeInstalled)for(const r of recipeStatus(inventory)){const line=document.createElement('div');line.className=r.missing?'missing':'available';line.textContent=catalogue[r.type].name+' · '+r.owned+' / '+r.required+(r.missing?' · MISSING '+r.missing:' · READY');requirements.append(line)}
-  const status=document.createElement('small');status.textContent=probeInstalled?'INSTALLED ON STANDARD MANIPULATOR':craftAvailable()?'READY TO CRAFT · HOLD OR SELECT + ENTER':specUnlocked?(!isPowered()?'AUXILIARY POWER REQUIRED':'MISSING COMPONENTS · SEE COUNTS ABOVE'):'SPEC LOCKED';
+  const detail=document.createElement('small');detail.textContent=specUnlocked?'RECOVERED SPECIFICATION · WRIST MODIFICATION':'UNKNOWN SPECIFICATION · TERMINAL ACCESS REQUIRED';
+  const requirements=document.createElement('div');requirements.className='recipe-requirements';if(specUnlocked&&!probeCrafted)for(const r of recipeStatus(inventory)){const line=document.createElement('div');line.className='ingredient-slot '+((staged[r.type]||0)===r.required?'loaded':'');line.dataset.ingredient=r.type;
+   const label=document.createElement('span');label.className=r.missing?'parts-missing':'parts-owned';label.textContent=catalogue[r.type].name+' · OWN '+r.owned+' / NEED '+r.required+' · PLACED '+(staged[r.type]||0)+' / '+r.required;
+   const load=document.createElement('button');load.textContent='↓ LOAD '+catalogue[r.type].name;load.disabled=(staged[r.type]||0)>=Math.min(r.owned,r.required);load.onclick=()=>loadPart(r.type);
+   const remove=document.createElement('button');remove.textContent='REMOVE';remove.disabled=!(staged[r.type]>0);remove.onclick=()=>{staged={...staged,[r.type]:staged[r.type]-1};updateUI()};
+   line.addEventListener('dragover',e=>e.preventDefault());line.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.getData('text/plain')===r.type)loadPart(r.type);else notify('THIS SLOT NEEDS '+catalogue[r.type].name)});line.append(label,load,remove);requirements.append(line)}
+  const status=document.createElement('small');status.className='craft-status '+(probeInstalled||craftAvailable()?'ready':'pending');status.textContent=probeInstalled?'INSTALLED ON STANDARD MANIPULATOR':probeCrafted?'IN INVENTORY · INSTALL SEPARATELY':craftAvailable()?'READY TO CRAFT · HOLD OR SELECT + ENTER':specUnlocked?(!isPowered()?'AUXILIARY POWER REQUIRED':'LOAD THE MATCHING RECIPE SLOTS BELOW'):'SPEC LOCKED';
   const hold=document.createElement('span');hold.className='workshop-hold';const bar=document.createElement('i');hold.append(bar);
-  card.setAttribute('aria-disabled',String(!specUnlocked));card.append(name,detail,requirements,status,hold);
+  card.setAttribute('aria-disabled',String(!specUnlocked));card.append(name,detail,status);spec.append(card);
+  if(!probeCrafted){if(specUnlocked){const tip=document.createElement('p');tip.className='context-tip';tip.textContent='① Move each part into its matching slot: drag or click PLACE / LOAD. Parts stay yours until Fabricate.';spec.append(tip,requirements)}const craft=document.createElement('button');craft.id='fabricate-probe';craft.textContent='② FABRICATE ACCESS PROBE';craft.disabled=!craftAvailable();craft.append(hold);craft.onclick=()=>fabricate();craft.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();fabricate()}};craft.onpointerdown=()=>{if(craftAvailable()){craftHolding=true;craftProgress=0}};craft.onpointerup=releaseHold;craft.onpointerleave=releaseHold;spec.append(craft)}else if(!probeInstalled){
+   const tip=document.createElement('p');tip.className='context-tip';tip.textContent='③ Probe fabricated, not installed. Move it from the inventory tray into the compatible wrist slot, then confirm.';
+   const item=document.createElement('button');item.id='stowed-probe';item.textContent='ACCESS PROBE · IN INVENTORY →';item.draggable=true;item.onclick=()=>{installPlaced=true;updateUI()};item.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain','access-probe'));
+   const socket=document.createElement('button');socket.id='probe-wrist-slot';socket.textContent=installPlaced?'WRIST MOD SLOT · PROBE PLACED':'↓ PLACE PROBE IN WRIST MOD SLOT';socket.onclick=()=>{installPlaced=true;updateUI()};socket.addEventListener('dragover',e=>e.preventDefault());socket.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.getData('text/plain')==='access-probe'){installPlaced=true;updateUI()}});
+   const install=document.createElement('button');install.id='install-probe';install.textContent='④ CONFIRM INSTALLATION';install.disabled=!installPlaced;install.onclick=installProbe;spec.append(tip,item,socket,install);
+  }
   card.onclick=()=>{selectedSpec=true;showPreview('arm');card.classList.add('selected')};
   card.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();selectedSpec=true;showPreview('arm');fabricate()}};
-  card.onpointerdown=()=>{selectedSpec=true;showPreview('arm');if(craftAvailable()){craftHolding=true;craftProgress=0}};
-  card.onpointerup=()=>{if(craftProgress<1.25)releaseHold()};card.onpointerleave=releaseHold;
-  spec.append(card);
   panel.querySelector('#workshop-locker').textContent=activeLocker<0?'':'Locker '+(106+activeLocker)+' · '+lockerContents[activeLocker].length+' physical pieces remain';
  }
  function open(locker=-1){
@@ -267,7 +279,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   panel.querySelector('#workshop-heading').textContent=mode==='locker'?'STORAGE / '+(106+locker):'MU-1 / FABRICATION';
   updateUI();if(mode==='craft'){selectedSpec=true;showPreview('arm');panel.querySelector('.workshop-spec-card').focus()}else panel.querySelector('#workshop-close').focus();
  }
- function close(){const servicing=screenOpen&&mode==='craft';screenOpen=false;if(servicing)onServiceEnd();panel.hidden=true;activeLocker=-1;releaseHold()}
+ function close(){staged={};installPlaced=false;const servicing=screenOpen&&mode==='craft';screenOpen=false;if(servicing)onServiceEnd();panel.hidden=true;activeLocker=-1;releaseHold()}
  function handle(o){
   if(o.userData.workshopType==='bench'){open();sound('select');return true}
   if(o.userData.workshopType==='locker'){setLockerOpen(o.userData.index);open(o.userData.index);sound('select');save();return true}
@@ -282,10 +294,10 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  }
  panel.addEventListener('keydown',e=>{if(e.key==='Enter'&&selectedSpec&&mode==='craft'&&e.target===panel){e.preventDefault();fabricate()}});
  function releaseSpec(){if(specUnlocked)return 'SPEC ALREADY RECOVERED';if(specReleased)return 'SHARD WAITING AT TERMINAL OUTPUT';specReleased=true;setShardVisible();notify('FABRICATION SHARD EJECTED');save();return 'FABRICATION SHARD EJECTED · RECOVER FROM TERMINAL OUTPUT'}
- function serialize(){return {seed,inventory,lockerContents,opened,specReleased,specUnlocked,probeInstalled,clawSalvaged,loose:loose.map(o=>({x:o.userData.x,z:o.userData.z,item:o.userData.item,kind:o.userData.kind}))}}
- function restore(data){if(!data||typeof data!=='object'){startFresh();return;}seed=Number.isInteger(data.seed)?data.seed:12345;inventory=Array.isArray(data.inventory)?data.inventory.filter(i=>catalogue[i.type]).slice(0,20):[];lockerContents=Array.isArray(data.lockerContents)?Array.from({length:4},(_,i)=>data.lockerContents[i]||[]):[[],[],[],[]];opened=Array.isArray(data.opened)?data.opened.slice(0,4):[false,false,false,false];specReleased=!!data.specReleased;specUnlocked=!!data.specUnlocked;probeInstalled=!!data.probeInstalled;clawSalvaged=!!data.clawSalvaged;if(inventory.some(i=>i.type==='card'))onAccessCard(true);if(clawSalvaged){scene.remove(brokenClaw);const n=interactables.indexOf(brokenClaw);if(n>=0)interactables.splice(n,1)}for(const o of [...loose])removeLoose(o);for(const p of Array.isArray(data.loose)?data.loose:[]){if(Number.isFinite(p.x)&&Number.isFinite(p.z))createLoose(p.item,p.x,p.z,p.kind)}setShardVisible();refreshLockerModels();for(let i=0;i<4;i++)if(opened[i])setLockerOpen(i);updateUI()}
+ function serialize(){return {seed,inventory,lockerContents,opened,specReleased,specUnlocked,probeInstalled,probeCrafted,clawSalvaged,loose:loose.map(o=>({x:o.userData.x,z:o.userData.z,item:o.userData.item,kind:o.userData.kind}))}}
+ function restore(data){if(!data||typeof data!=='object'){startFresh();return;}seed=Number.isInteger(data.seed)?data.seed:12345;inventory=Array.isArray(data.inventory)?data.inventory.filter(i=>catalogue[i.type]).slice(0,20):[];lockerContents=Array.isArray(data.lockerContents)?Array.from({length:4},(_,i)=>data.lockerContents[i]||[]):[[],[],[],[]];opened=Array.isArray(data.opened)?data.opened.slice(0,4):[false,false,false,false];specReleased=!!data.specReleased;specUnlocked=!!data.specUnlocked;probeInstalled=!!data.probeInstalled;probeCrafted=!!data.probeCrafted||probeInstalled;staged={};installPlaced=false;clawSalvaged=!!data.clawSalvaged;if(inventory.some(i=>i.type==='card'))onAccessCard(true);if(clawSalvaged){scene.remove(brokenClaw);const n=interactables.indexOf(brokenClaw);if(n>=0)interactables.splice(n,1)}for(const o of [...loose])removeLoose(o);for(const p of Array.isArray(data.loose)?data.loose:[]){if(Number.isFinite(p.x)&&Number.isFinite(p.z))createLoose(p.item,p.x,p.z,p.kind)}setShardVisible();refreshLockerModels();for(let i=0;i<4;i++)if(opened[i])setLockerOpen(i);updateUI()}
  function update(dt){if(!isPowered())releaseHold();if(screenOpen&&mode==='craft'){previewAngle+=dt*.5;previewModel.rotation.y=previewAngle;const width=previewCanvas.clientWidth,height=previewCanvas.clientHeight;if(width&&height){previewRenderer.setSize(width,height,false);previewCamera.aspect=width/height;previewCamera.updateProjectionMatrix();previewRenderer.render(previewScene,previewCamera);previewCanvas.width=width;previewCanvas.height=height;previewCtx.drawImage(previewRenderer.domElement,0,0,width,height)}if(craftHolding&&craftAvailable()){craftProgress+=dt;const bar=panel.querySelector('.workshop-hold i');if(bar)bar.style.width=Math.min(100,craftProgress/1.25*100)+'%';if(craftProgress>=1.25)fabricate()}}for(let i=0;i<lockerDoors.length;i++){const desired=opened[i]?-1.55:0;lockerDoors[i].rotation.y=THREE.MathUtils.damp(lockerDoors[i].rotation.y,desired,7,dt)}for(const o of loose){if(o.position.y<=0&&o.userData.velocity===undefined)continue;const v=(o.userData.velocity||0)-9.8*dt;o.position.y+=v*dt;if(o.position.y<=0){o.position.y=0;const bounce=-v*.16;if(bounce>.24)o.userData.velocity=bounce;else delete o.userData.velocity}else o.userData.velocity=v}}
  function hint(){if(!specUnlocked)return specReleased?'Collect the specification shard from the terminal.':'Export the Access Probe specification from the terminal.';return !clawSalvaged?'Dismantle the broken Industrial Claw near the repair bay.':probeInstalled?'Use your Access Probe at the exit socket.':'Fabricate the Access Probe beneath the maintenance arm.'}
  startFresh();
- return {makePartModel,open,close,handle,releaseSpec,serialize,restore,hint,updateUI,update,mass,get isOpen(){return screenOpen&&mode==='craft'},get miniOpen(){return screenOpen&&mode==='locker'},get progress(){return {specUnlocked,specReleased,hasProbe:probeInstalled,salvagedClaw:clawSalvaged,recipeReady:recipeStatus(inventory).every(i=>!i.missing)}},get specUnlocked(){return specUnlocked},get hasProbe(){return probeInstalled},get salvagedClaw(){return clawSalvaged}};
+ return {makePartModel,open,close,handle,releaseSpec,serialize,restore,hint,updateUI,update,mass,get hasCraftedProbe(){return probeCrafted},installProbe,get isOpen(){return screenOpen&&mode==='craft'},get miniOpen(){return screenOpen&&mode==='locker'},get progress(){return {specUnlocked,specReleased,probeCrafted,hasProbe:probeInstalled,salvagedClaw:clawSalvaged,recipeReady:recipeStatus(inventory).every(i=>!i.missing)}},get specUnlocked(){return specUnlocked},get hasProbe(){return probeInstalled},get salvagedClaw(){return clawSalvaged}};
 }

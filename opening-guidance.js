@@ -3,12 +3,13 @@ export const CONTROL_STEPS=[
  {title:'MOVE MU-1',text:'Hold W / A / S / D to walk across the deck. W moves toward the back wall; S moves toward the open edge. The camera follows MU-1.'},
  {title:'LOOK AROUND',text:'Hold the left mouse button on empty space and drag to orbit the camera. Scroll or pinch to zoom. Press R to return to the default view.'},
  {title:'INTERACT & INSPECT',text:'Walk close to an object. Its E prompt tells you what will happen. Press E to use or collect it. Press I, then select a collected item to inspect it.'},
- {title:'FOLLOW YOUR DIRECTIVE',text:'The active directive shows your next task. H reopens these controls. C opens fabrication only near the powered maintenance arm. Escape closes a panel or pauses.'}
+ {title:'PANELS & SHORTCUTS',text:'I opens inventory. C opens the nearby maintenance station. E interacts with the nearest object. Escape closes a panel or pauses. H shows these controls.'}
 ];
 export function openingDirective(s){
  if(!s.powerOn)return 'Restore auxiliary power. Walk to the power control cabinet and press E.';
  if(s.hasProbe)return s.doorOpen?'Exit open. Approach the door and press E to finish the demo.':'Access Probe installed. Approach the exit door and press E at its socket.';
- if(s.specUnlocked){if(!s.salvagedClaw)return 'Recover crafting parts. Approach the broken Industrial Claw and press E to dismantle it.';if(!s.recipeReady)return 'Collect the missing components. Check owned / required counts at the maintenance arm (C nearby).';return 'Parts ready. Approach the maintenance arm and press E. Select Access Probe, then Enter or hold to fabricate.';}
+ if(s.probeCrafted)return 'Probe fabricated. At the maintenance station, place it in the wrist modification slot and confirm installation.';
+ if(s.specUnlocked){if(!s.salvagedClaw)return 'Recover crafting parts. Approach the broken Industrial Claw and press E to dismantle it.';if(!s.recipeReady)return 'Collect the missing components. Check owned / required counts at the maintenance arm (C nearby).';return 'Parts ready. Approach the maintenance arm and press E. Load the recipe slots, then fabricate the probe.';}
  if(s.specReleased)return 'Specification exported. Close the terminal and collect the shard beside it with E.';
  if(!s.hasNote)return 'Find station access information. Explore, collect items with E and inspect them in inventory (I).';
  if(!s.terminalBooted)return 'Inspect the worker ID card (I). Use its handwritten password at the powered terminal.';

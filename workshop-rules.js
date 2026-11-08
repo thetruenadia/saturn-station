@@ -3,3 +3,10 @@ export function stackParts(items){const groups=new Map();for(const item of items
 export function recipeStatus(items,recipe=PROBE_RECIPE){return Object.entries(recipe).map(([type,required])=>{const owned=items.filter(i=>i.type===type).length;return {type,required,owned,missing:Math.max(0,required-owned)}})}
 export function canFabricate({items,discovered,installed,powered,atStation}){return discovered&&!installed&&powered&&atStation&&recipeStatus(items).every(i=>!i.missing)}
 export const SERVICE_POSITION={x:-7.35,z:2.2,heading:-Math.PI/2};
+// Staging reserves nothing: closing the tray cannot consume or lose inventory.
+export function placeIngredient(staged,items,type,recipe=PROBE_RECIPE){
+ if(!recipe[type])return staged;
+ const count=staged[type]||0,owned=items.filter(i=>i.type===type).length;
+ return count<recipe[type]&&count<owned?{...staged,[type]:count+1}:staged;
+}
+export function trayComplete(staged,recipe=PROBE_RECIPE){return Object.entries(recipe).every(([type,n])=>staged[type]===n)}

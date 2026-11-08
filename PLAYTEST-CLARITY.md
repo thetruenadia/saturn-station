@@ -24,3 +24,7 @@ Validation:
 - Audible output was not independently listened to. Pointer hold crafting and mobile layout remain unverified in this pass.
 
 Changes remain on the existing feature branch and draft PR #7. Main and version 0.1 are untouched.
+
+## Current manual assembly follow-up
+
+Manual ingredient staging and separate probe installation are now implemented and browser-tested. The card asset, five-slot HUD, top-centre directive, controls-only H help and stronger text hierarchy are included. See [ASSEMBLY-PLAYTEST.md](ASSEMBLY-PLAYTEST.md) for the current 53-test result, assisted browser sequence and remaining checks; earlier deferred-item and auto-install descriptions above are historical.
