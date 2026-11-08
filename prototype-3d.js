@@ -1,5 +1,5 @@
-import {createBackgroundMusic} from './background-music.js?v=music2';
-import {createMainMenu} from './main-menu.js?v=music2';
+import {createBackgroundMusic} from './background-music.js?v=menu-music3';
+import {createMainMenu} from './main-menu.js?v=menu-music3';
 import {consumeLaunch} from './menu-saves.js?v=menu1';
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
@@ -987,10 +987,12 @@ let audio=null,audioMaster=null,hum=null,humGain=null,soundEnabled=true;
 const SETTINGS_KEY='saturn-station-0.2-settings-v1';
 let musicVolume=35,brightness=100,settingsWasPaused=false;
 try{const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY));if(saved){if(Number.isFinite(saved.music))musicVolume=THREE.MathUtils.clamp(saved.music,0,100);if(Number.isFinite(saved.brightness))brightness=THREE.MathUtils.clamp(saved.brightness,50,180)}}catch{}
-const musicStartButton=document.createElement('button');musicStartButton.id='music-start';musicStartButton.textContent='PLAY MUSIC';musicStartButton.style.cssText='position:fixed;right:18px;bottom:18px;z-index:240;padding:12px 18px;background:#17211e;color:#e7eedb;border:1px solid #8d9c84;cursor:pointer';document.body.append(musicStartButton);
-const backgroundMusic=createBackgroundMusic({volume:musicVolume/100,onState(state){musicStartButton.hidden=state!=='blocked'}});
-musicStartButton.addEventListener('click',()=>backgroundMusic.unlock());
-soundEnabled=backgroundMusic.enabled;
+const musicToggle=document.createElement('button');musicToggle.id='menu-music-toggle';musicToggle.style.cssText='position:fixed;right:18px;bottom:18px;z-index:240;width:42px;height:42px;padding:9px;background:#101b20b3;color:#e7eedb;border:1px solid #8d9c8466;border-radius:50%;cursor:pointer';document.body.append(musicToggle);
+const backgroundMusic=createBackgroundMusic({volume:musicVolume/100,active:!menuLaunch,onState(state){
+ musicToggle.hidden=state==='inactive';const enabled=state!=='muted';musicToggle.setAttribute('aria-label',enabled?'Mute menu music':'Unmute menu music');musicToggle.setAttribute('aria-pressed',String(enabled));musicToggle.title=enabled?'Mute menu music':'Unmute menu music';
+ musicToggle.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M11 5 6 9H3v6h3l5 4Z"/>'+(enabled?'<path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>':'<path d="m16 9 6 6m0-6-6 6"/>')+'</svg>';
+}});
+musicToggle.addEventListener('click',()=>{backgroundMusic.setEnabled(!backgroundMusic.enabled);backgroundMusic.unlock()});
 const settingsPanel=document.createElement('dialog');settingsPanel.id='game-settings';settingsPanel.setAttribute('aria-labelledby','settings-title');
 settingsPanel.innerHTML='<form method="dialog"><header><div><small>MU-1 / PREFERENCES</small><h1 id="settings-title">SETTINGS</h1></div><button aria-label="Close settings" value="close">×</button></header><label for="music-volume">MUSIC <output id="music-value" for="music-volume"></output></label><input id="music-volume" type="range" min="0" max="100" step="1"><p>Ambient station score. Set to zero to mute music.</p><label for="game-brightness">BRIGHTNESS <output id="brightness-value" for="game-brightness"></output></label><input id="game-brightness" type="range" min="50" max="180" step="5"><p>Adjusts the scene while keeping emergency and working lights distinct.</p><footer><span>Saved automatically on this device.</span><button value="done">DONE</button></footer></form>';
 document.body.append(settingsPanel);
@@ -1107,7 +1109,7 @@ if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.
 if(firstPerson){firstPersonCamera.position.set(robot.position.x,2.15,robot.position.z);firstPersonCamera.lookAt(robot.position.x+Math.sin(lookHeading)*Math.cos(lookPitch),2.15+Math.sin(lookPitch),robot.position.z+Math.cos(lookHeading)*Math.cos(lookPitch));}
 doorAccessProbe.visible=workshop.hasProbe;workshop.update(dt);updateStationSystems(dt);renderer.render(scene,activeCamera());updateNearbyUI()}
 opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();if(menuLaunch?.mode!=='resume'){doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;}updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
-mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound,unlockAudio});
+mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound,unlockAudio,onVisibility:visible=>backgroundMusic.setActive(visible)});
 const returnMenuButton=document.createElement('button');returnMenuButton.textContent='MAIN MENU';returnMenuButton.addEventListener('click',()=>{hideTerminal();closeInventory();saveProgress();setPaused(true);mainMenu.show()});document.querySelector('#pause-restart').after(returnMenuButton);
 if(menuLaunch?.mode==='resume')opening.skip();else if(!menuLaunch)mainMenu.show();
 resize();updateStationSystems(0);animate();document.querySelector('#loading').classList.add('hidden');document.querySelector('#charge').textContent='60%';document.querySelector('#charge-bar').style.width='60%';updateCharge();updateInventory();refreshDirective();say('MU-1 ONLINE.');

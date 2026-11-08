@@ -1,5 +1,5 @@
-// One player per game document, independent of pause/menu state and Web Audio effects.
-export function createBackgroundMusic({volume=.35,media=new Audio(),doc=document,win=window,storage,onState=()=>{}}={}){
+// One player per game document, with explicit menu visibility, separate from Web Audio effects.
+export function createBackgroundMusic({volume=.35,active=true,media=new Audio(),doc=document,win=window,storage,onState=()=>{}}={}){
  const key='saturn-station-music-position-v1';
  try{storage??=win.sessionStorage}catch{}
  media.id='background-music';media.hidden=true;doc.body?.append(media);
@@ -9,11 +9,11 @@ export function createBackgroundMusic({volume=.35,media=new Audio(),doc=document
  let enabled=true,unlocked=false,pending=false;
  try{const saved=JSON.parse(storage?.getItem(key)||'null');if(saved&&Date.now()-saved.at<30000&&Number.isFinite(saved.time)&&saved.time>=0){media.addEventListener('loadedmetadata',()=>{if(Number.isFinite(media.duration)&&media.duration>0)media.currentTime=saved.time%media.duration},{once:true});unlocked=!!saved.unlocked;enabled=saved.enabled!==false}}catch{}
  function save(){try{storage?.setItem(key,JSON.stringify({time:media.currentTime,at:Date.now(),unlocked,enabled}))}catch{}}
- function report(){onState(!enabled||media.volume===0?'muted':media.paused?'blocked':'playing')}
+ function report(){onState(!active?'inactive':!enabled||media.volume===0?'muted':media.paused?'blocked':'playing')}
  function play(){
-  if(!unlocked||!enabled||doc.hidden||media.volume===0||!media.paused||pending)return;
+  if(!active||!unlocked||!enabled||doc.hidden||media.volume===0||!media.paused||pending)return;
   pending=true;
-  try{Promise.resolve(media.play()).catch(()=>{}).finally(()=>{pending=false;if(!enabled||doc.hidden||media.volume===0)media.pause();report()})}catch{pending=false;report()}
+  try{Promise.resolve(media.play()).catch(()=>{}).finally(()=>{pending=false;if(!active||!enabled||doc.hidden||media.volume===0)media.pause();report()})}catch{pending=false;report()}
  }
  function setVolume(value){media.volume=Math.max(0,Math.min(1,value));if(media.volume===0)media.pause();else play();report()}
  function setEnabled(value){enabled=value;if(!enabled)media.pause();else play();report();save()}
@@ -24,5 +24,5 @@ export function createBackgroundMusic({volume=.35,media=new Audio(),doc=document
  setVolume(volume);
  // Try autoplay when permitted; activation handlers remain available after rejection.
  unlocked=true;play();
- return {get enabled(){return enabled},unlock(){unlocked=true;play()},setVolume,setEnabled};
+ return {setActive(value){active=value;if(!active){media.pause();media.currentTime=0}else play();report()},get enabled(){return enabled},unlock(){unlocked=true;play()},setVolume,setEnabled};
 }

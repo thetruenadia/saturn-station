@@ -40,6 +40,6 @@ Automated checks do not replace a full browser playthrough. The root `index.html
 
 MU-1 is the canonical robot designation (SRV-09 is retired). Third-person movement is WASD with mouse camera rotation and wheel zoom; first-person mode may differ. Do not implement plug-in charging yet: it is reserved for a future installable modification.
 
-### Background music
+### Main menu music
 
-The supplied `main menu.m4a` plays as a loop in the menu and game. A normalized MP3 is preferred for consistent browser playback; the original AAC and a PCM WAV fallback are retained. Music attempts autoplay, and a PLAY MUSIC button appears when playback is blocked. Clicks or keypresses (including inside the embedded menu) retry playback, respects MUSIC and SOUND controls, and pauses while the tab is hidden. Opening the menu keeps the same player; start/load currently reloads the game, so a recent session playback position is restored after that reload. Browser autoplay rules may require another gesture after navigation. No playback failure prevents gameplay.
+Main menu music: India Davies Nilsson. The track loops only while the menu is open and stops when starting or loading the demo. Playback is attempted automatically; if browser policy blocks it, normal menu interaction retries without a play prompt. A small speaker icon at the bottom right toggles menu music. The normalized MP3 is preferred, with PCM WAV fallback; the original AAC is retained. Hidden tabs pause playback.
