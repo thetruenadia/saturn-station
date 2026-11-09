@@ -178,7 +178,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  <div id="workshop-crafting"><div class="workshop-columns">
  <section><h2>RECOVERED SALVAGE</h2><div id="workshop-items"></div><div class="workshop-actions"><button id="workshop-drop-cell">DROP FUEL CELL</button><button id="workshop-dismantle-arm">DISMANTLE ARM</button></div></section>
  <section><h2>CRAFTING SPECS</h2><div id="workshop-spec"></div><div class="workshop-preview"><canvas id="workshop-preview-3d" aria-label="Three-dimensional component preview"></canvas><small id="workshop-preview-label">SELECT A COMPONENT</small></div></section>
- </div><p class="workshop-footer">PLACE PARTS → FABRICATE → INSTALL · ESC CLOSES WITHOUT USING PARTS</p></div></div>`;
+ </div><p class="workshop-footer">DROP PARTS INTO BOX → FABRICATE → INSTALL · ESC CLOSES WITHOUT USING PARTS</p></div></div>`;
  document.body.append(panel);
  const css=document.createElement('style');css.textContent=`
  #workshop-panel{position:fixed;right:16px;top:8%;bottom:9%;z-index:105;pointer-events:none;color:#d9e0d2;font:11px IBM Plex Mono,monospace}
@@ -189,7 +189,16 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  .workshop-window h2{color:#a5c4af;font-size:11px;letter-spacing:.12em}.workshop-window button{background:#1a2b26;color:#d4e5d3;border:1px solid #607f70;padding:7px 10px;cursor:pointer;font:inherit}
  .workshop-window button:focus-visible{outline:2px solid #a3e1ac}.workshop-window button:disabled{opacity:.36;cursor:default}
  .workshop-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}.workshop-row{display:flex;align-items:center;gap:7px;justify-content:space-between;border-bottom:1px solid #41544b;padding:5px 0}
- .workshop-row button{flex-shrink:0}.workshop-item-label{flex:1}.workshop-icon{width:55px;height:43px;flex-shrink:0;display:block;background:#182722}
+ .workshop-row>button{flex-shrink:0}.workshop-row .component-grip{display:flex;align-items:center;gap:7px;flex:1 1 auto;min-width:0;padding:0;border:0;background:none;text-align:left;user-select:none;overflow-wrap:anywhere}
+ .component-grip[data-component]{cursor:grab;touch-action:none}.component-grip[data-component]:active{cursor:grabbing}
+ #fabrication-box{display:block;width:100%;min-height:76px;padding:10px;border:2px dashed #9cb787;background:#192a20;color:#e1edd0;text-align:center}
+ #fabrication-box strong,#fabrication-box small{display:block}#fabrication-box small{margin-top:5px}
+ .fabrication-parts{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin:8px auto 0;max-width:245px}
+ .fabrication-parts span{display:grid;place-items:center;aspect-ratio:1;background:#0c1812;border:1px solid #617b65}
+ .fabrication-parts canvas{width:100%;height:auto;display:block}
+ #fabrication-box.drop-ready{border-color:#d6e6a9;background:#273e2c}#fabrication-box.drop-over{border-style:solid;background:#3f5940}
+ .component-drag-label{position:fixed;z-index:108;pointer-events:none;transform:translate(12px,12px);padding:8px 12px;border:1px solid #c3d69f;background:#243b2c;color:#f1f4db;font:12px monospace}
+.workshop-item-label{flex:1}.workshop-icon{width:55px;height:43px;flex-shrink:0;display:block;background:#182722}
  .workshop-spec-card{width:100%;text-align:left;margin:6px 0;padding:13px!important;display:flex;flex-direction:column;gap:7px;opacity:.5;border:1px solid #6e7571!important;color:#98a79f!important;background:#131b1a!important}
  .workshop-spec-card.unlocked{opacity:1;border:1px solid #75c88e!important;box-shadow:inset 0 0 0 1px #40825966;color:#d6f0da!important}
  .workshop-spec-card.selected{background:#21372b!important}.workshop-spec-card small{font-size:9px}
@@ -197,7 +206,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  .workshop-preview{margin-top:15px;border:1px solid #50665d;background:#0d1715}.workshop-preview canvas{width:100%;height:145px;display:block}.workshop-preview small{display:block;padding:6px;color:#b9ceb8}
  .context-tip{color:#c7dbab;border-left:3px solid #bdd78c;padding:10px;font-size:12px;line-height:1.6}.ingredient-slot{border:1px dashed #8c9d78;padding:10px;margin:8px 0}.ingredient-slot.loaded{border-style:solid;border-color:#9bc58c;background:#294332}.ingredient-slot span{display:block}.ingredient-slot button{margin:6px 5px 0 0;font-size:9px}#fabricate-probe,#stowed-probe,#probe-wrist-slot,#install-probe{display:block;width:100%;margin:10px 0;padding:12px}#probe-wrist-slot{border:2px dashed #b8cf91;min-height:65px}.recipe-requirements{line-height:1.8;font-size:10px}.recipe-requirements .missing{color:#e7ad91}.recipe-requirements .available{color:#a6dfb0}.workshop-footer{font-size:9px;color:#9aac9c}.workshop-actions{display:flex;flex-wrap:wrap}
  #workshop-panel.mini #workshop-mini p{color:#c3d5c2;line-height:1.5}#workshop-locker{font-size:10px;color:#8da391}
- @media(max-width:750px){#workshop-panel{right:8px;top:10%;bottom:10%}.workshop-window{width:min(520px,85vw)}.workshop-columns{grid-template-columns:1fr}#workshop-panel.mini .workshop-window{width:min(290px,65vw)}}
+ @media(max-width:900px){#workshop-panel{right:8px;top:10%;bottom:10%}.workshop-window{width:min(520px,85vw)}.workshop-columns{gap:8px}#workshop-panel:not(.mini) .workshop-window{width:calc(100vw - 16px);padding:9px}.workshop-row{flex-wrap:wrap;gap:4px}.workshop-row .workshop-icon{width:36px;height:30px}.workshop-row>button:not(.component-grip){padding:3px 6px}.workshop-columns .workshop-spec-card{padding:7px!important}#fabrication-box{min-height:60px}#workshop-panel.mini .workshop-window{width:min(290px,65vw)}}
  `;document.head.append(css);
  const previewCanvas=panel.querySelector('#workshop-preview-3d');
  const previewRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});
@@ -228,6 +237,51 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  }
  function loadPart(type){const next=placeIngredient(staged,inventory,type);if(next===staged){notify('NO MATCHING PART AVAILABLE OR SLOT FULL');return}staged=next;sound('select');updateUI()}
  function releaseHold(){craftHolding=false;craftProgress=0;const bar=panel.querySelector('.workshop-hold i');if(bar)bar.style.width='0%'}
+ let componentDrag=null,keyboardPart=null;
+ const dragLabel=document.createElement('div');
+ dragLabel.className='component-drag-label';dragLabel.hidden=true;dragLabel.setAttribute('aria-hidden','true');document.body.append(dragLabel);
+ function boxTarget(){return panel.querySelector('#fabrication-box')}
+ function clearComponentDrag(){
+  const id=componentDrag?.id;
+  componentDrag=null;keyboardPart=null;dragLabel.hidden=true;
+  boxTarget()?.classList.remove('drop-ready','drop-over');
+  if(id!==undefined&&panel.hasPointerCapture(id))panel.releasePointerCapture(id);
+ }
+ function overBox(event){
+  const box=boxTarget();
+  return !!box&&box.contains(document.elementFromPoint(event.clientX,event.clientY));
+ }
+ panel.addEventListener('pointerdown',event=>{
+  const grip=event.target.closest('[data-component]');
+  if(!grip||!event.isPrimary||event.button!==0||!boxTarget())return;
+  clearComponentDrag();
+  componentDrag={id:event.pointerId,type:grip.dataset.component,x:event.clientX,y:event.clientY,moved:false};
+  panel.setPointerCapture(event.pointerId);
+  showPreview(componentDrag.type);
+ });
+ panel.addEventListener('pointermove',event=>{
+  if(componentDrag?.id!==event.pointerId)return;
+  if(!componentDrag.moved&&Math.hypot(event.clientX-componentDrag.x,event.clientY-componentDrag.y)<6)return;
+  componentDrag.moved=true;
+  dragLabel.hidden=false;dragLabel.textContent=catalogue[componentDrag.type].name;
+  dragLabel.style.left=event.clientX+'px';dragLabel.style.top=event.clientY+'px';
+  const box=boxTarget();box?.classList.add('drop-ready');box?.classList.toggle('drop-over',overBox(event));
+ });
+ panel.addEventListener('pointerup',event=>{
+  if(componentDrag?.id!==event.pointerId)return;
+  const {type,moved}=componentDrag;
+  const accepted=moved&&overBox(event);
+  clearComponentDrag();
+  if(accepted)loadPart(type);
+ });
+ for(const eventName of ['pointercancel','lostpointercapture'])panel.addEventListener(eventName,event=>{
+  if(componentDrag?.id===event.pointerId)clearComponentDrag();
+ });
+ window.addEventListener('blur',clearComponentDrag);
+ panel.addEventListener('keydown',event=>{
+  if(event.key!=='Escape'||(!componentDrag&&!keyboardPart))return;
+  event.stopPropagation();clearComponentDrag();
+ });
  function resetCraftView(){panel.querySelector('.workshop-window').scrollTop=0;panel.querySelector('.workshop-columns>section:last-child').scrollTop=0}
  panel.querySelector('#workshop-close').onclick=close;
  panel.querySelector('#workshop-drop-cell').onclick=dropFuelCell;
@@ -236,19 +290,32 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  function updateUI(){
   panel.querySelector('#workshop-status').textContent='SALVAGE '+inventory.length+'/20 · '+(mass()+cellCount()*1.8).toFixed(1)+' KG · FUEL CELLS '+cellCount();
   const list=panel.querySelector('#workshop-items');list.replaceChildren();
+  const icons=new Map();
   for(const stack of stacked(inventory)){
    const item=stack[0],row=document.createElement('div');row.className='workshop-row';
    const canvas=document.createElement('canvas');canvas.className='workshop-icon';canvas.width=110;canvas.height=86;
    const text=document.createElement('span');text.className='workshop-item-label';const partName=document.createElement('strong');partName.textContent=catalogue[item.type].name+' ×'+stack.length;const partInfo=document.createElement('small');partInfo.textContent=catalogue[item.type].mass.toFixed(1)+' KG EACH';text.append(partName,partInfo);
-   text.onclick=()=>showPreview(item.type);
-   const button=document.createElement('button');button.textContent='DROP 1';button.onclick=()=>drop(item,inventory.findIndex(x=>x.id===item.id));
-   row.draggable=!!recipe[item.type]&&!probeCrafted;row.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain',item.type));
-   if(recipe[item.type]&&!probeCrafted){const place=document.createElement('button');place.textContent='PLACE →';place.setAttribute('aria-label','Place '+catalogue[item.type].name);place.disabled=!specUnlocked;place.onclick=()=>loadPart(item.type);row.append(canvas,text,place,button)}else row.append(canvas,text,button);list.append(row);
+   const grip=document.createElement('button');grip.type='button';grip.className='component-grip';grip.append(canvas,text);
+   grip.onclick=()=>showPreview(item.type);
+   if(specUnlocked&&!probeCrafted&&recipe[item.type]&&(staged[item.type]||0)<Math.min(stack.length,recipe[item.type])){
+    grip.dataset.component=item.type;
+    grip.setAttribute('aria-label','Grab '+catalogue[item.type].name);
+    grip.addEventListener('keydown',event=>{
+     if(event.key!=='Enter'&&event.key!==' ')return;
+     const box=boxTarget();if(!box)return;
+     event.preventDefault();clearComponentDrag();keyboardPart=item.type;
+     showPreview(item.type);box.classList.add('drop-ready');box.focus();
+    });
+   }
+   const button=document.createElement('button');button.textContent='DROP 1';button.setAttribute('aria-label','Drop '+catalogue[item.type].name+' on the floor');
+   button.disabled=stack.length<=(staged[item.type]||0);
+   button.onclick=()=>drop(item,inventory.findIndex(x=>x.id===item.id));
+   row.append(grip,button);list.append(row);
    // Render each icon from the actual Three.js model via the shared preview renderer.
    const model=makePartModel(new THREE.Group(),item.type,1);model.rotation.y=.42;
    const slotScene=new THREE.Scene();slotScene.add(new THREE.AmbientLight(0xffffff,2));slotScene.add(new THREE.DirectionalLight(0xffffff,2));
    slotScene.add(model);previewRenderer.setSize(110,86,false);previewCamera.aspect=110/86;previewCamera.updateProjectionMatrix();previewRenderer.render(slotScene,previewCamera);
-   canvas.getContext('2d').drawImage(previewRenderer.domElement,0,0,110,86);
+   canvas.getContext('2d').drawImage(previewRenderer.domElement,0,0,110,86);icons.set(item.type,canvas);
   }
   if(!inventory.length)list.textContent='NO RECOVERED COMPONENTS';
   const spec=panel.querySelector('#workshop-spec');spec.replaceChildren();
@@ -257,13 +324,37 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   const detail=document.createElement('small');detail.textContent=specUnlocked?'RECOVERED SPECIFICATION · WRIST MODIFICATION':'UNKNOWN SPECIFICATION · TERMINAL ACCESS REQUIRED';
   const requirements=document.createElement('div');requirements.className='recipe-requirements';if(specUnlocked&&!probeCrafted)for(const r of recipeStatus(inventory)){const line=document.createElement('div');line.className='ingredient-slot '+((staged[r.type]||0)===r.required?'loaded':'');line.dataset.ingredient=r.type;
    const label=document.createElement('span');label.className=r.missing?'parts-missing':'parts-owned';label.textContent=catalogue[r.type].name+' · OWN '+r.owned+' / NEED '+r.required+' · PLACED '+(staged[r.type]||0)+' / '+r.required;
-   const load=document.createElement('button');load.textContent='↓ LOAD '+catalogue[r.type].name;load.disabled=(staged[r.type]||0)>=Math.min(r.owned,r.required);load.onclick=()=>loadPart(r.type);
-   const remove=document.createElement('button');remove.textContent='REMOVE';remove.disabled=!(staged[r.type]>0);remove.onclick=()=>{staged={...staged,[r.type]:staged[r.type]-1};updateUI()};
-   line.addEventListener('dragover',e=>e.preventDefault());line.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.getData('text/plain')===r.type)loadPart(r.type);else notify('THIS SLOT NEEDS '+catalogue[r.type].name)});line.append(label,load,remove);requirements.append(line)}
-  const status=document.createElement('small');status.className='craft-status '+(probeInstalled||craftAvailable()?'ready':'pending');status.textContent=probeInstalled?'INSTALLED ON STANDARD MANIPULATOR':probeCrafted?'IN INVENTORY · INSTALL SEPARATELY':craftAvailable()?'READY TO CRAFT · HOLD OR SELECT + ENTER':specUnlocked?(!isPowered()?'AUXILIARY POWER REQUIRED':'LOAD THE MATCHING RECIPE SLOTS BELOW'):'SPEC LOCKED';
+   const remove=document.createElement('button');remove.textContent='REMOVE';remove.setAttribute('aria-label','Remove '+catalogue[r.type].name+' from fabrication box');remove.disabled=!(staged[r.type]>0);remove.onclick=()=>{staged={...staged,[r.type]:staged[r.type]-1};updateUI()};line.append(label,remove);requirements.append(line)}
+  const status=document.createElement('small');status.className='craft-status '+(probeInstalled||craftAvailable()?'ready':'pending');status.textContent=probeInstalled?'INSTALLED ON STANDARD MANIPULATOR':probeCrafted?'IN INVENTORY · INSTALL SEPARATELY':craftAvailable()?'READY TO CRAFT · HOLD OR SELECT + ENTER':specUnlocked?(!isPowered()?'AUXILIARY POWER REQUIRED':'DRAG PARTS INTO THE FABRICATION BOX'):'SPEC LOCKED';
   const hold=document.createElement('span');hold.className='workshop-hold';const bar=document.createElement('i');hold.append(bar);
   card.setAttribute('aria-disabled',String(!specUnlocked));card.append(name,detail,status);spec.append(card);
-  if(!probeCrafted){if(specUnlocked){const tip=document.createElement('p');tip.className='context-tip';tip.textContent='① Move each part into its matching slot: drag or click PLACE / LOAD. Parts stay yours until Fabricate.';spec.append(tip,requirements)}const craft=document.createElement('button');craft.id='fabricate-probe';craft.textContent='② FABRICATE ACCESS PROBE';craft.disabled=!craftAvailable();craft.append(hold);craft.onclick=()=>fabricate();craft.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();fabricate()}};craft.onpointerdown=()=>{if(craftAvailable()){craftHolding=true;craftProgress=0}};craft.onpointerup=releaseHold;craft.onpointerleave=releaseHold;spec.append(craft)}else if(!probeInstalled){
+  if(!probeCrafted){
+   if(specUnlocked){
+    const box=document.createElement('button');box.type='button';box.id='fabrication-box';
+    const title=document.createElement('strong');title.textContent='FABRICATION BOX';
+    const count=document.createElement('small');const loaded=Object.values(staged).reduce((sum,n)=>sum+n,0),required=Object.values(recipe).reduce((sum,n)=>sum+n,0);
+    count.textContent=loaded===required?loaded+' / '+required+' PARTS · READY':loaded+' / '+required+' PARTS · DROP HERE';
+    const parts=document.createElement('span');parts.className='fabrication-parts';parts.setAttribute('aria-hidden','true');
+    for(const [type,needed] of Object.entries(recipe))for(let i=0;i<needed;i++){
+     const slot=document.createElement('span');
+     const icon=icons.get(type);
+     if(icon&&i<(staged[type]||0)){
+      const copy=icon.cloneNode();copy.getContext('2d').drawImage(icon,0,0);slot.append(copy);
+     }
+     parts.append(slot);
+    }
+    box.append(title,parts,count);
+    box.addEventListener('click',()=>{
+     if(!keyboardPart)return;
+     const type=keyboardPart;clearComponentDrag();loadPart(type);
+     (panel.querySelector('[data-component="'+type+'"]')||panel.querySelector('[data-component]')||panel.querySelector('#fabricate-probe'))?.focus();
+    });
+    spec.prepend(box);
+    const tip=document.createElement('p');tip.className='context-tip';tip.textContent='Grab a component and drop it into the box. Keyboard: Enter to grab, then Enter to drop.';
+    spec.append(tip,requirements);
+   }
+   const craft=document.createElement('button');craft.id='fabricate-probe';craft.textContent='② FABRICATE ACCESS PROBE';craft.disabled=!craftAvailable();craft.append(hold);craft.onclick=()=>fabricate();craft.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();fabricate()}};craft.onpointerdown=()=>{if(craftAvailable()){craftHolding=true;craftProgress=0}};craft.onpointerup=releaseHold;craft.onpointerleave=releaseHold;
+   const box=boxTarget();if(box)box.after(craft);else spec.append(craft)}else if(!probeInstalled){
    const tip=document.createElement('p');tip.className='context-tip';tip.textContent='③ Probe fabricated, not installed. Move it from the inventory tray into the compatible wrist slot, then confirm.';
    const item=document.createElement('button');item.id='stowed-probe';item.textContent='ACCESS PROBE · IN INVENTORY →';item.draggable=true;item.onclick=()=>{installPlaced=true;updateUI()};item.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain','access-probe'));
    const socket=document.createElement('button');socket.id='probe-wrist-slot';socket.textContent=installPlaced?'WRIST MOD SLOT · PROBE PLACED':'↓ PLACE PROBE IN WRIST MOD SLOT';socket.onclick=()=>{installPlaced=true;updateUI()};socket.addEventListener('dragover',e=>e.preventDefault());socket.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.getData('text/plain')==='access-probe'){installPlaced=true;updateUI()}});
@@ -278,9 +369,9 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   mode=locker>=0?'locker':'craft';activeLocker=locker;screenOpen=true;panel.hidden=false;
   panel.classList.toggle('mini',mode==='locker');
   panel.querySelector('#workshop-heading').textContent=mode==='locker'?'STORAGE / '+(106+locker):'MU-1 / FABRICATION';
-  updateUI();if(mode==='craft'){selectedSpec=true;showPreview('arm');panel.querySelector('.workshop-spec-card').focus()}else panel.querySelector('#workshop-close').focus();
+  updateUI();if(mode==='craft'){selectedSpec=true;showPreview('arm');(boxTarget()||panel.querySelector('.workshop-spec-card')).focus({preventScroll:true});resetCraftView()}else panel.querySelector('#workshop-close').focus();
  }
- function close(){staged={};installPlaced=false;const servicing=screenOpen&&mode==='craft';screenOpen=false;if(servicing)onServiceEnd();panel.hidden=true;activeLocker=-1;releaseHold()}
+ function close(){clearComponentDrag();staged={};installPlaced=false;const servicing=screenOpen&&mode==='craft';screenOpen=false;if(servicing)onServiceEnd();panel.hidden=true;activeLocker=-1;releaseHold()}
  function handle(o){
   if(o.userData.workshopType==='bench'){open();sound('select');return true}
   if(o.userData.workshopType==='locker'){setLockerOpen(o.userData.index);open(o.userData.index);sound('select');save();return true}

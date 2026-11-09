@@ -9,7 +9,7 @@ export function openingDirective(s){
  if(!s.powerOn)return 'Restore auxiliary power. Walk to the power control cabinet and press E.';
  if(s.hasProbe)return s.doorOpen?'Exit open. Approach the door and press E to finish the demo.':'Access Probe installed. Approach the exit door and press E at its socket.';
  if(s.probeCrafted)return 'Probe fabricated. At the maintenance station, place it in the wrist modification slot and confirm installation.';
- if(s.specUnlocked){if(!s.salvagedClaw)return 'Recover crafting parts. Approach the broken Industrial Claw and press E to dismantle it.';if(!s.recipeReady)return 'Collect the missing components. Check owned / required counts at the maintenance arm (C nearby).';return 'Parts ready. Approach the maintenance arm and press E. Load the recipe slots, then fabricate the probe.';}
+ if(s.specUnlocked){if(!s.salvagedClaw)return 'Recover crafting parts. Approach the broken Industrial Claw and press E to dismantle it.';if(!s.recipeReady)return 'Collect the missing components. Check owned / required counts at the maintenance arm (C nearby).';return 'Parts ready. Approach the maintenance arm and press E. Drag the parts into the fabrication box, then fabricate the probe.';}
  if(s.specReleased)return 'Specification exported. Close the terminal and collect the shard beside it with E.';
  if(!s.hasNote)return 'Find station access information. Explore, collect items with E and inspect them in inventory (I).';
  if(!s.terminalBooted)return 'Inspect the worker ID card (I). Use its handwritten password at the powered terminal.';

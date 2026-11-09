@@ -2,7 +2,7 @@ import {createBackgroundMusic} from './background-music.js?v=menu-music3';
 import {ROOM_LAYOUT,OBSERVATION_PORT} from './room-layout.js?v=window3';
 import {installRoomStory} from './room-story.js?v=matte2';
 import {createObservationView} from './observation-view.js?v=window3';
-import {openingDirective,createControlGuide} from './opening-guidance.js?v=room2';
+import {openingDirective,createControlGuide} from './opening-guidance.js?v=box2';
 import {createAccessProbe} from './access-probe.js?v=polish1';
 import {SERVICE_POSITION} from './workshop-rules.js?v=polish1';
 import {createMainMenu} from './main-menu.js?v=release1';
@@ -14,7 +14,7 @@ import {installReferenceAssets} from './reference-assets.js?v=window3';
 import { applyArtDirection } from './station-art.js?v=etna1';
 
 import {createMakerOpening} from './maker-opening.js?v=story1';
-import {createWorkshopSystem} from './workshop-system.js?v=story1';
+import {createWorkshopSystem} from './workshop-system.js?v=box3';
 
 let opening,mainMenu,observation,roomStory;let tutorialWalked=false,tutorialLooked=false;
 let menuLaunch=null;try{menuLaunch=consumeLaunch(sessionStorage)}catch{}
