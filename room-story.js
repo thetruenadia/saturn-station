@@ -29,10 +29,17 @@ export function installRoomStory({THREE,scene,interactables,referenceAssets,term
  // Connected wall utilities and a restrained, continuous walking route replace scattered pads.
  for(const [a,b] of [[[-10.8,0.12,-8.5],[-11,.12,-5.7]],[[-11,.12,-5.7],[-11,.12,-2]],[[-11,.12,-2],[-11.4,.12,1.8]]])pipeBetween(scene,a,b,.045,brass);
  pipeBetween(scene,[-10.8,.15,-8.5],[-5.5,.15,-8.5],.055,ink);
- const stripe=new THREE.MeshStandardMaterial({color:0x8a8c67,roughness:1});
- function floorRoute(a,b){pipeBetween(scene,[a[0],.065,a[1]],[b[0],.065,b[1]],.025,stripe)}
+ const stripe=new THREE.MeshLambertMaterial({color:0x686c53});
+ function floorRoute([x,z],[endX,endZ]){
+  const dx=endX-x,dz=endZ-z;
+  const mark=new THREE.Mesh(new THREE.PlaneGeometry(Math.hypot(dx,dz),.06),stripe);
+  mark.position.set((x+endX)/2,.078,(z+endZ)/2);
+  mark.rotation.set(-Math.PI/2,0,-Math.atan2(dz,dx));
+  mark.receiveShadow=true;
+  scene.add(mark);
+ }
  floorRoute([-6,5],[-3,5]);floorRoute([-3,5],[-3,-3]);floorRoute([-3,-3],[5,-3]);floorRoute([-3,-3],[-6,-6]);
- for(const [text,x,z] of [['01 / UTILITIES',-8,-4.5],['02 / SERVICE BAY',-7,5],['03 / CREW & CONTROL',5,-1]]){const mark=label(scene,text,x,.08,z,0,.6,0xa8b08b);mark.rotation.x=-Math.PI/2;mark.scale.x=3;}
+ for(const [text,x,z] of [['01 / UTILITIES',-8,-4.5],['02 / SERVICE BAY',-6.8,3.45],['03 / CREW & CONTROL',5,-1]]){const mark=label(scene,text,x,.08,z,0,.6,0xa8b08b);mark.rotation.x=-Math.PI/2;mark.scale.x=3;}
  // An unoccupied seat angled toward the moon gives the crew corner a human focal point.
  const seat=new THREE.Group();seat.position.set(7.5,0,-8.9);scene.add(seat);box(seat,.65,.12,.65,cream,0,.6,0);box(seat,.65,.65,.1,ink,0,1,-.28);for(const x of [-.25,.25])for(const z of [-.24,.24])box(seat,.07,.55,.07,ink,x,.3,z);examineRoot(seat,'seat');for(const x of [-.25,.25])box(scene,.18,.006,.75,ink,7.5+x,.04,-8.65);
  function handleObject(o){if(o.userData.environmentType==='window'){narration.hidden=true;onWindow();return true}const entry=nextObservation(o.userData.observationId,counts);if(!entry)return false;narration.querySelector('strong').textContent=entry.name;narration.querySelector('p').textContent=entry.text;narration.hidden=false;until=performance.now()+8500;sound('select');return true}

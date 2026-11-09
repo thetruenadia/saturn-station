@@ -1,6 +1,6 @@
 import {createBackgroundMusic} from './background-music.js?v=menu-music3';
 import {ROOM_LAYOUT,OBSERVATION_PORT} from './room-layout.js?v=window3';
-import {installRoomStory} from './room-story.js?v=story1';
+import {installRoomStory} from './room-story.js?v=matte2';
 import {createObservationView} from './observation-view.js?v=window3';
 import {openingDirective,createControlGuide} from './opening-guidance.js?v=room2';
 import {createAccessProbe} from './access-probe.js?v=polish1';
@@ -236,7 +236,6 @@ for(let x=-2.4;x<=2.4;x+=.8)box(exchanger,.16,.19,2.9,ivory,x,5.1,0);
 for(let i=0;i<10;i++){const a=i*Math.PI*2/10;cylinder(exchanger,.07,.07,.14,doorFrame,-2.7,4.25+1.55*Math.sin(a),1.55*Math.cos(a),0,Math.PI/2)}
 // Observation window and Enceladus view are constructed by reference-assets.js.
 // Workshop zones: scrap/wake, fabrication, generator and command, with clear central circulation.
-const pathPaint=mat(0xb1a16e,.98,.05);
 const generatorLight=new THREE.PointLight(0xffc17b,18,10,2);generatorLight.position.set(5,4,-7);scene.add(generatorLight);
 const benchLight=new THREE.PointLight(0xffd99b,12,10,2);benchLight.position.set(-9,3.5,4);scene.add(benchLight);
 // Terminal is physically separated from the generator and exit.
@@ -961,8 +960,9 @@ scene.traverse(o=>{
  o.material=roofMaterials.get(o.material);o.children.forEach(c=>{if(c.isLineSegments)c.visible=false});
 });
 const workFixtures=[],redFixtures=[];
+const lampCableMaterial=new THREE.MeshLambertMaterial({color:0x242623});
 function workLamp(x,y,z,color,intensity){
- for(const dx of [-.55,.55])cylinder(scene,.022,.022,7-y,doorFrame,x+dx,(7+y)/2,z);
+ for(const dx of [-.55,.55])cylinder(scene,.022,.022,7-y,lampCableMaterial,x+dx,(7+y)/2,z);
  const housing=box(scene,1.55,.18,.52,doorFrame,x,y,z);
  const material=new THREE.MeshStandardMaterial({color:0xd5d7c4,emissive:color,emissiveIntensity:0});
  box(scene,1.28,.045,.34,material,x,y-.115,z,false);
@@ -984,7 +984,6 @@ for(const [x,z] of [[-13.4,5],[-13.4,-5],[0,-10.5],[10,-10.5]]){
 // Low repair-bay rails and floor markings preserve open walking routes.
 for(const x of [-11.9,-7.2]){box(scene,.12,.1,3.1,hazardPaint,x,.12,6.5);for(const z of [5.1,7.9])box(scene,.18,.7,.18,deckSteel,x,.35,z)}
 for(const z of [4.9,8.1])box(scene,4.8,.06,.1,hazardPaint,-9.55,.12,z);
-label(scene,'REPAIR BAY',-9.5,.16,8.2,0,1.1,0xc9ae75).rotation.x=-Math.PI/2;
 box(scene,3.0,.06,1.7,deckSteel,-10.8,.08,-8.5);
 
 // The old floating CONTROL label was removed with the obsolete control-alcove props.
@@ -1015,7 +1014,7 @@ const SETTINGS_KEY='saturn-station-0.2-settings-v1';
 let musicVolume=35,brightness=100,settingsWasPaused=false;
 try{const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY));if(saved){if(Number.isFinite(saved.music))musicVolume=THREE.MathUtils.clamp(saved.music,0,100);if(Number.isFinite(saved.brightness))brightness=THREE.MathUtils.clamp(saved.brightness,50,180)}}catch{}
 const musicToggle=document.createElement('button');musicToggle.id='menu-music-toggle';musicToggle.style.cssText='position:fixed;right:18px;bottom:18px;z-index:240;width:42px;height:42px;padding:9px;background:#101b20b3;color:#e7eedb;border:1px solid #8d9c8466;border-radius:50%;cursor:pointer';document.body.append(musicToggle);
-const backgroundMusic=createBackgroundMusic({volume:musicVolume/100,active:true,onState(state){
+const backgroundMusic=createBackgroundMusic({volume:musicVolume/100,active:!menuLaunch,onState(state){
  musicToggle.hidden=state==='inactive';const enabled=state!=='muted';musicToggle.setAttribute('aria-label',enabled?'Mute menu music':'Unmute menu music');musicToggle.setAttribute('aria-pressed',String(enabled));musicToggle.title=enabled?'Mute menu music':'Unmute menu music';
  musicToggle.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M11 5 6 9H3v6h3l5 4Z"/>'+(enabled?'<path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>':'<path d="m16 9 6 6m0-6-6 6"/>')+'</svg>';
 }});
@@ -1141,7 +1140,7 @@ doorAccessProbe.visible=workshop.hasProbe;workshop.update(dt);updateStationSyste
 roomStory=installRoomStory({THREE,scene,interactables,referenceAssets,terminal,exchanger,box,cylinder,pipeBetween,label,notify,sound:playSound,onWindow:()=>observation.show()});
 observation=createObservationView({THREE,viewport,renderer,windowGlass:referenceAssets.windowGlass,sourceCamera:activeCamera,reducedMotion,sound:playSound,onOpen(){Object.keys(keys).forEach(k=>keys[k]=false);controlGuide.hide();roomStory.hide();document.body.classList.add('observing');if(humGain&&audio)humGain.gain.setTargetAtTime(0,audio.currentTime,.2)},onClose(){Object.keys(keys).forEach(k=>keys[k]=false);document.body.classList.remove('observing')}});
 opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();if(menuLaunch?.mode!=='resume'){doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;}updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
-mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound,unlockAudio});
+mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound,unlockAudio,onVisibility:visible=>backgroundMusic.setActive(visible)});
 const returnMenuButton=document.createElement('button');returnMenuButton.textContent='MAIN MENU';returnMenuButton.addEventListener('click',()=>{hideTerminal();closeInventory();saveProgress();setPaused(true);mainMenu.show()});document.querySelector('#pause-restart').after(returnMenuButton);
 if(menuLaunch?.mode==='resume')opening.skip();else if(!menuLaunch)mainMenu.show();
 resize();updateStationSystems(0);animate();document.querySelector('#loading').classList.add('hidden');document.querySelector('#charge').textContent='60%';document.querySelector('#charge-bar').style.width='60%';updateCharge();updateInventory();refreshDirective();say('MU-1 ONLINE.');
