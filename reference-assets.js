@@ -1,4 +1,5 @@
-export const ROOM_COLLIDERS=[[-5,2,1,.73],[5,-7,1.15,.55],[-7,-4,1.1,.6],[-9,2.2,1.05,.9],[9.8,4.8,1.05,.9],[10,-3.5,.95,.85],[-10.5,-6.6,.9,.8]];
+import {ROOM_LAYOUT,ROOM_COLLIDERS,OBSERVATION_PORT} from './room-layout.js?v=window3';
+export {ROOM_COLLIDERS};
 // Reference-led procedural assets for prototype 0.2. Gameplay groups remain stable.
 export function stepFloorBody(body,dt){
  const step=Math.min(Math.max(dt,0),.04);if(body.sleeping)return;
@@ -89,15 +90,18 @@ export function installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatc
  let armHeld=true;const armBody={height:arm.position.y,velocity:0,floor:arm.position.y,sleeping:true};
  function releaseArm(){armHeld=false;armBody.height=arm.position.y+.035;armBody.velocity=-.12;armBody.sleeping=false;}
 
- // 05/06: chamfered ship viewport and the user's Enceladus photograph.
- const windowGroup=group('enceladus-observation-window',5,4.35,-10.52);const w=7.7,h=3.9,ch=.58;
+ // Observation port; the same rendered sky stays in its glass during the close-up.
+ const {x:portX,y:portY,z:portZ,width:w,height:h}=OBSERVATION_PORT;
+ const windowGroup=group('enceladus-observation-window',portX,portY,portZ);const ch=.58;
  function octagon(width,height,c){return [[-width/2+c,-height/2],[width/2-c,-height/2],[width/2,-height/2+c],[width/2,height/2-c],[width/2-c,height/2],[-width/2+c,height/2],[-width/2,height/2-c],[-width/2,-height/2+c]];}
  function path(points,Type){const p=new Type();p.moveTo(...points[0]);points.slice(1).forEach(v=>p.lineTo(...v));p.closePath();return p;}
  const outer=path(octagon(w,h,ch),THREE.Shape);outer.holes.push(path(octagon(w-.42,h-.42,ch-.12).reverse(),THREE.Path));
  const frame=new THREE.Mesh(new THREE.ExtrudeGeometry(outer,{depth:.25,bevelEnabled:true,bevelSize:.045,bevelThickness:.035,bevelSegments:2,steps:1}),cream);windowGroup.add(frame);
  const imageGeometry=new THREE.ShapeGeometry(path(octagon(w-.39,h-.39,ch-.1),THREE.Shape));const uv=imageGeometry.attributes.uv;const pos=imageGeometry.attributes.position;for(let i=0;i<uv.count;i++)uv.setXY(i,(pos.getX(i)+w/2)/w,(pos.getY(i)+h/2)/h);uv.needsUpdate=true;
- const photo=new THREE.TextureLoader().load('./assets/enceladus.jpg');photo.colorSpace=THREE.SRGBColorSpace;photo.repeat.set(1,.53);photo.offset.set(0,0);
- const glass=new THREE.Mesh(imageGeometry,new THREE.MeshBasicMaterial({map:photo,toneMapped:false}));glass.position.z=.01;windowGroup.add(glass);
+ const glass=new THREE.Mesh(imageGeometry,new THREE.MeshBasicMaterial());
+ glass.material.color.set(0x03070c);
+ glass.userData.aperture={width:w,height:h};
+ glass.position.z=.01;windowGroup.add(glass);
  for(const y of [-h/2,h/2]){B(windowGroup,1.15,.26,.18,steel,0,y,.31);for(const x of [-2.9,2.9])B(windowGroup,.42,.12,.12,black,x,y,.28);}
  for(const x of [-w/2,w/2])for(const y of [-.9,.9])B(windowGroup,.12,.26,.14,steel,x,y,.28);
  for(const x of [-.76,.76]){C(windowGroup,.12,.04,black,x,-h/2,.43,Math.PI/2);for(let i=0;i<4;i++)B(windowGroup,.14,.012,.02,steel,x,-h/2-.05+i*.035,.46);}
@@ -114,7 +118,8 @@ export function installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatc
  for(let i=0;i<3;i++){C(engine,.15,.22,black,-.36,.69+i*.4,.62,Math.PI/2);cable(engine,[[-.36,.69+i*.4,.74],[.35,.83+i*.4,.74],[.55,1.6+i*.3,.28]],.025,copper);}
  const crank=group('engine-drive',.72,.72,0,engine);const wheel=ring(crank,.34,.07,steel,0,0,0);for(let i=0;i<4;i++){const spoke=B(crank,.045,.6,.05,black);spoke.rotation.z=i*Math.PI/4;}rotors.push(crank);plaque(engine,'AUX / COMPRESSOR',0,1.53,.53,.83,.13);lamp(engine,.33,1.32,.54);
  for(const machine of [workArm,turbine,press,engine]){const light=new THREE.PointLight(0xd6dfc1,0,5,2);light.position.set(.4,2.7,1.1);machine.add(light);workLights.push(light);}
- const colliders=ROOM_COLLIDERS;
+ for(const [key,root] of Object.entries({workArm,turbine,press,engine})){const point=ROOM_LAYOUT[key];root.position.set(point.x,0,point.z)}
+ const colliders=ROOM_COLLIDERS.map(c=>[...c]);
  let phase=0,speed=0;
  function update(dt,powered,reducedMotion=false,beingPickedUp=false){
   // A smooth start/stop; zero power eventually means no mechanical movement.
@@ -126,5 +131,5 @@ export function installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatc
   workLights.forEach(l=>l.intensity=powered?9:0);
   indicators.forEach((m,i)=>{if(m.needle){m.needle.rotation.z=powered?-.6+Math.sin(phase*.7+i)*.08:.85;}else{m.emissiveIntensity=powered?1.8:0;m.color.set(powered?0x80b79b:0x25362d);}});
  }
- return {update,releaseArm,armBody,colliders,workArm,windowGroup,turbine,press,engine,rotors,reciprocators};
+ return {update,releaseArm,armBody,colliders,workArm,windowGroup,windowGlass:glass,turbine,press,engine,rotors,reciprocators};
 }

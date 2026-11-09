@@ -1,6 +1,6 @@
 import {listSaves,recordSave,newGame,loadSave,deleteSave,LAUNCH_KEY} from './menu-saves.js?v=menu1';
 export function createMainMenu({saveCurrent,sound}){
- const frame=document.createElement('iframe');frame.id='station-main-menu';frame.title='Saturn Station main menu';frame.src='./station-menu.html?v=menu1';frame.hidden=true;
+ const frame=document.createElement('iframe');frame.id='station-main-menu';frame.title='Saturn Station main menu';frame.src='./station-menu.html?v=story1';frame.hidden=true;
  frame.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;z-index:220;background:#000;display:none';document.body.append(frame);
  let active=false;
  function send(){let saves=[],error='';try{saves=listSaves(localStorage).map(({id,name,t})=>({id,name,t}));}catch{error='Device storage is unavailable. Starting a new session may not save progress.';}frame.contentWindow?.postMessage({type:'saturn-menu-state',saves,error},location.origin);}

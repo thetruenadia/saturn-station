@@ -1,18 +1,21 @@
+import {ROOM_LAYOUT,OBSERVATION_PORT} from './room-layout.js?v=window3';
+import {installRoomStory} from './room-story.js?v=story1';
+import {createObservationView} from './observation-view.js?v=window3';
 import {openingDirective,createControlGuide} from './opening-guidance.js?v=room2';
 import {createAccessProbe} from './access-probe.js?v=polish1';
 import {SERVICE_POSITION} from './workshop-rules.js?v=polish1';
-import {createMainMenu} from './main-menu.js?v=menu1';
+import {createMainMenu} from './main-menu.js?v=story1';
 import {consumeLaunch} from './menu-saves.js?v=menu1';
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
 import {createTerminalBrowser,createDemoEnding} from './terminal-browser.js?v=polish1';
-import {installReferenceAssets} from './reference-assets.js?v=room2';
+import {installReferenceAssets} from './reference-assets.js?v=window3';
 import { applyArtDirection } from './station-art.js?v=etna1';
 
-import {createMakerOpening} from './maker-opening.js?v=menu1';
-import {createWorkshopSystem} from './workshop-system.js?v=room2';
+import {createMakerOpening} from './maker-opening.js?v=story1';
+import {createWorkshopSystem} from './workshop-system.js?v=story1';
 
-let opening,mainMenu;let tutorialWalked=false,tutorialLooked=false;
+let opening,mainMenu,observation,roomStory;let tutorialWalked=false,tutorialLooked=false;
 let menuLaunch=null;try{menuLaunch=consumeLaunch(sessionStorage)}catch{}
 const viewport=document.querySelector('#viewport');
 const scene=new THREE.Scene();
@@ -144,13 +147,13 @@ const cellLoop=new THREE.Mesh(new THREE.TorusGeometry(.07,.012,6,18),cellCopper)
 cell.rotation.x=-Math.PI/2;
 cell.visible=false;
 scene.add(caseGroup);caseGroup.userData={name:'SEALED SERVICE CASE',x:-5,z:2};interactables.push(caseGroup);
-const generator=new THREE.Group();generator.position.set(5,0,-7);box(generator,1,.7,.8,edgeMat,0,.35,0);box(generator,.7,.9,.6,wallMat,0,1.1,0);box(generator,.48,.22,.05,screenMat,0,1.25,.33);
+const generator=new THREE.Group();generator.position.set(ROOM_LAYOUT.generator.x,0,ROOM_LAYOUT.generator.z);box(generator,1,.7,.8,edgeMat,0,.35,0);box(generator,.7,.9,.6,wallMat,0,1.1,0);box(generator,.48,.22,.05,screenMat,0,1.25,.33);
 const generatorLever=new THREE.Group();generatorLever.position.set(.37,1.35,.35);generator.add(generatorLever);
 cylinder(generatorLever,.16,.16,.15,rustMat,0,0,0,Math.PI/2);
 const leverHandle=box(generatorLever,.09,.65,.09,edgeMat,0,.35,.04);leverHandle.rotation.z=-.34;
 cylinder(generatorLever,.16,.16,.16,greenMat,-.11,.7,.04);
 for(let i=0;i<6;i++)box(generator,.12,.08,.58,edgeMat,-.35+i*.14,.48,.12);
-scene.add(generator);generator.userData={name:'AUXILIARY POWER DISTRIBUTION',x:5,z:-7};interactables.push(generator);
+scene.add(generator);generator.userData={name:'AUXILIARY POWER DISTRIBUTION',x:ROOM_LAYOUT.generator.x,z:ROOM_LAYOUT.generator.z};interactables.push(generator);
 // Sliding double-leaf pressure bulkhead with a visible rectangular doorway.
 const hatch=new THREE.Group();hatch.position.set(11.4,0,-10.6);scene.add(hatch);
 const doorFrame=mat(0x343c34,.83,.35),doorPaint=mat(0x88876a,.88,.22),doorInset=mat(0x42483e,.8,.34),doorWarning=mat(0xc19b4b,.87,.2);
@@ -176,7 +179,7 @@ for(const side of [-1,1])box(hatch,.035,.14,.035,doorWarning,-1.4+side*.065,1.48
 const deckSteel=wornSteelMat,deckRust=wornRustMat,deckCream=wornSandMat;
 for(let z=-10;z<=10;z+=2){box(scene,27,.07,.16,deckSteel,0,.035,z);for(let x=-13;x<=13;x+=3.3)box(scene,.22,.045,1.8,deckRust,x,.052,z+.85)}
 for(const x of [-13.5,13.5])for(let z=-9;z<=9;z+=3){box(scene,.35,7,.42,deckSteel,x,3.5,z);box(scene,.7,.16,.7,deckRust,x,6.7,z)}
-for(const z of [-10.6,10.6])for(let x=-12;x<=12;x+=3){if(z<0&&x>9)continue;box(scene,.35,7,.4,deckSteel,x,3.5,z)}
+for(const z of [-10.6,10.6])for(let x=-12;x<=12;x+=3){if(z<0&&(x>9||Math.abs(x-OBSERVATION_PORT.x)<OBSERVATION_PORT.width/2))continue;box(scene,.35,7,.4,deckSteel,x,3.5,z)}
 // Scrap and tools surrounding MU-1's waking area.
 const scrap=new THREE.Group();scrap.position.set(-10,0,7);scene.add(scrap);
 // Dense, grounded salvage from industrial motor and gear assemblies.
@@ -214,17 +217,14 @@ const olivePaint=wornOliveMat,sandPaint=wornSandMat,inkBlack=mat(0x282b25,.92,.1
 for(let x=-12;x<=7.5;x+=3.5){
  box(scene,3.12,3.2,.11,x%2===0?olivePaint:sandPaint,x,3.1,-10.65);
  box(scene,3.1,.11,.18,inkBlack,x,1.48,-10.53);
- for(const y of [1.7,4.5])for(const dx of [-1.38,1.38])cylinder(scene,.055,.055,.06,inkBlack,x+dx,y,-10.52,Math.PI/2);
+ for(const y of [1.7,4.5])for(const dx of [-1.38,1.38]){
+  if(Math.abs(x+dx-OBSERVATION_PORT.x)<OBSERVATION_PORT.width/2&&Math.abs(y-OBSERVATION_PORT.y)<OBSERVATION_PORT.height/2)continue;
+  cylinder(scene,.055,.055,.06,inkBlack,x+dx,y,-10.52,Math.PI/2);
+ }
 }
 for(let z=-9;z<=9;z+=3.6){
  box(scene,.12,3.15,3.2,olivePaint,-13.63,3.1,z);
  box(scene,.22,.13,3.1,inkBlack,-13.5,1.5,z);
-}
-for(let i=0;i<7;i++){
- const x=-11+i*3.5;
- box(scene,1.35,.06,.8,hazardPaint,x,.095,-2);
- box(scene,.15,.07,.82,inkBlack,x-.48,.13,-2);
- box(scene,.15,.07,.82,inkBlack,x+.48,.13,-2);
 }
 // Illustrated industrial set piece: enormous serviced heat-exchanger, catwalk and Saturn observation port.
 const exchanger=new THREE.Group();exchanger.position.set(-5.5,0,-8.5);scene.add(exchanger);
@@ -233,18 +233,13 @@ cylinder(exchanger,1.75,1.75,6.5,wornOlive,0,4.25,0,0,Math.PI/2);
 for(let x=-2.7;x<=2.7;x+=1.35)cylinder(exchanger,1.83,1.83,.22,oxidisedCopper,x,4.25,0,0,Math.PI/2);
 for(let x=-2.4;x<=2.4;x+=.8)box(exchanger,.16,.19,2.9,ivory,x,5.1,0);
 for(let i=0;i<10;i++){const a=i*Math.PI*2/10;cylinder(exchanger,.07,.07,.14,doorFrame,-2.7,4.25+1.55*Math.sin(a),1.55*Math.cos(a),0,Math.PI/2)}
-box(exchanger,8.6,.28,2.5,doorFrame,0,2.15,1.4);
-for(let x=-3.9;x<=3.9;x+=.8){box(exchanger,.1,1.2,.11,ivory,x,2.9,2.65);box(exchanger,.75,.05,2.3,oxidisedCopper,x,2.32,1.4)}
-box(exchanger,8.2,.09,.12,ivory,0,3.5,2.65);
 // Observation window and Enceladus view are constructed by reference-assets.js.
 // Workshop zones: scrap/wake, fabrication, generator and command, with clear central circulation.
 const pathPaint=mat(0xb1a16e,.98,.05);
-for(let z=-7;z<=8;z+=1.25)for(const x of [3.8,8.2])box(scene,.12,.024,.75,pathPaint,x,.1,z);
-for(let x=-11;x<=-4;x+=1.2)box(scene,.7,.024,.12,pathPaint,x,.1,3.6);
 const generatorLight=new THREE.PointLight(0xffc17b,18,10,2);generatorLight.position.set(5,4,-7);scene.add(generatorLight);
 const benchLight=new THREE.PointLight(0xffd99b,12,10,2);benchLight.position.set(-9,3.5,4);scene.add(benchLight);
 // Terminal is physically separated from the generator and exit.
-const terminal=new THREE.Group();terminal.position.set(-7,0,-4);scene.add(terminal);
+const terminal=new THREE.Group();terminal.position.set(ROOM_LAYOUT.terminal.x,0,ROOM_LAYOUT.terminal.z);scene.add(terminal);
 const rackCream=wornPaint(0xb7b398,95),rackBlue=wornPaint(0x29486c,96),rackBlack=mat(0x141b1b,.72,.3),rackHandle=mat(0x8d9281,.5,.65);
 box(terminal,2.05,.15,1.15,rackBlack,0,.08,0);
 box(terminal,1.96,2.03,1.03,rackCream,0,1.14,0);
@@ -277,7 +272,7 @@ cylinder(terminal,.035,.035,.045,mat(0xa8442d),.72,2.4,.64,Math.PI/2);
 assetLabel(terminal,'WAVETERM / STATION B-7',1.65,.10,0,3.62,.594,'#29486c','#cec9aa');
 const rackCable=new THREE.CatmullRomCurve3([new THREE.Vector3(-.35,1.85,.65),new THREE.Vector3(-.15,1.3,.78),new THREE.Vector3(-.30,.4,.85),new THREE.Vector3(-.8,.22,.7)]);
 terminal.add(new THREE.Mesh(new THREE.TubeGeometry(rackCable,24,.027,7,false),rackHandle));
-terminal.userData={name:'CONTROL TERMINAL',x:-7,z:-4};interactables.push(terminal);
+terminal.userData={name:'CONTROL TERMINAL',x:ROOM_LAYOUT.terminal.x,z:ROOM_LAYOUT.terminal.z};interactables.push(terminal);
 // The existing hatch stays at the exit and is controlled exclusively by the terminal.
 // MU-1 silhouette-first reconstruction for 0.2.
 // Proportions follow the supplied sprite/blueprint: broad, heavy upper chassis,
@@ -322,7 +317,7 @@ function label(parent,text,x,y,z,rotationY=0,size=.12,color=0xd0cbb2){
   const c=document.createElement('canvas');c.width=256;c.height=128;
   const ctx=c.getContext('2d');ctx.clearRect(0,0,256,128);
   ctx.fillStyle='#'+color.toString(16).padStart(6,'0');ctx.font='bold 76px sans-serif';
-  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,128,65);
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,128,65,240);
   const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
   const mesh=new THREE.Mesh(new THREE.PlaneGeometry(size*2,size),new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide,depthWrite:false}));
   mesh.position.set(x,y,z);mesh.rotation.y=rotationY;parent.add(mesh);return mesh;
@@ -679,6 +674,7 @@ function removeObject(o){if(selected===o)selected=null;scene.remove(o);const i=i
 function nearest(){let best=null,d=Infinity;for(const o of interactables){const n=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(n>1.8)continue;const score=n-(o.userData.workshopType==='locker-loot'?.8:0);if(score<d){d=score;best=o}}return d<1.8?best:null}
 function interact(){if(opening?.active)return;if(ended||pickup||inventory.classList.contains('open'))return;const o=(selected&&interactables.includes(selected)&&Math.hypot(robot.position.x-selected.userData.x,robot.position.z-selected.userData.z)<1.8?selected:null)||nearest();if(!o){notify('NO SERVICE OBJECT IN REACH');return}const dist=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(dist>1.8){target=new THREE.Vector3(o.userData.x,0,o.userData.z);notify('MOVING TO '+o.userData.name);return}
 const id=o.userData.name;interactionPulse=1;
+if(o.userData.environmentType){selected=null;roomStory.handle(o);return;}
 if(o.userData.workshopType){selected=null;workshop.handle(o);return;}
 if(id==='MAINTENANCE NOTE'){notify('PERSONAL NOTE · STATION ACCESS REQUIRED')}
 else if(id==='LOCK-SERVICE MANIPULATOR'){notify('PART REPLACEMENT REQUIRES A SERVICE BAY')}
@@ -744,7 +740,7 @@ else if(cmd==='kill'){charge=0;updateCharge();triggerDeath()}
 else if(cmd==='clear')consoleOutput.textContent='SATURN STATION // 0.2 DEV CONSOLE';
 else consoleLog('UNKNOWN COMMAND. Type help.')}
 let godMode=false;document.querySelector('#console-form').addEventListener('submit',e=>{e.preventDefault();const value=consoleInput.value;consoleLog('> '+value);runCommand(value);consoleInput.value=''});
-window.addEventListener('keydown',e=>{if(mainMenu?.active)return;const k=e.key.toLowerCase();if(opening?.active){if(k==='escape'&&opening.elapsed>0)setPaused(!paused);return;}if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){terminalUI.key(e);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
+window.addEventListener('keydown',e=>{if(mainMenu?.active||observation?.active)return;const k=e.key.toLowerCase();if(opening?.active){if(k==='escape'&&opening.elapsed>0)setPaused(!paused);return;}if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){terminalUI.key(e);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
 if(k==='f2'){e.preventDefault();devConsole.classList.add('open');devConsole.setAttribute('aria-hidden','false');consoleInput.focus();return}
 if(workshop.isOpen||workshop.miniOpen){if(k==='escape'){workshop.close();return}if(k==='c'){if(workshop.miniOpen)workshop.open();else workshop.close();return}if(workshop.isOpen)return}
 if(k==='i'&&inventory.classList.contains('open')){closeInventory();return}
@@ -768,7 +764,7 @@ const hintBox=document.createElement('aside');hintBox.id='hint-box';hintBox.hidd
 const hintButton=document.createElement('button');hintButton.id='hint-toggle';hintButton.textContent='?';hintButton.title='Controls (H)';document.querySelector('#viewport').append(hintButton);
 function toggleHint(){controlGuide.toggle()}
 hintButton.onclick=toggleHint;hintBox.querySelector('button').onclick=()=>hintBox.hidden=true;
-window.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='h'&&!opening?.active&&!paused&&!devConsole.classList.contains('open')&&!settingsPanel.open&&!mainMenu?.active&&!terminalOpen&&!workshop.isOpen&&!inventory.classList.contains('open'))toggleHint()});
+window.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='h'&&!observation?.active&&!opening?.active&&!paused&&!devConsole.classList.contains('open')&&!settingsPanel.open&&!mainMenu?.active&&!terminalOpen&&!workshop.isOpen&&!inventory.classList.contains('open'))toggleHint()});
 
 
 // Drag to look around in first person. Keep orbit controls exclusive to the isometric view.
@@ -919,6 +915,7 @@ function refreshDirective(){
  if(task.textContent!==text){task.textContent=text;task.setAttribute('aria-live','polite');task.parentElement.classList.remove('directive-updated');void task.offsetWidth;task.parentElement.classList.add('directive-updated');}
 }
 function interactionHint(o){
+ if(o.userData.environmentType)return o.userData.environmentType==='window'?'LOOK OUTSIDE':'EXAMINE';
  if(o.userData.workshopType==='locker')return 'OPEN SALVAGE LOCKER';
  if(o.userData.workshopType==='bench')return 'OPEN WORKSHOP';
  if(o.userData.workshopType==='shard')return 'RECOVER SPEC SHARD';
@@ -974,7 +971,7 @@ function workLamp(x,y,z,color,intensity){
  const light=new THREE.PointLight(color,0,12,2);light.position.set(x,y-.35,z);scene.add(light);
  workFixtures.push({light,material,intensity});
 }
-for(const [x,y,z,c,i] of [[-9,4.5,6,0xffd6a0,36],[6,4.7,5,0xffd6a0,38],[-7,4.7,-4,0xffd6a0,35],[5,4.6,-7,0xc5e5e8,42],[11.4,4,-9.5,0xe9edcc,35],[0,5,-1,0xe4dfbd,38]])workLamp(x,y,z,c,i);
+for(const [x,y,z,c,i] of [[-9,4.5,6,0xffd6a0,36],[6,4.7,5,0xffd6a0,38],[-7,4.7,-4,0xffd6a0,35],[-10.8,4.6,-8.5,0xc5e5e8,42],[11.4,4,-9.5,0xe9edcc,35],[0,5,-1,0xe4dfbd,38]])workLamp(x,y,z,c,i);
 for(const [x,z] of [[-13.4,5],[-13.4,-5],[0,-10.5],[10,-10.5]]){
  const material=new THREE.MeshStandardMaterial({color:0xa6190d,emissive:0xff1608,emissiveIntensity:2.4});
  box(scene,.36,.25,.15,doorFrame,x,2.8,z);box(scene,.25,.14,.04,material,x,2.8,z+.10,false);
@@ -990,8 +987,8 @@ for(const [x,z] of [[-13.4,5],[-13.4,-5],[0,-10.5],[10,-10.5]]){
 for(const x of [-11.9,-7.2]){box(scene,.12,.1,3.1,hazardPaint,x,.12,6.5);for(const z of [5.1,7.9])box(scene,.18,.7,.18,deckSteel,x,.35,z)}
 for(const z of [4.9,8.1])box(scene,4.8,.06,.1,hazardPaint,-9.55,.12,z);
 label(scene,'REPAIR BAY',-9.5,.16,8.2,0,1.1,0xc9ae75).rotation.x=-Math.PI/2;
-box(scene,3.7,.06,2.8,deckSteel,5,.08,-7);
-for(const x of [3.1,6.9])box(scene,.13,3.8,.25,ivory,x,1.9,-8.5);
+box(scene,3.0,.06,1.7,deckSteel,-10.8,.08,-8.5);
+
 // The old floating CONTROL label was removed with the obsolete control-alcove props.
 label(scene,'EXIT B-7',11.4,3.6,-10.15,0,.7,0xe9d7a4);
 function setStationPower(value){
@@ -1063,13 +1060,13 @@ function playSound(kind){
 function saveProgress(){
  if(opening?.active||mainMenu?.active)return;
  if(resettingProgress)return;
- try{const progress={version:1,charge,hasArm,armEquipped,caseOpen,caseCellTaken,hasNote,hasCell,usedCell,cellCount,workshop:workshop.serialize(),powerOn,doorOpen,terminalBooted,x:robot.position.x,z:robot.position.z,heading:robot.rotation.y};if(mainMenu)mainMenu.record(progress);else localStorage.setItem(SAVE_KEY,JSON.stringify(progress));return true}catch{return false}
+ try{const progress={version:1,charge,hasArm,armEquipped,caseOpen,caseCellTaken,hasNote,hasCell,usedCell,cellCount,workshop:workshop.serialize(),observations:roomStory?.serialize(),powerOn,doorOpen,terminalBooted,x:robot.position.x,z:robot.position.z,heading:robot.rotation.y};if(mainMenu)mainMenu.record(progress);else localStorage.setItem(SAVE_KEY,JSON.stringify(progress));return true}catch{return false}
 }
 function restoreProgress(){
  try{
   const p=JSON.parse(localStorage.getItem(SAVE_KEY));if(!p||p.version!==1)return;
   const flag=k=>p[k]===true;
-  hasNote=flag('hasNote');if(hasNote)removeObject(maintenanceNote);hasArm=flag('hasArm');armEquipped=false;caseOpen=flag('caseOpen');caseCellTaken=flag('caseCellTaken')||flag('hasCell')||flag('usedCell');setCellCount(Number.isInteger(p.cellCount)?p.cellCount:(flag('hasCell')&&!flag('usedCell')?1:0));workshop.restore(p.workshop);
+  hasNote=flag('hasNote');if(hasNote)removeObject(maintenanceNote);hasArm=flag('hasArm');armEquipped=false;caseOpen=flag('caseOpen');caseCellTaken=flag('caseCellTaken')||flag('hasCell')||flag('usedCell');setCellCount(Number.isInteger(p.cellCount)?p.cellCount:(flag('hasCell')&&!flag('usedCell')?1:0));workshop.restore(p.workshop);roomStory?.restore(p.observations);
   charge=Number.isFinite(p.charge)?THREE.MathUtils.clamp(p.charge,1,100):60;
   if(Number.isFinite(p.x)&&Number.isFinite(p.z))robot.position.set(THREE.MathUtils.clamp(p.x,-12.5,12.5),0,THREE.MathUtils.clamp(p.z,-9.5,9.5));
   if(Number.isFinite(p.heading))robot.rotation.y=p.heading;
@@ -1083,7 +1080,7 @@ function restoreProgress(){
 window.addEventListener('pagehide',saveProgress);
 function updateStationSystems(dt){
  const active=!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!workshop.isOpen&&!devConsole.classList.contains('open');
- refreshDirective();roomCoach.hidden=!!opening?.active||menuLaunch?.mode!=='new'||(tutorialWalked&&tutorialLooked)||paused||ended||terminalOpen||inventory.classList.contains('open')||workshop.isOpen||devConsole.classList.contains('open');roomCoach.textContent=!tutorialWalked?'↓ MU-1 · Hold W A S D to walk.':'↔ LOOK · Drag empty space to orbit. Scroll to zoom. R resets the camera.';terminalUI.update(dt);updateLighting(dt);animatePickup(dt);stationArt.updateOcclusion(camera,dt);
+ roomStory?.update(paused||ended||terminalOpen||inventory.classList.contains('open')||workshop.isOpen);observation?.update(0);refreshDirective();roomCoach.hidden=!!opening?.active||menuLaunch?.mode!=='new'||(tutorialWalked&&tutorialLooked)||paused||ended||terminalOpen||inventory.classList.contains('open')||workshop.isOpen||devConsole.classList.contains('open');roomCoach.textContent=!tutorialWalked?'↓ MU-1 · Hold W A S D to walk.':'↔ LOOK · Drag empty space to orbit. Scroll to zoom. R resets the camera.';terminalUI.update(dt);updateLighting(dt);animatePickup(dt);stationArt.updateOcclusion(camera,dt);
  if(active){systemTime+=dt;saveElapsed+=dt;stepElapsed+=dt;if(gaitVelocity>.35&&!pickup&&stepElapsed>.56){playSound('step');stepElapsed=0}if(saveElapsed>2){saveElapsed=0;saveProgress()}}
  if(humGain&&audio)humGain.gain.setTargetAtTime(active?(powerOn?.16:.035):0,audio.currentTime,.25);
  if(musicGain&&audio){const audible=!document.hidden&&(!paused||settingsPanel.open)&&!ended;musicGain.gain.setTargetAtTime(audible?musicVolume/100*.12:0,audio.currentTime,.15);const chords=[[110,164.81,220],[98,146.83,196],[87.31,130.81,174.61],[98,146.83,220]],chord=chords[Math.floor(audio.currentTime/12)%chords.length];musicVoices.forEach((voice,i)=>voice.frequency.setTargetAtTime(chord[i],audio.currentTime,2))}
@@ -1100,7 +1097,7 @@ function moveRobot(dx,dz){
  if(canOccupy(robot.position.x+dx,robot.position.z))robot.position.x+=dx;
  if(canOccupy(robot.position.x,robot.position.z+dz))robot.position.z+=dz;
 }
-function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta();const dt=Math.min(elapsed,.04);if(mainMenu?.active)return;referenceAssets.update(paused||ended||workshop.isOpen?0:dt,powerOn,reducedMotion,!!pickup&&pickup.time>.53);if(opening?.active){controls.enabled=false;if(!paused)opening.update(elapsed);renderer.render(scene,opening.camera);return;}controls.enabled=!firstPerson&&!inventory.classList.contains('open')&&!workshop.isOpen&&!paused&&!devConsole.classList.contains('open')&&!terminalOpen;// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
+function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta();const dt=Math.min(elapsed,.04);if(mainMenu?.active){observation?.update(0);return;}if(observation?.active){controls.enabled=false;observation.update(dt);renderer.render(scene,observation.approachCamera);return;}referenceAssets.update(paused||ended||workshop.isOpen?0:dt,powerOn,reducedMotion,!!pickup&&pickup.time>.53);if(opening?.active){controls.enabled=false;if(!paused)opening.update(elapsed);renderer.render(scene,opening.camera);return;}controls.enabled=!firstPerson&&!inventory.classList.contains('open')&&!workshop.isOpen&&!paused&&!devConsole.classList.contains('open')&&!terminalOpen;// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
 const desiredFocus=workshop.isOpen?new THREE.Vector3(-5.3,1.3,2.2):new THREE.Vector3(robot.position.x,1.25,robot.position.z);
 const followDelta=desiredFocus.sub(controls.target).multiplyScalar(1-Math.exp(-dt*4));
 controls.target.add(followDelta);camera.position.add(followDelta);
@@ -1140,6 +1137,8 @@ if(!paused&&!ended&&!workshop.isOpen&&!godMode&&charge>0){charge=Math.max(0,char
 if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);leftLeaf.position.x=-1.85*t;rightLeaf.position.x=1.85*t;if(t>=1){doorOpening=false;doorOpen=true;updateTerminalStatus();task.textContent='Exit door open. Terminal remains available.';notify('DOOR OPEN')}}
 if(firstPerson){firstPersonCamera.position.set(robot.position.x,2.15,robot.position.z);firstPersonCamera.lookAt(robot.position.x+Math.sin(lookHeading)*Math.cos(lookPitch),2.15+Math.sin(lookPitch),robot.position.z+Math.cos(lookHeading)*Math.cos(lookPitch));}
 doorAccessProbe.visible=workshop.hasProbe;workshop.update(dt);updateStationSystems(dt);renderer.render(scene,activeCamera());updateNearbyUI()}
+roomStory=installRoomStory({THREE,scene,interactables,referenceAssets,terminal,exchanger,box,cylinder,pipeBetween,label,notify,sound:playSound,onWindow:()=>observation.show()});
+observation=createObservationView({THREE,viewport,renderer,windowGlass:referenceAssets.windowGlass,sourceCamera:activeCamera,reducedMotion,sound:playSound,onOpen(){Object.keys(keys).forEach(k=>keys[k]=false);controlGuide.hide();roomStory.hide();document.body.classList.add('observing');if(humGain&&audio)humGain.gain.setTargetAtTime(0,audio.currentTime,.2);if(musicGain&&audio)musicGain.gain.setTargetAtTime(musicVolume/100*.035,audio.currentTime,.3)},onClose(){Object.keys(keys).forEach(k=>keys[k]=false);document.body.classList.remove('observing')}});
 opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();if(menuLaunch?.mode!=='resume'){doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;}updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
 mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound});
 const returnMenuButton=document.createElement('button');returnMenuButton.textContent='MAIN MENU';returnMenuButton.addEventListener('click',()=>{hideTerminal();closeInventory();saveProgress();setPaused(true);mainMenu.show()});document.querySelector('#pause-restart').after(returnMenuButton);

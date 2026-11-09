@@ -1,6 +1,7 @@
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {createTerminalSession} from '../terminal-browser.js';
+import {ROOM_LAYOUT} from '../room-layout.js';
 import {ROOM_COLLIDERS} from '../reference-assets.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,6 +29,6 @@ test('terminal remains isolated even after an access probe has been fabricated',
 test('terminal close cancels animation, seals leaves, and updates directive',()=>{const {c}=setup();c.terminalUI.session.state.authenticated=true;c.doorOpening=true;c.leftLeaf.position.x=-1;c.terminalCommand('2');assert.equal(c.doorOpening,false);assert.equal(c.doorOpen,false);assert.equal(c.leftLeaf.position.x,0);assert.match(c.task.textContent,/sealed/);});
 test('terminal power-off closes UI and requires a new boot and password',()=>{const {c}=setup();c.terminalUI.session.state.authenticated=true;c.terminalBooted=true;c.terminalCommand('3');assert.equal(c.powerOn,false);assert.equal(c.terminalBooted,false);assert.equal(c.terminalOpen,false);assert.equal(c.terminalUI.session.state.authenticated,false);});
 test('terminal rejects open without generator power',()=>{const {c}=setup();c.terminalUI.session.state.authenticated=true;c.powerOn=false;assert.match(c.terminalCommand('1'),/OFFLINE/);assert.equal(c.doorOpening,false);});
-test('solid props and room bounds block movement, clear floor remains traversable',()=>{const {c}=setup();assert.equal(c.canOccupy(5,-7),false);assert.equal(c.canOccupy(-9,2.2),false);assert.equal(c.canOccupy(13,0),false);assert.equal(c.canOccupy(0,0),true);c.robot.position={x:0,z:0};c.moveRobot(.05,.05);assert.equal(c.robot.position.x,.05);});
+test('solid props and room bounds block movement, clear floor remains traversable',()=>{const {c}=setup();assert.equal(c.canOccupy(ROOM_LAYOUT.generator.x,ROOM_LAYOUT.generator.z),false);assert.equal(c.canOccupy(-9,2.2),false);assert.equal(c.canOccupy(13,0),false);assert.equal(c.canOccupy(0,0),true);c.robot.position={x:0,z:0};c.moveRobot(.05,.05);assert.equal(c.robot.position.x,.05);});
 test('axis collision permits sliding alongside the work-arm base',()=>{const {c}=setup();c.robot.position={x:-7.5,z:2.2};c.moveRobot(-.1,.1);assert.equal(c.robot.position.x,-7.5);assert.equal(c.robot.position.z,2.3000000000000003);});
 

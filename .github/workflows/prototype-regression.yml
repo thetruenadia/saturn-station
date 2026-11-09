@@ -16,6 +16,9 @@ jobs:
       - run: node --check workshop-rules.js
       - run: node --check access-probe.js
       - run: node --check opening-guidance.js
+      - run: node --check room-layout.js
+      - run: node --check room-story.js
+      - run: node --check observation-view.js
       - run: node --check main-menu.js
       - run: node --check menu-saves.js
       - run: node --check menu-screen.js

@@ -145,3 +145,10 @@ body:has(#game-settings[open]) #pause-screen{visibility:hidden}
 #item-model-preview.card-selected{width:100%;height:190px}#inspection-title{font-size:14px;font-weight:700;color:#f1ead2}#inspection-description{font-size:12px;line-height:1.65;color:#c8d2b9}#inspection-specs{font-size:10px;font-weight:600;color:#e0bd72}
 
 #workshop-panel:not(.mini){top:180px;bottom:24px}.workshop-columns>section{min-width:0;max-height:calc(100vh - 320px);overflow-y:auto;padding-right:6px;scrollbar-color:#718866 #14221a}.workshop-columns>section>h2{position:sticky;top:0;background:#0d1b15;padding:8px 0;z-index:1}.ingredient-slot{padding:8px;margin:6px 0}.ingredient-slot button{padding:7px!important}.context-tip{font-size:11px;line-height:1.5}@media(max-width:750px){#workshop-panel:not(.mini){top:225px;bottom:15px}.workshop-columns>section{max-height:240px}}
+
+#room-narration{position:absolute;left:24px;bottom:128px;width:min(440px,calc(100vw - 48px));background:#101d19f0;border-left:2px solid #b7bd8f;padding:17px;z-index:103;color:#dce1c8;pointer-events:none}#room-narration[hidden]{display:none}#room-narration small{font:9px monospace;letter-spacing:.16em;color:#9cae8d}#room-narration strong{display:block;font:700 13px monospace;margin-top:9px;color:#e5d3a1}#room-narration p{font:13px/1.7 Georgia,serif;margin:8px 0 0}#inventory.open ~ #room-narration{display:none}
+#observation-view{position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;border:0;margin:0;padding:0;background:transparent}
+#observation-view::backdrop{background:transparent}
+#observation-view button{position:absolute;top:max(16px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));width:44px;height:44px;border:1px solid #9bada65e;border-radius:50%;background:#08100cd9;color:#e0e8d2;font:24px/1 sans-serif;cursor:pointer}
+#observation-view button:focus-visible{outline:2px solid #e0e8d2;outline-offset:3px}
+.observing :is(.top-right,.readout,.task-readout,#hotbar,#nearby-panel,#interaction-marker,#room-coach,#toast,#hint-toggle,#hint-box,#pickup-feed){visibility:hidden}

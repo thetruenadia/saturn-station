@@ -1,3 +1,4 @@
+import {LOCKER_BANK,SPEC_OUTPUT} from './room-layout.js';
 import {PROBE_RECIPE,stackParts,recipeStatus,canFabricate,placeIngredient,trayComplete} from './workshop-rules.js?v=room2';
 // Workshop prototype: seeded salvage, lockers, loose pickups and physical specification recovery.
 export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,notify,sound,save,cellCount,setCellCount,onCraftProbe,onAccessCard,armModel,isPowered=()=>true,onService=()=>true,onServiceEnd=()=>{},stationModel,salvageModel}){
@@ -66,7 +67,7 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
   return root;
  }
  // One shared four-door bank, positioned away from the central repair route.
- for(let i=0;i<4;i++)makeLocker(i,7.15+i*.98,1.15);
+ for(let i=0;i<4;i++)makeLocker(i,LOCKER_BANK.x+i*LOCKER_BANK.spacing,LOCKER_BANK.z);
  const workbench=stationModel||new THREE.Group();if(!stationModel){workbench.position.set(-9,0,2.2);scene.add(workbench);cube(workbench,1.2,.18,.8,steel,0,.95,0);}
  workbench.userData={name:'MAINTENANCE SERVICING STATION',x:-9,z:2.2,workshopType:'bench'};interactables.push(workbench);
  // Broken industrial claw: disassemble in the field for recoverable components.
@@ -74,10 +75,10 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  if(!salvageModel){brokenClaw.position.set(-7.6,.18,2.85);scene.add(brokenClaw);cube(brokenClaw,.62,.26,.42,steel,0,.10,0);for(const sign of [-1,1]){const finger=cube(brokenClaw,.11,.47,.12,brass,sign*.19,.08,.33);finger.rotation.z=sign*.35}}
  brokenClaw.userData={name:'BROKEN INDUSTRIAL CLAW',x:brokenClaw.position.x,z:brokenClaw.position.z,workshopType:'broken-claw'};
  if(!interactables.includes(brokenClaw))interactables.push(brokenClaw);
- const terminalShard=new THREE.Group();terminalShard.position.set(-6.8,.65,-2.45);
+ const terminalShard=new THREE.Group();terminalShard.position.set(SPEC_OUTPUT.x,.65,SPEC_OUTPUT.z);
  const shardMat=new THREE.MeshStandardMaterial({color:0x69bc9c,emissive:0x164e45,emissiveIntensity:.5,metalness:.65,roughness:.38});
  cube(terminalShard,.35,.48,.12,shardMat,0,0,0);cube(terminalShard,.27,.10,.14,steel,0,.29,0);
- terminalShard.userData={name:'FABRICATION SPEC SHARD',x:-6.8,z:-2.45,workshopType:'shard'};
+ terminalShard.userData={name:'FABRICATION SPEC SHARD',x:SPEC_OUTPUT.x,z:SPEC_OUTPUT.z,workshopType:'shard'};
  function setShardVisible(){if(specReleased&&!specUnlocked){scene.add(terminalShard);if(!interactables.includes(terminalShard))interactables.push(terminalShard)}else{scene.remove(terminalShard);const i=interactables.indexOf(terminalShard);if(i>=0)interactables.splice(i,1)}}
  function next(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}
  function generate(type){const keys=['motor','gear','chip','plate','wire'];return {id:Math.floor(next()*1000000000).toString(36),type:type||keys[Math.floor(next()*keys.length)]};}
