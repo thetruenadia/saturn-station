@@ -1,10 +1,11 @@
+import {createBackgroundMusic} from './background-music.js?v=menu-music3';
 import {ROOM_LAYOUT,OBSERVATION_PORT} from './room-layout.js?v=window3';
 import {installRoomStory} from './room-story.js?v=story1';
 import {createObservationView} from './observation-view.js?v=window3';
 import {openingDirective,createControlGuide} from './opening-guidance.js?v=room2';
 import {createAccessProbe} from './access-probe.js?v=polish1';
 import {SERVICE_POSITION} from './workshop-rules.js?v=polish1';
-import {createMainMenu} from './main-menu.js?v=story1';
+import {createMainMenu} from './main-menu.js?v=release1';
 import {consumeLaunch} from './menu-saves.js?v=menu1';
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
@@ -545,9 +546,6 @@ function addTechnicalInk(root){
   edge.renderOrder=1;edge.scale.setScalar(1.003);o.add(edge);inkMeshes.push(edge);
  });
 }
-const maintenanceNote=new THREE.Group();maintenanceNote.position.set(5,1.25,-10.15);scene.add(maintenanceNote);
-assetLabel(maintenanceNote,'STAFF LOCKERS\nB-7 / 106',.65,.44,0,0,0,'#c2b68e','#353a2d');
-maintenanceNote.userData={name:'LOCKER DIRECTION SIGN',x:5,z:-10.15};
 const stationArt=applyArtDirection({THREE,scene,robot,terminal,terminalScreen,terminalLamp,terminalLit,exchanger,box,cylinder,pipeBetween,wornPaint,label});
 const referenceAssets=installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatch,hatchDoor,leftLeaf,rightLeaf,mountedArm,arm,box,cylinder,wornPaint,stationArt,generator,generatorLever});
 addTechnicalInk(scene);
@@ -1012,10 +1010,16 @@ function updateLighting(dt){
 }
 
 // Synthesised quiet mechanical sounds; audio starts only after a user gesture.
-let audio=null,audioMaster=null,hum=null,humGain=null,musicGain=null,musicVoices=[],soundEnabled=true;
+let audio=null,audioMaster=null,hum=null,humGain=null,soundEnabled=true;
 const SETTINGS_KEY='saturn-station-0.2-settings-v1';
 let musicVolume=35,brightness=100,settingsWasPaused=false;
 try{const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY));if(saved){if(Number.isFinite(saved.music))musicVolume=THREE.MathUtils.clamp(saved.music,0,100);if(Number.isFinite(saved.brightness))brightness=THREE.MathUtils.clamp(saved.brightness,50,180)}}catch{}
+const musicToggle=document.createElement('button');musicToggle.id='menu-music-toggle';musicToggle.style.cssText='position:fixed;right:18px;bottom:18px;z-index:240;width:42px;height:42px;padding:9px;background:#101b20b3;color:#e7eedb;border:1px solid #8d9c8466;border-radius:50%;cursor:pointer';document.body.append(musicToggle);
+const backgroundMusic=createBackgroundMusic({volume:musicVolume/100,active:true,onState(state){
+ musicToggle.hidden=state==='inactive';const enabled=state!=='muted';musicToggle.setAttribute('aria-label',enabled?'Mute menu music':'Unmute menu music');musicToggle.setAttribute('aria-pressed',String(enabled));musicToggle.title=enabled?'Mute menu music':'Unmute menu music';
+ musicToggle.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M11 5 6 9H3v6h3l5 4Z"/>'+(enabled?'<path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>':'<path d="m16 9 6 6m0-6-6 6"/>')+'</svg>';
+}});
+musicToggle.addEventListener('click',()=>{backgroundMusic.setEnabled(!backgroundMusic.enabled);backgroundMusic.unlock()});
 const settingsPanel=document.createElement('dialog');settingsPanel.id='game-settings';settingsPanel.setAttribute('aria-labelledby','settings-title');
 settingsPanel.innerHTML='<form method="dialog"><header><div><small>MU-1 / PREFERENCES</small><h1 id="settings-title">SETTINGS</h1></div><button aria-label="Close settings" value="close">×</button></header><label for="music-volume">MUSIC <output id="music-value" for="music-volume"></output></label><input id="music-volume" type="range" min="0" max="100" step="1"><p>Ambient station score. Set to zero to mute music.</p><label for="game-brightness">BRIGHTNESS <output id="brightness-value" for="game-brightness"></output></label><input id="game-brightness" type="range" min="50" max="180" step="5"><p>Adjusts the scene while keeping emergency and working lights distinct.</p><footer><span>Saved automatically on this device.</span><button value="done">DONE</button></footer></form>';
 document.body.append(settingsPanel);
@@ -1024,7 +1028,7 @@ function applySettings(){
  renderer.toneMappingExposure=1.15*brightness/100;
  musicSlider.value=String(musicVolume);brightnessSlider.value=String(brightness);
  settingsPanel.querySelector('#music-value').textContent=musicVolume+'%';settingsPanel.querySelector('#brightness-value').textContent=brightness+'%';
- if(musicGain&&audio)musicGain.gain.setTargetAtTime(musicVolume/100*.12,audio.currentTime,.08);
+ backgroundMusic.setVolume(musicVolume/100);
 }
 function persistSettings(){try{localStorage.setItem(SETTINGS_KEY,JSON.stringify({music:musicVolume,brightness}))}catch{}}
 musicSlider.addEventListener('input',()=>{musicVolume=Number(musicSlider.value);unlockAudio();applySettings();persistSettings()});
@@ -1035,18 +1039,16 @@ settingsPanel.addEventListener('cancel',e=>{e.preventDefault();settingsPanel.clo
 const settingsButton=document.createElement('button');settingsButton.id='settings-button';settingsButton.textContent='SETTINGS';settingsButton.addEventListener('click',openSettings);document.querySelector('.top-right').append(settingsButton);
 const pauseSettings=document.createElement('button');pauseSettings.textContent='SETTINGS';pauseSettings.addEventListener('click',openSettings);document.querySelector('#resume-game').after(pauseSettings);
 applySettings();
-const soundButton=document.createElement('button');soundButton.id='sound-toggle';soundButton.textContent='SOUND ON';soundButton.setAttribute('aria-pressed','true');
+const soundButton=document.createElement('button');soundButton.id='sound-toggle';soundButton.textContent=soundEnabled?'SOUND ON':'SOUND OFF';soundButton.setAttribute('aria-pressed',String(soundEnabled));
 document.querySelector('.top-right').append(soundButton);
 function unlockAudio(){
  if(!soundEnabled)return;
+ backgroundMusic.unlock();
  try{if(!audio){const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;audio=new Audio();audioMaster=audio.createGain();audioMaster.gain.value=.13;audioMaster.connect(audio.destination);hum=audio.createOscillator();hum.type='sine';hum.frequency.value=55;humGain=audio.createGain();humGain.gain.value=.035;hum.connect(humGain).connect(audioMaster);hum.start();
- // A quiet generative ambient score has its own volume bus, separate from machinery and effects.
- musicGain=audio.createGain();musicGain.gain.value=musicVolume/100*.12;musicGain.connect(audioMaster);
- for(const [i,f] of [110,164.81,220].entries()){const voice=audio.createOscillator(),gain=audio.createGain();voice.type='sine';voice.frequency.value=f;voice.detune.value=i*3-3;gain.gain.value=.5;voice.connect(gain).connect(musicGain);voice.start();musicVoices.push(voice)}
  }if(audio.state==='suspended')audio.resume().catch(()=>{})}catch{}
 }
-window.addEventListener('pointerdown',unlockAudio);window.addEventListener('keydown',unlockAudio);
-soundButton.addEventListener('click',()=>{soundEnabled=!soundEnabled;soundButton.textContent=soundEnabled?'SOUND ON':'SOUND OFF';soundButton.setAttribute('aria-pressed',String(soundEnabled));if(soundEnabled)unlockAudio();if(audioMaster)audioMaster.gain.setTargetAtTime(soundEnabled?.13:0,audio.currentTime,.05)});
+window.addEventListener('click',unlockAudio);window.addEventListener('pointerdown',unlockAudio);window.addEventListener('keydown',unlockAudio);
+soundButton.addEventListener('click',()=>{soundEnabled=!soundEnabled;backgroundMusic.setEnabled(soundEnabled);soundButton.textContent=soundEnabled?'SOUND ON':'SOUND OFF';soundButton.setAttribute('aria-pressed',String(soundEnabled));if(soundEnabled)unlockAudio();if(audioMaster)audioMaster.gain.setTargetAtTime(soundEnabled?.13:0,audio.currentTime,.05)});
 document.addEventListener('visibilitychange',()=>{if(audioMaster)audioMaster.gain.setTargetAtTime(soundEnabled&&!document.hidden?.13:0,audio.currentTime,.08);if(document.hidden)saveProgress()});
 function playSound(kind){
  if(!soundEnabled)return;
@@ -1066,7 +1068,7 @@ function restoreProgress(){
  try{
   const p=JSON.parse(localStorage.getItem(SAVE_KEY));if(!p||p.version!==1)return;
   const flag=k=>p[k]===true;
-  hasNote=flag('hasNote');if(hasNote)removeObject(maintenanceNote);hasArm=flag('hasArm');armEquipped=false;caseOpen=flag('caseOpen');caseCellTaken=flag('caseCellTaken')||flag('hasCell')||flag('usedCell');setCellCount(Number.isInteger(p.cellCount)?p.cellCount:(flag('hasCell')&&!flag('usedCell')?1:0));workshop.restore(p.workshop);roomStory?.restore(p.observations);
+  hasNote=flag('hasNote');hasArm=flag('hasArm');armEquipped=false;caseOpen=flag('caseOpen');caseCellTaken=flag('caseCellTaken')||flag('hasCell')||flag('usedCell');setCellCount(Number.isInteger(p.cellCount)?p.cellCount:(flag('hasCell')&&!flag('usedCell')?1:0));workshop.restore(p.workshop);roomStory?.restore(p.observations);
   charge=Number.isFinite(p.charge)?THREE.MathUtils.clamp(p.charge,1,100):60;
   if(Number.isFinite(p.x)&&Number.isFinite(p.z))robot.position.set(THREE.MathUtils.clamp(p.x,-12.5,12.5),0,THREE.MathUtils.clamp(p.z,-9.5,9.5));
   if(Number.isFinite(p.heading))robot.rotation.y=p.heading;
@@ -1083,7 +1085,6 @@ function updateStationSystems(dt){
  roomStory?.update(paused||ended||terminalOpen||inventory.classList.contains('open')||workshop.isOpen);observation?.update(0);refreshDirective();roomCoach.hidden=!!opening?.active||menuLaunch?.mode!=='new'||(tutorialWalked&&tutorialLooked)||paused||ended||terminalOpen||inventory.classList.contains('open')||workshop.isOpen||devConsole.classList.contains('open');roomCoach.textContent=!tutorialWalked?'↓ MU-1 · Hold W A S D to walk.':'↔ LOOK · Drag empty space to orbit. Scroll to zoom. R resets the camera.';terminalUI.update(dt);updateLighting(dt);animatePickup(dt);stationArt.updateOcclusion(camera,dt);
  if(active){systemTime+=dt;saveElapsed+=dt;stepElapsed+=dt;if(gaitVelocity>.35&&!pickup&&stepElapsed>.56){playSound('step');stepElapsed=0}if(saveElapsed>2){saveElapsed=0;saveProgress()}}
  if(humGain&&audio)humGain.gain.setTargetAtTime(active?(powerOn?.16:.035):0,audio.currentTime,.25);
- if(musicGain&&audio){const audible=!document.hidden&&(!paused||settingsPanel.open)&&!ended;musicGain.gain.setTargetAtTime(audible?musicVolume/100*.12:0,audio.currentTime,.15);const chords=[[110,164.81,220],[98,146.83,196],[87.31,130.81,174.61],[98,146.83,220]],chord=chords[Math.floor(audio.currentTime/12)%chords.length];musicVoices.forEach((voice,i)=>voice.frequency.setTargetAtTime(chord[i],audio.currentTime,2))}
 }
 
 // Robot centre uses a 0.42-unit clearance around solid floor props.
@@ -1138,9 +1139,9 @@ if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.
 if(firstPerson){firstPersonCamera.position.set(robot.position.x,2.15,robot.position.z);firstPersonCamera.lookAt(robot.position.x+Math.sin(lookHeading)*Math.cos(lookPitch),2.15+Math.sin(lookPitch),robot.position.z+Math.cos(lookHeading)*Math.cos(lookPitch));}
 doorAccessProbe.visible=workshop.hasProbe;workshop.update(dt);updateStationSystems(dt);renderer.render(scene,activeCamera());updateNearbyUI()}
 roomStory=installRoomStory({THREE,scene,interactables,referenceAssets,terminal,exchanger,box,cylinder,pipeBetween,label,notify,sound:playSound,onWindow:()=>observation.show()});
-observation=createObservationView({THREE,viewport,renderer,windowGlass:referenceAssets.windowGlass,sourceCamera:activeCamera,reducedMotion,sound:playSound,onOpen(){Object.keys(keys).forEach(k=>keys[k]=false);controlGuide.hide();roomStory.hide();document.body.classList.add('observing');if(humGain&&audio)humGain.gain.setTargetAtTime(0,audio.currentTime,.2);if(musicGain&&audio)musicGain.gain.setTargetAtTime(musicVolume/100*.035,audio.currentTime,.3)},onClose(){Object.keys(keys).forEach(k=>keys[k]=false);document.body.classList.remove('observing')}});
+observation=createObservationView({THREE,viewport,renderer,windowGlass:referenceAssets.windowGlass,sourceCamera:activeCamera,reducedMotion,sound:playSound,onOpen(){Object.keys(keys).forEach(k=>keys[k]=false);controlGuide.hide();roomStory.hide();document.body.classList.add('observing');if(humGain&&audio)humGain.gain.setTargetAtTime(0,audio.currentTime,.2)},onClose(){Object.keys(keys).forEach(k=>keys[k]=false);document.body.classList.remove('observing')}});
 opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();if(menuLaunch?.mode!=='resume'){doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;}updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
-mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound});
+mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound,unlockAudio});
 const returnMenuButton=document.createElement('button');returnMenuButton.textContent='MAIN MENU';returnMenuButton.addEventListener('click',()=>{hideTerminal();closeInventory();saveProgress();setPaused(true);mainMenu.show()});document.querySelector('#pause-restart').after(returnMenuButton);
 if(menuLaunch?.mode==='resume')opening.skip();else if(!menuLaunch)mainMenu.show();
 resize();updateStationSystems(0);animate();document.querySelector('#loading').classList.add('hidden');document.querySelector('#charge').textContent='60%';document.querySelector('#charge-bar').style.width='60%';updateCharge();updateInventory();refreshDirective();say('MU-1 ONLINE.');

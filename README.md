@@ -39,3 +39,7 @@ Automated checks do not replace a full browser playthrough. The root `index.html
 ## Design decisions
 
 MU-1 is the canonical robot designation (SRV-09 is retired). Third-person movement is WASD with mouse camera rotation and wheel zoom; first-person mode may differ. Do not implement plug-in charging yet: it is reserved for a future installable modification.
+
+### Main menu music
+
+Main menu music: India Davies Nilsson. The track loops only while the menu is open and stops when starting or loading the demo. Playback is attempted automatically; if browser policy blocks it, normal menu interaction retries without a play prompt. A small speaker icon at the bottom right toggles menu music. The normalized MP3 is preferred, with PCM WAV fallback; the original AAC is retained. Hidden tabs pause playback.

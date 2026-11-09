@@ -151,4 +151,4 @@ body:has(#game-settings[open]) #pause-screen{visibility:hidden}
 #observation-view::backdrop{background:transparent}
 #observation-view button{position:absolute;top:max(16px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));width:44px;height:44px;border:1px solid #9bada65e;border-radius:50%;background:#08100cd9;color:#e0e8d2;font:24px/1 sans-serif;cursor:pointer}
 #observation-view button:focus-visible{outline:2px solid #e0e8d2;outline-offset:3px}
-.observing :is(.top-right,.readout,.task-readout,#hotbar,#nearby-panel,#interaction-marker,#room-coach,#toast,#hint-toggle,#hint-box,#pickup-feed){visibility:hidden}
+.observing :is(.top-right,.readout,.task-readout,#hotbar,#nearby-panel,#interaction-marker,#room-coach,#toast,#hint-toggle,#hint-box,#pickup-feed,#menu-music-toggle){visibility:hidden}
