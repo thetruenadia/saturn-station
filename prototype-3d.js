@@ -1,16 +1,22 @@
 import {createBackgroundMusic} from './background-music.js?v=menu-music3';
-import {createMainMenu} from './main-menu.js?v=menu-music3';
+import {ROOM_LAYOUT,OBSERVATION_PORT} from './room-layout.js?v=window3';
+import {installRoomStory} from './room-story.js?v=story1';
+import {createObservationView} from './observation-view.js?v=window3';
+import {openingDirective,createControlGuide} from './opening-guidance.js?v=room2';
+import {createAccessProbe} from './access-probe.js?v=polish1';
+import {SERVICE_POSITION} from './workshop-rules.js?v=polish1';
+import {createMainMenu} from './main-menu.js?v=release1';
 import {consumeLaunch} from './menu-saves.js?v=menu1';
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
-import {createTerminalBrowser,createDemoEnding} from './terminal-browser.js?v=access1';
-import {installReferenceAssets} from './reference-assets.js?v=etna1';
+import {createTerminalBrowser,createDemoEnding} from './terminal-browser.js?v=polish1';
+import {installReferenceAssets} from './reference-assets.js?v=window3';
 import { applyArtDirection } from './station-art.js?v=etna1';
 
-import {createMakerOpening} from './maker-opening.js?v=menu1';
-import {createWorkshopSystem} from './workshop-system.js?v=access1';
+import {createMakerOpening} from './maker-opening.js?v=story1';
+import {createWorkshopSystem} from './workshop-system.js?v=story1';
 
-let opening,mainMenu;
+let opening,mainMenu,observation,roomStory;let tutorialWalked=false,tutorialLooked=false;
 let menuLaunch=null;try{menuLaunch=consumeLaunch(sessionStorage)}catch{}
 const viewport=document.querySelector('#viewport');
 const scene=new THREE.Scene();
@@ -142,13 +148,13 @@ const cellLoop=new THREE.Mesh(new THREE.TorusGeometry(.07,.012,6,18),cellCopper)
 cell.rotation.x=-Math.PI/2;
 cell.visible=false;
 scene.add(caseGroup);caseGroup.userData={name:'SEALED SERVICE CASE',x:-5,z:2};interactables.push(caseGroup);
-const generator=new THREE.Group();generator.position.set(5,0,-7);box(generator,1,.7,.8,edgeMat,0,.35,0);box(generator,.7,.9,.6,wallMat,0,1.1,0);box(generator,.48,.22,.05,screenMat,0,1.25,.33);
+const generator=new THREE.Group();generator.position.set(ROOM_LAYOUT.generator.x,0,ROOM_LAYOUT.generator.z);box(generator,1,.7,.8,edgeMat,0,.35,0);box(generator,.7,.9,.6,wallMat,0,1.1,0);box(generator,.48,.22,.05,screenMat,0,1.25,.33);
 const generatorLever=new THREE.Group();generatorLever.position.set(.37,1.35,.35);generator.add(generatorLever);
 cylinder(generatorLever,.16,.16,.15,rustMat,0,0,0,Math.PI/2);
 const leverHandle=box(generatorLever,.09,.65,.09,edgeMat,0,.35,.04);leverHandle.rotation.z=-.34;
 cylinder(generatorLever,.16,.16,.16,greenMat,-.11,.7,.04);
 for(let i=0;i<6;i++)box(generator,.12,.08,.58,edgeMat,-.35+i*.14,.48,.12);
-scene.add(generator);generator.userData={name:'AUXILIARY POWER DISTRIBUTION',x:5,z:-7};interactables.push(generator);
+scene.add(generator);generator.userData={name:'AUXILIARY POWER DISTRIBUTION',x:ROOM_LAYOUT.generator.x,z:ROOM_LAYOUT.generator.z};interactables.push(generator);
 // Sliding double-leaf pressure bulkhead with a visible rectangular doorway.
 const hatch=new THREE.Group();hatch.position.set(11.4,0,-10.6);scene.add(hatch);
 const doorFrame=mat(0x343c34,.83,.35),doorPaint=mat(0x88876a,.88,.22),doorInset=mat(0x42483e,.8,.34),doorWarning=mat(0xc19b4b,.87,.2);
@@ -174,7 +180,7 @@ for(const side of [-1,1])box(hatch,.035,.14,.035,doorWarning,-1.4+side*.065,1.48
 const deckSteel=wornSteelMat,deckRust=wornRustMat,deckCream=wornSandMat;
 for(let z=-10;z<=10;z+=2){box(scene,27,.07,.16,deckSteel,0,.035,z);for(let x=-13;x<=13;x+=3.3)box(scene,.22,.045,1.8,deckRust,x,.052,z+.85)}
 for(const x of [-13.5,13.5])for(let z=-9;z<=9;z+=3){box(scene,.35,7,.42,deckSteel,x,3.5,z);box(scene,.7,.16,.7,deckRust,x,6.7,z)}
-for(const z of [-10.6,10.6])for(let x=-12;x<=12;x+=3){if(z<0&&x>9)continue;box(scene,.35,7,.4,deckSteel,x,3.5,z)}
+for(const z of [-10.6,10.6])for(let x=-12;x<=12;x+=3){if(z<0&&(x>9||Math.abs(x-OBSERVATION_PORT.x)<OBSERVATION_PORT.width/2))continue;box(scene,.35,7,.4,deckSteel,x,3.5,z)}
 // Scrap and tools surrounding MU-1's waking area.
 const scrap=new THREE.Group();scrap.position.set(-10,0,7);scene.add(scrap);
 // Dense, grounded salvage from industrial motor and gear assemblies.
@@ -212,17 +218,14 @@ const olivePaint=wornOliveMat,sandPaint=wornSandMat,inkBlack=mat(0x282b25,.92,.1
 for(let x=-12;x<=7.5;x+=3.5){
  box(scene,3.12,3.2,.11,x%2===0?olivePaint:sandPaint,x,3.1,-10.65);
  box(scene,3.1,.11,.18,inkBlack,x,1.48,-10.53);
- for(const y of [1.7,4.5])for(const dx of [-1.38,1.38])cylinder(scene,.055,.055,.06,inkBlack,x+dx,y,-10.52,Math.PI/2);
+ for(const y of [1.7,4.5])for(const dx of [-1.38,1.38]){
+  if(Math.abs(x+dx-OBSERVATION_PORT.x)<OBSERVATION_PORT.width/2&&Math.abs(y-OBSERVATION_PORT.y)<OBSERVATION_PORT.height/2)continue;
+  cylinder(scene,.055,.055,.06,inkBlack,x+dx,y,-10.52,Math.PI/2);
+ }
 }
 for(let z=-9;z<=9;z+=3.6){
  box(scene,.12,3.15,3.2,olivePaint,-13.63,3.1,z);
  box(scene,.22,.13,3.1,inkBlack,-13.5,1.5,z);
-}
-for(let i=0;i<7;i++){
- const x=-11+i*3.5;
- box(scene,1.35,.06,.8,hazardPaint,x,.095,-2);
- box(scene,.15,.07,.82,inkBlack,x-.48,.13,-2);
- box(scene,.15,.07,.82,inkBlack,x+.48,.13,-2);
 }
 // Illustrated industrial set piece: enormous serviced heat-exchanger, catwalk and Saturn observation port.
 const exchanger=new THREE.Group();exchanger.position.set(-5.5,0,-8.5);scene.add(exchanger);
@@ -231,18 +234,13 @@ cylinder(exchanger,1.75,1.75,6.5,wornOlive,0,4.25,0,0,Math.PI/2);
 for(let x=-2.7;x<=2.7;x+=1.35)cylinder(exchanger,1.83,1.83,.22,oxidisedCopper,x,4.25,0,0,Math.PI/2);
 for(let x=-2.4;x<=2.4;x+=.8)box(exchanger,.16,.19,2.9,ivory,x,5.1,0);
 for(let i=0;i<10;i++){const a=i*Math.PI*2/10;cylinder(exchanger,.07,.07,.14,doorFrame,-2.7,4.25+1.55*Math.sin(a),1.55*Math.cos(a),0,Math.PI/2)}
-box(exchanger,8.6,.28,2.5,doorFrame,0,2.15,1.4);
-for(let x=-3.9;x<=3.9;x+=.8){box(exchanger,.1,1.2,.11,ivory,x,2.9,2.65);box(exchanger,.75,.05,2.3,oxidisedCopper,x,2.32,1.4)}
-box(exchanger,8.2,.09,.12,ivory,0,3.5,2.65);
 // Observation window and Enceladus view are constructed by reference-assets.js.
 // Workshop zones: scrap/wake, fabrication, generator and command, with clear central circulation.
 const pathPaint=mat(0xb1a16e,.98,.05);
-for(let z=-7;z<=8;z+=1.25)for(const x of [3.8,8.2])box(scene,.12,.024,.75,pathPaint,x,.1,z);
-for(let x=-11;x<=-4;x+=1.2)box(scene,.7,.024,.12,pathPaint,x,.1,3.6);
 const generatorLight=new THREE.PointLight(0xffc17b,18,10,2);generatorLight.position.set(5,4,-7);scene.add(generatorLight);
 const benchLight=new THREE.PointLight(0xffd99b,12,10,2);benchLight.position.set(-9,3.5,4);scene.add(benchLight);
 // Terminal is physically separated from the generator and exit.
-const terminal=new THREE.Group();terminal.position.set(-7,0,-4);scene.add(terminal);
+const terminal=new THREE.Group();terminal.position.set(ROOM_LAYOUT.terminal.x,0,ROOM_LAYOUT.terminal.z);scene.add(terminal);
 const rackCream=wornPaint(0xb7b398,95),rackBlue=wornPaint(0x29486c,96),rackBlack=mat(0x141b1b,.72,.3),rackHandle=mat(0x8d9281,.5,.65);
 box(terminal,2.05,.15,1.15,rackBlack,0,.08,0);
 box(terminal,1.96,2.03,1.03,rackCream,0,1.14,0);
@@ -275,7 +273,7 @@ cylinder(terminal,.035,.035,.045,mat(0xa8442d),.72,2.4,.64,Math.PI/2);
 assetLabel(terminal,'WAVETERM / STATION B-7',1.65,.10,0,3.62,.594,'#29486c','#cec9aa');
 const rackCable=new THREE.CatmullRomCurve3([new THREE.Vector3(-.35,1.85,.65),new THREE.Vector3(-.15,1.3,.78),new THREE.Vector3(-.30,.4,.85),new THREE.Vector3(-.8,.22,.7)]);
 terminal.add(new THREE.Mesh(new THREE.TubeGeometry(rackCable,24,.027,7,false),rackHandle));
-terminal.userData={name:'CONTROL TERMINAL',x:-7,z:-4};interactables.push(terminal);
+terminal.userData={name:'CONTROL TERMINAL',x:ROOM_LAYOUT.terminal.x,z:ROOM_LAYOUT.terminal.z};interactables.push(terminal);
 // The existing hatch stays at the exit and is controlled exclusively by the terminal.
 // MU-1 silhouette-first reconstruction for 0.2.
 // Proportions follow the supplied sprite/blueprint: broad, heavy upper chassis,
@@ -320,7 +318,7 @@ function label(parent,text,x,y,z,rotationY=0,size=.12,color=0xd0cbb2){
   const c=document.createElement('canvas');c.width=256;c.height=128;
   const ctx=c.getContext('2d');ctx.clearRect(0,0,256,128);
   ctx.fillStyle='#'+color.toString(16).padStart(6,'0');ctx.font='bold 76px sans-serif';
-  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,128,65);
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,128,65,240);
   const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
   const mesh=new THREE.Mesh(new THREE.PlaneGeometry(size*2,size),new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide,depthWrite:false}));
   mesh.position.set(x,y,z);mesh.rotation.y=rotationY;parent.add(mesh);return mesh;
@@ -356,10 +354,7 @@ box(originalArm,.25,.17,.2,originalDark,-.3,-1.24,.06);
 const originalJaws=[];
 for(const side of [-1,1]){const jaw=box(originalArm,.07,.24,.09,originalDark,-.3+side*.1,-1.4,.06);originalJaws.push({jaw,side})}
 // Standard manipulator retrofit: a short keyed probe fitted between its existing fingers.
-const doorAccessProbe=new THREE.Group();doorAccessProbe.name='door-access-probe';doorAccessProbe.position.set(-.3,-1.53,.08);originalArm.add(doorAccessProbe);
-box(doorAccessProbe,.15,.21,.14,originalGreen,0,-.02,0);
-for(const side of [-1,1])box(doorAccessProbe,.035,.17,.035,originalDark,side*.05,-.17,.01);
-doorAccessProbe.visible=false;
+const doorAccessProbe=createAccessProbe(THREE);originalArm.add(doorAccessProbe);
 const mountedArm=new THREE.Group();mountedArm.name='mounted-service-arm';mountedArm.position.set(.91,-.13,.33);shell.add(mountedArm);
 const factoryYellow=wornPaint(0xc69a3d,73),factoryBlack=mat(0x222521,.7,.55),factorySteel=mat(0x77796c,.6,.68);
 cylinder(mountedArm,.23,.23,.35,factoryBlack,0,0,0,Math.PI/2);
@@ -551,9 +546,6 @@ function addTechnicalInk(root){
   edge.renderOrder=1;edge.scale.setScalar(1.003);o.add(edge);inkMeshes.push(edge);
  });
 }
-const maintenanceNote=new THREE.Group();maintenanceNote.position.set(5,1.25,-10.15);scene.add(maintenanceNote);
-assetLabel(maintenanceNote,'STAFF LOCKERS\nB-7 / 106',.65,.44,0,0,0,'#c2b68e','#353a2d');
-maintenanceNote.userData={name:'LOCKER DIRECTION SIGN',x:5,z:-10.15};
 const stationArt=applyArtDirection({THREE,scene,robot,terminal,terminalScreen,terminalLamp,terminalLit,exchanger,box,cylinder,pipeBetween,wornPaint,label});
 const referenceAssets=installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatch,hatchDoor,leftLeaf,rightLeaf,mountedArm,arm,box,cylinder,wornPaint,stationArt,generator,generatorLever});
 addTechnicalInk(scene);
@@ -566,15 +558,13 @@ const logMessages=[];const task=document.querySelector('#task'),toast=document.q
 let terminalBooted=false,terminalOpen=false;
 const terminalUI=createTerminalBrowser({
  onClose(){terminalOpen=false;Object.keys(keys).forEach(k=>keys[k]=false)},
- onBoot(){terminalBooted=true;saveProgress()},onCommand:terminalCommand,onSave:saveProgress,
+ onBoot(){terminalBooted=true;refreshDirective();saveProgress()},onCommand:terminalCommand,onSave:saveProgress,
  readNote:()=>hasNote,sound:playSound,onSpec:()=>workshop.releaseSpec()
 });
 function setCellCount(n){cellCount=Math.max(0,Math.floor(n));hasCell=cellCount>0;usedCell=!hasCell;updateInventory()}
-workshop=createWorkshopSystem({THREE,scene,robot,interactables,colliders:referenceAssets.colliders,notify,sound:playSound,save:saveProgress,cellCount:()=>cellCount,setCellCount,onCraftProbe(){return !workshop.hasProbe},onAccessCard(value){hasNote=value;updateInventory()},armModel:originalArm});
-// Retain the loose arm as scenery, not a field-replaceable part.
-{const i=interactables.indexOf(arm);if(i>=0)interactables.splice(i,1)}
+workshop=createWorkshopSystem({THREE,scene,robot,interactables,colliders:referenceAssets.colliders,notify,sound:playSound,save(){refreshDirective();return saveProgress()},cellCount:()=>cellCount,setCellCount,isPowered:()=>powerOn,onService:beginServicing,onServiceEnd:endServicing,onCraftProbe(){return !workshop.hasProbe},onAccessCard(value){hasNote=value;updateInventory()},armModel:originalArm,stationModel:referenceAssets.workArm,salvageModel:arm});
 function updateTerminalStatus(){terminalUI.setStatus('AUXILIARY GRID: '+(powerOn?'ONLINE':'OFFLINE')+' / DOOR: '+(doorOpen?'OPEN':doorOpening?'OPENING':'SEALED')+' / MU-1 LINK: ACTIVE')}
-function showTerminal(){Object.keys(keys).forEach(k=>keys[k]=false);terminalOpen=true;updateTerminalStatus();terminalUI.show()}
+function showTerminal(){controlGuide.hide();Object.keys(keys).forEach(k=>keys[k]=false);terminalOpen=true;updateTerminalStatus();terminalUI.show()}
 function hideTerminal(){terminalUI.hide()}
 function terminalKey(k){terminalUI.key({key:k,target:{tagName:'BODY'},preventDefault(){}})}
 function terminalCommand(k){
@@ -584,7 +574,7 @@ function terminalCommand(k){
   return 'AUTOMATIC DOOR LINK ISOLATED · USE LOCAL EXIT SOCKET WITH ACCESS PROBE';
 
  }
- if(k==='2'){doorOpening=false;doorOpen=false;leftLeaf.position.x=rightLeaf.position.x=0;task.textContent='Exit door sealed. Use the terminal to reopen it.';updateTerminalStatus();saveProgress();return 'COMMAND 02 / DOOR SEALED'}
+ if(k==='2'){doorOpening=false;doorOpen=false;leftLeaf.position.x=rightLeaf.position.x=0;task.textContent='Exit door sealed. Use the Access Probe at the local socket.';updateTerminalStatus();saveProgress();return 'COMMAND 02 / DOOR SEALED'}
  if(k==='3'){setStationPower(false);task.textContent='Restore generator power to use the terminal.';notify('GENERATOR POWER OFF');return 'AUXILIARY POWER OFF'}
  return 'UNKNOWN COMMAND';
 }
@@ -593,18 +583,28 @@ function finishDemo(){
  hideTerminal();closeInventory();setPaused(false);ended=true;target=null;Object.keys(keys).forEach(k=>keys[k]=false);saveProgress();demoEnding.show();
 }
 function say(s){logMessages.push(s);if(logMessages.length>8)logMessages.shift()}
-let toastTimer;function notify(s){toast.textContent=s;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600)}
+let toastTimer;const pickupFeed=document.createElement('ol');pickupFeed.id='pickup-feed';pickupFeed.setAttribute('aria-label','Recent item notifications');viewport.append(pickupFeed);
+function notify(s){
+ toast.textContent=s;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),4200);
+ if(/ACQUIRED|RECOVERED|COLLECTED|SALVAGED|INSTALLED|UNLOCKED|DISMANTLED/.test(s)){
+  const entry=document.createElement('li');entry.textContent=s;pickupFeed.append(entry);while(pickupFeed.children.length>4)pickupFeed.firstElementChild.remove();setTimeout(()=>entry.remove(),9000);
+  const button=document.querySelector('#inventory-button');if(button){button.classList.remove('new-items');void button.offsetWidth;button.classList.add('new-items');}
+ }
+}
 function updateCharge(){document.querySelector('#charge').textContent=String(Math.ceil(charge)).padStart(2,'0')+'%';document.querySelector('#charge-bar').style.width=Math.max(0,charge)+'%'}
 function itemIcon(type){
  const base='<svg viewBox="0 0 96 72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
- if(type==='note')return base+'<path d="M25 6h46v60H25Z" fill="#c2b68e" stroke="#413d31" stroke-width="2"/><path d="M32 20h32m-32 9h32m-32 9h24m-24 9h29" stroke="#514c3b" stroke-width="2"/></svg>';
+ if(type==='probe')return base+'<path d="M36 14h24v12H36zm8 12h8v35h-8z" fill="#a6b48f"/><path d="M45 61h6v9h-6z" fill="#d9ba70"/></svg>';
+ if(type==='note')return base+'<rect x="9" y="13" width="78" height="48" rx="3" fill="#c8ceb5" stroke="#394c40" stroke-width="3"/><path d="M10 24h76" stroke="#364d42" stroke-width="10"/><rect x="17" y="32" width="18" height="21" fill="#455e4f"/><circle cx="26" cy="38" r="4" fill="#aab99c"/><path d="M20 48q6-10 12 0M44 34h33m-33 8h27m-27 8h30" stroke="#4b5e47" stroke-width="3"/></svg>';
  if(type==='arm')return base+'<g transform="rotate(-20 48 36)" stroke="#1c211d" stroke-width="3"><rect x="34" y="3" width="29" height="17" rx="5" fill="#84917d"/><circle cx="49" cy="21" r="9" fill="#7a8176"/><rect x="40" y="26" width="19" height="25" rx="4" fill="#a0ab8a"/><path d="M40 30h19M40 40h19" stroke="#222"/><circle cx="49" cy="52" r="7" fill="#838b80"/><path d="M43 57v12m12-12v12" stroke="#c1c6b9" stroke-width="6"/></g></svg>';
  return base+'<g stroke="#293233" stroke-width="2"><rect x="16" y="17" width="64" height="39" rx="5" fill="#b89948"/><path d="M21 20h54v14H21Z" fill="#d1a36a"/><path d="M26 20v14m7-14v14m7-14v14m7-14v14m7-14v14m7-14v14m7-14v14" stroke="#a75f32" stroke-width="4"/><path d="M15 14v46m66-46v46M15 15h66M15 58h66" stroke="#283230" stroke-width="7"/><rect x="26" y="39" width="44" height="10" fill="#263b33"/><path d="M30 42h31m-31 4h22" stroke="#d3c9a6" stroke-width="1"/><circle cx="19" cy="19" r="1" fill="#d8d6bd"/><circle cx="77" cy="54" r="1" fill="#d8d6bd"/></g></svg>';
 }
 function updateInventory(){
  mountedArm.visible=hasArm&&armEquipped;
  previewMountedArm.visible=hasArm&&armEquipped;
+ previewRobot.getObjectByName('door-access-probe').visible=workshop.hasProbe;doorAccessProbe.visible=workshop.hasProbe;
  const entries=[];
+ if(workshop.hasCraftedProbe)entries.push({type:'probe',name:workshop.hasProbe?'ACCESS PROBE · INSTALLED':'ACCESS PROBE · NOT INSTALLED',draggable:false});
  if(hasNote)entries.push({type:'note',name:'WORKER ACCESS CARD',draggable:false});
  if(hasArm)entries.push({type:'arm',name:'INDUSTRIAL MANIPULATOR',description:'Olive articulated industrial service arm. Heavy-duty gripper for physical switches and mechanical releases.',stats:'CLASS  TOOL ARM  /  MOUNT  RIGHT  /  GRIP  85 N  /  STATUS  '+(armEquipped?'EQUIPPED':'STOWED'),draggable:!armEquipped});
  if(cellCount>0)entries.push({type:'cell',name:'PORTABLE POWER PACK',description:'Sealed auxiliary energy cartridge. Restores MU-1 internal charge when consumed with Q.',stats:'CLASS  CONSUMABLE  /  CHARGE  +55%  /  USE  Q',draggable:false});
@@ -612,7 +612,7 @@ function updateInventory(){
  document.querySelector('#cell-hot').textContent=String(cellCount)+' ×';
  document.querySelector('#cell-hot').classList.toggle('filled',cellCount>0);
  document.querySelector('#arm-slot').textContent=armEquipped?'FACTORY MANIPULATOR':'EMPTY';
- document.querySelector('#arm-slot').nextElementSibling.textContent=armEquipped?'COMPONENT INSTALLED':hasArm?'CLICK OR DRAG TO INSTALL':'RECOVER COMPONENT FIRST';
+ document.querySelector('#arm-slot').nextElementSibling.textContent=armEquipped?'COMPONENT INSTALLED':'BODY PARTS REQUIRE SERVICE BAY';
  document.querySelector('#arm-hot').innerHTML=armEquipped?itemIcon('arm'):'';
  document.querySelector('#cell-icon').innerHTML=cellCount>0?itemIcon('cell'):'';
  mountedArm.visible=hasArm&&armEquipped;previewMountedArm.visible=hasArm&&armEquipped;
@@ -623,7 +623,7 @@ function updateInventory(){
   slot.className='inventory-grid-slot'+(entry?' occupied':'');
   slot.setAttribute('aria-label',entry?entry.name:'Empty inventory slot '+(i+1));if(entry){slot.dataset.item=entry.type;slot.classList.toggle('selected',itemType===entry.type);slot.setAttribute('aria-pressed',String(itemType===entry.type))}
   if(entry){
-   slot.tabIndex=0;slot.setAttribute('role','button');slot.draggable=entry.draggable;
+   slot.tabIndex=0;slot.setAttribute('role','button');slot.draggable=false;
    const model=document.createElement('span');model.className='slot-object';model.innerHTML=itemIcon(entry.type);
    slot.append(model);
    const number=document.createElement('small');number.textContent=String(i+1).padStart(2,'0');slot.append(number);
@@ -635,14 +635,32 @@ function updateInventory(){
   grid.append(slot);
  }
 }
-function openInventory(){if(opening?.active||pickup)return;Object.keys(keys).forEach(k=>keys[k]=false);inventory.classList.add('open');inventory.setAttribute('aria-hidden','false');updateInventory();target=null}
-function closeInventory(){inventory.classList.remove('open');inventory.setAttribute('aria-hidden','true')}
-function equipArm(){
- if(!hasArm||armEquipped)return;
- armEquipped=true;updateInventory();say('LOCK-SERVICE ARM INSTALLED.');notify('COMPONENT INSTALLED');task.textContent='Activate the generator switch.';
+let serviceCamera=null;
+function beginServicing(){
+ controlGuide.hide();
+ if(!powerOn){notify('RESTORE AUXILIARY POWER FIRST');return false}
+ if(Math.hypot(robot.position.x+9,robot.position.z-2.2)>2.5){notify('MOVE TO THE MAINTENANCE WORKSTATION');return false}
+ if(!canOccupy(SERVICE_POSITION.x,SERVICE_POSITION.z)){notify('SERVICE POSITION OBSTRUCTED');return false}
+ if(!serviceCamera)serviceCamera={position:camera.position.clone(),target:controls.target.clone(),zoom:camera.zoom,firstPerson};
+ firstPerson=false;robot.visible=true;robot.position.set(SERVICE_POSITION.x,0,SERVICE_POSITION.z);robot.rotation.y=SERVICE_POSITION.heading;
+ Object.keys(keys).forEach(k=>keys[k]=false);gaitVelocity=0;target=null;
+ controls.target.set(-5.3,1.3,2.2);camera.position.set(5.7,12.8,13.2);camera.zoom=2.3;camera.updateProjectionMatrix();
+ referenceAssets.workArm.getObjectByName('work-arm-shoulder').rotation.z=-.10;
+ referenceAssets.workArm.getObjectByName('work-arm-elbow').rotation.z=-1.35;
+ return true;
 }
+function endServicing(){
+ if(!serviceCamera)return;
+ camera.position.copy(serviceCamera.position);controls.target.copy(serviceCamera.target);camera.zoom=serviceCamera.zoom;firstPerson=serviceCamera.firstPerson;robot.visible=!firstPerson;camera.updateProjectionMatrix();serviceCamera=null;
+ referenceAssets.workArm.getObjectByName('work-arm-shoulder').rotation.z=-1.061;
+ referenceAssets.workArm.getObjectByName('work-arm-elbow').rotation.z=-1.839;
+ saveProgress();
+}
+function openInventory(){if(opening?.active||pickup)return;controlGuide.hide();Object.keys(keys).forEach(k=>keys[k]=false);inventory.classList.add('open');inventory.setAttribute('aria-hidden','false');updateInventory();target=null}
+function closeInventory(){inventory.classList.remove('open');inventory.setAttribute('aria-hidden','true')}
+function equipArm(){notify('BODY PART REPLACEMENT REQUIRES A SERVICE BAY')}
 const armSlot=document.querySelector('[data-slot="arm"]');
-armSlot.tabIndex=0;armSlot.setAttribute('role','button');armSlot.setAttribute('aria-label','Install recovered manipulator');
+armSlot.tabIndex=0;armSlot.setAttribute('role','button');armSlot.setAttribute('aria-label','Robot manipulator mount · service bay required');
 armSlot.addEventListener('click',equipArm);
 armSlot.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();equipArm()}});
 armSlot.addEventListener('dragover',e=>{e.preventDefault();armSlot.classList.add('drag-over')});
@@ -651,15 +669,16 @@ armSlot.addEventListener('drop',e=>{e.preventDefault();armSlot.classList.remove(
 document.querySelector('#close-inventory').addEventListener('click',closeInventory);
 document.querySelector('#fullscreen').addEventListener('click',()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()});
 function removeObject(o){if(selected===o)selected=null;scene.remove(o);const i=interactables.indexOf(o);if(i>=0)interactables.splice(i,1)}
-function nearest(){let best=null,d=Infinity;for(const o of interactables){const n=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);const score=n-(o.userData.workshopType==='locker-loot'?.8:0);if(score<d){d=score;best=o}}return d<1.8?best:null}
+function nearest(){let best=null,d=Infinity;for(const o of interactables){const n=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(n>1.8)continue;const score=n-(o.userData.workshopType==='locker-loot'?.8:0);if(score<d){d=score;best=o}}return d<1.8?best:null}
 function interact(){if(opening?.active)return;if(ended||pickup||inventory.classList.contains('open'))return;const o=(selected&&interactables.includes(selected)&&Math.hypot(robot.position.x-selected.userData.x,robot.position.z-selected.userData.z)<1.8?selected:null)||nearest();if(!o){notify('NO SERVICE OBJECT IN REACH');return}const dist=Math.hypot(robot.position.x-o.userData.x,robot.position.z-o.userData.z);if(dist>1.8){target=new THREE.Vector3(o.userData.x,0,o.userData.z);notify('MOVING TO '+o.userData.name);return}
 const id=o.userData.name;interactionPulse=1;
-if(o.userData.workshopType){workshop.handle(o);return;}
-if(id==='MAINTENANCE NOTE'){notify('SEARCH LOCKER 106 FOR THE STAFF CARD')}
+if(o.userData.environmentType){selected=null;roomStory.handle(o);return;}
+if(o.userData.workshopType){selected=null;workshop.handle(o);return;}
+if(id==='MAINTENANCE NOTE'){notify('PERSONAL NOTE · STATION ACCESS REQUIRED')}
 else if(id==='LOCK-SERVICE MANIPULATOR'){notify('PART REPLACEMENT REQUIRES A SERVICE BAY')}
 else if(id==='SEALED SERVICE CASE'){if(!caseOpen){caseOpen=true;lidPivot.rotation.x=-1.35;cell.visible=true;say('SERVICE CASE RELEASED.');task.textContent='Recover the portable power cell from the open case.';notify('LOCK RELEASED')}else if(!caseCellTaken){caseCellTaken=true;setCellCount(cellCount+1);cell.visible=false;say('PORTABLE POWER CELL RECOVERED.');task.textContent='Use the power cell to restore internal charge.';updateInventory();notify('POWER CELL ACQUIRED')}}
 else if(id==='AUXILIARY POWER DISTRIBUTION'){setStationPower(true);say('GENERATOR SWITCH ENGAGED. TERMINAL POWER AVAILABLE.');task.textContent='Access the powered terminal.';notify('GENERATOR ONLINE')}
-else if(id==='CONTROL TERMINAL'){if(!powerOn){notify('TERMINAL OFFLINE');return}showTerminal()}else if(id==='MAINTENANCE EXIT'){if(doorOpen)finishDemo();else if(!workshop.hasProbe)notify('DOOR SOCKET REQUIRES ACCESS PROBE');else if(!powerOn)notify('RESTORE POWER FIRST');else{doorOpening=true;hatch.userData.openStarted=performance.now();notify('ACCESS PROBE ENGAGED · DOOR UNLOCKING');saveProgress()}}
+else if(id==='CONTROL TERMINAL'){if(!powerOn){notify('TERMINAL OFFLINE');return}showTerminal()}else if(id==='MAINTENANCE EXIT'){if(doorOpen)finishDemo();else if(!workshop.hasProbe)notify(workshop.hasCraftedProbe?'PROBE IN INVENTORY · INSTALL IT AT THE MAINTENANCE STATION FIRST':'DOOR SOCKET REQUIRES ACCESS PROBE');else if(!powerOn)notify('RESTORE POWER FIRST');else{doorOpening=true;hatch.userData.openStarted=performance.now();notify('ACCESS PROBE ENGAGED · DOOR UNLOCKING');saveProgress()}}
 }
 // Nearby item readout and small projected E key above interactable objects.
 const nearbyPanel=document.querySelector('#nearby-panel');
@@ -695,7 +714,7 @@ function updateNearbyUI(){
 }
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let downX=0,downY=0,dragged=false;
 renderer.domElement.addEventListener('pointerdown',e=>{downX=e.clientX;downY=e.clientY;dragged=false});
-renderer.domElement.addEventListener('pointermove',e=>{if(Math.hypot(e.clientX-downX,e.clientY-downY)>5)dragged=true});
+renderer.domElement.addEventListener('pointermove',e=>{if(Math.hypot(e.clientX-downX,e.clientY-downY)>5){dragged=true;tutorialLooked=true}});
 renderer.domElement.addEventListener('pointerup',e=>{if(opening?.active||dragged||ended||paused||inventory.classList.contains('open'))return;const r=renderer.domElement.getBoundingClientRect();pointer.x=((e.clientX-r.left)/r.width)*2-1;pointer.y=-((e.clientY-r.top)/r.height)*2+1;raycaster.setFromCamera(pointer,activeCamera());const hits=raycaster.intersectObjects(interactables,true);let hit=null;for(const h of hits){let obj=h.object;while(obj.parent&&!interactables.includes(obj))obj=obj.parent;if(interactables.includes(obj)){hit=obj;break}}if(hit){if(hit===hatch&&doorOpen&&Math.hypot(robot.position.x-hatch.userData.x,robot.position.z-hatch.userData.z)<2.2){finishDemo();return}selected=hit;notify(hit.userData.name)}});
 const noteDialog=document.createElement('dialog');noteDialog.className='note-dialog';noteDialog.innerHTML='<h2>MAINTENANCE NOTE</h2><p>The password is <strong>ETNA</strong>.</p><form method="dialog"><button>KEEP NOTE</button></form>';document.body.append(noteDialog);
 function showNote(){Object.keys(keys).forEach(k=>keys[k]=false);setPaused(true);noteDialog.showModal()}
@@ -719,7 +738,7 @@ else if(cmd==='kill'){charge=0;updateCharge();triggerDeath()}
 else if(cmd==='clear')consoleOutput.textContent='SATURN STATION // 0.2 DEV CONSOLE';
 else consoleLog('UNKNOWN COMMAND. Type help.')}
 let godMode=false;document.querySelector('#console-form').addEventListener('submit',e=>{e.preventDefault();const value=consoleInput.value;consoleLog('> '+value);runCommand(value);consoleInput.value=''});
-window.addEventListener('keydown',e=>{if(mainMenu?.active)return;const k=e.key.toLowerCase();if(opening?.active){if(k==='escape'&&opening.elapsed>0)setPaused(!paused);return;}if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){terminalUI.key(e);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
+window.addEventListener('keydown',e=>{if(mainMenu?.active||observation?.active)return;const k=e.key.toLowerCase();if(opening?.active){if(k==='escape'&&opening.elapsed>0)setPaused(!paused);return;}if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){terminalUI.key(e);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
 if(k==='f2'){e.preventDefault();devConsole.classList.add('open');devConsole.setAttribute('aria-hidden','false');consoleInput.focus();return}
 if(workshop.isOpen||workshop.miniOpen){if(k==='escape'){workshop.close();return}if(k==='c'){if(workshop.miniOpen)workshop.open();else workshop.close();return}if(workshop.isOpen)return}
 if(k==='i'&&inventory.classList.contains('open')){closeInventory();return}
@@ -727,18 +746,23 @@ if(ended)return;
 if(k==='escape'){if(inventory.classList.contains('open')){closeInventory();return}if(deathScreen.classList.contains('open'))return;setPaused(!paused);return}
 if(paused||ended||inventory.classList.contains('open')||workshop.isOpen)return;
 if(k in keys){keys[k]=true;e.preventDefault()}
-if(k==='i'){openInventory();return}if(k==='c'){workshop.open();return}if(k==='§'||k==='`'){firstPerson=!firstPerson;lookHeading=robot.rotation.y;lookPitch=0;robot.visible=!firstPerson;notify(firstPerson?'FIRST-PERSON OPTICS · DRAG TO LOOK':'ISOMETRIC VIEW');return}if(k==='e')interact();if(k==='q'&&cellCount>0){setCellCount(cellCount-1);charge=Math.min(100,charge+55);updateCharge();workshop.updateUI();say('FUEL CELL CONSUMED. INTERNAL CHARGE RESTORED.');notify('CHARGE +55 · '+cellCount+' CELLS LEFT');saveProgress()}});
+if(k==='r'){resetCamera();return}if(k==='i'){openInventory();return}if(k==='c'){workshop.open();return}if(k==='§'||k==='`'){firstPerson=!firstPerson;lookHeading=robot.rotation.y;lookPitch=0;robot.visible=!firstPerson;notify(firstPerson?'FIRST-PERSON OPTICS · DRAG TO LOOK':'ISOMETRIC VIEW');return}if(k==='e')interact();if(k==='q'&&cellCount>0){setCellCount(cellCount-1);charge=Math.min(100,charge+55);updateCharge();workshop.updateUI();say('FUEL CELL CONSUMED. INTERNAL CHARGE RESTORED.');notify('CHARGE +55 · '+cellCount+' CELLS LEFT');saveProgress()}});
 window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k in keys)keys[k]=false});
 window.addEventListener('blur',()=>Object.keys(keys).forEach(k=>keys[k]=false));
 function triggerDeath(){if(godMode||deathScreen.classList.contains('open'))return;ended=true;Object.keys(keys).forEach(k=>keys[k]=false);deathScreen.classList.add('open');deathScreen.setAttribute('aria-hidden','false');task.textContent='UNIT POWER DEPLETED.';say('CRITICAL: UNIT POWER DEPLETED.');}
 function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);const aspect=w/h,view=8;camera.left=-view*aspect;camera.right=view*aspect;camera.top=view;camera.bottom=-view;camera.updateProjectionMatrix();firstPersonCamera.aspect=aspect;firstPersonCamera.updateProjectionMatrix();opening?.resize(w,h)}
 window.addEventListener('resize',resize);resize();
 
+const roomCoach=document.createElement('aside');roomCoach.id='room-coach';roomCoach.hidden=true;viewport.append(roomCoach);
+const controlGuide=createControlGuide({host:viewport,onOpen(){Object.keys(keys).forEach(k=>keys[k]=false)}});
+const controlsButton=document.createElement('button');controlsButton.id='controls-button';controlsButton.textContent='CONTROLS · H';controlsButton.addEventListener('click',()=>controlGuide.toggle());document.querySelector('.top-right').append(controlsButton);
+const inventoryButton=document.createElement('button');inventoryButton.id='inventory-button';inventoryButton.textContent='INVENTORY · I';inventoryButton.addEventListener('click',()=>{if(inventory.classList.contains('open'))closeInventory();else openInventory();inventoryButton.classList.remove('new-items')});document.querySelector('.top-right').append(inventoryButton);
+function resetCamera(){firstPerson=false;robot.visible=true;camera.position.set(robot.position.x+12,robot.position.y+15,robot.position.z+12);controls.target.set(robot.position.x,1.3,robot.position.z);camera.zoom=1.55;camera.updateProjectionMatrix();notify('CAMERA RESET · DRAG TO ORBIT · SCROLL TO ZOOM')}
 const hintBox=document.createElement('aside');hintBox.id='hint-box';hintBox.hidden=true;hintBox.innerHTML='<strong>MAINTENANCE GUIDANCE</strong><button aria-label="Close hints">×</button><p></p><small>H CLOSE · C WORKSHOP · § VIEW</small>';document.querySelector('#viewport').append(hintBox);
-const hintButton=document.createElement('button');hintButton.id='hint-toggle';hintButton.textContent='?';hintButton.title='Gameplay hints (H)';document.querySelector('#viewport').append(hintButton);
-function toggleHint(){hintBox.hidden=!hintBox.hidden;hintBox.querySelector('p').textContent=!powerOn?'Throw the generator switch to power the room.':!hasNote?'Find the staff card in locker 106.':workshop.hint()}
+const hintButton=document.createElement('button');hintButton.id='hint-toggle';hintButton.textContent='?';hintButton.title='Controls (H)';document.querySelector('#viewport').append(hintButton);
+function toggleHint(){controlGuide.toggle()}
 hintButton.onclick=toggleHint;hintBox.querySelector('button').onclick=()=>hintBox.hidden=true;
-window.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='h'&&!mainMenu?.active&&!terminalOpen&&!workshop.isOpen&&!inventory.classList.contains('open'))toggleHint()});
+window.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='h'&&!observation?.active&&!opening?.active&&!paused&&!devConsole.classList.contains('open')&&!settingsPanel.open&&!mainMenu?.active&&!terminalOpen&&!workshop.isOpen&&!inventory.classList.contains('open'))toggleHint()});
 
 
 // Drag to look around in first person. Keep orbit controls exclusive to the isometric view.
@@ -771,22 +795,24 @@ itemScene.add(new THREE.HemisphereLight(0xf0e5c9,0x39453d,2.5));
 const itemLight=new THREE.DirectionalLight(0xffe0ae,3);itemLight.position.set(-3,6,6);itemScene.add(itemLight);
 const itemCamera=new THREE.PerspectiveCamera(32,1,.1,30);itemCamera.position.set(3,2.6,4.2);itemCamera.lookAt(0,.7,0);
 const itemRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true});itemRenderer.setPixelRatio(Math.min(devicePixelRatio,2));itemRenderer.outputColorSpace=THREE.SRGBColorSpace;itemHost.appendChild(itemRenderer.domElement);
+const cardImage=document.createElement('img');cardImage.id='worker-card-inspection';cardImage.src='./assets/worker-id.svg';cardImage.alt='Faded worker badge: Mara Venn, portrait, terminal password ETNA';cardImage.hidden=true;itemHost.append(cardImage);
 const itemModel=new THREE.Group();itemScene.add(itemModel);
 let itemType=null,itemYaw=.4,itemDragging=false,itemLastX=0;
 function ownsInspectionItem(type){
- return type==='note'?hasNote:type==='arm'?hasArm:type==='cell'?cellCount>0:false;
+ return type==='probe'?workshop.hasCraftedProbe:type==='note'?hasNote:type==='arm'?hasArm:type==='cell'?cellCount>0:false;
 }
 function chooseInspection(type){
- itemType=ownsInspectionItem(type)?type:null;itemYaw=.4;itemDragging=false;itemModel.clear();
+ itemType=ownsInspectionItem(type)?type:null;itemYaw=.4;itemDragging=false;itemModel.clear();cardImage.hidden=itemType!=='note';itemHost.classList.toggle('card-selected',itemType==='note');
  document.querySelectorAll('[data-item]').forEach(slot=>{const active=slot.dataset.item===itemType;slot.classList.toggle('selected',active);slot.setAttribute('aria-pressed',String(active))});
- const equip=document.querySelector('#equip-inspected');equip.hidden=itemType!=='arm';equip.textContent=armEquipped?'UNEQUIP':'EQUIP';
+ const equip=document.querySelector('#equip-inspected');equip.hidden=true;equip.textContent=armEquipped?'UNEQUIP':'EQUIP';
  if(!itemType){
   document.querySelector('#inspection-title').textContent='NO ITEM SELECTED';
   document.querySelector('#inspection-description').textContent='Select an occupied slot to inspect its equipment.';
   document.querySelector('#inspection-specs').textContent='';
   return;
  }
- if(type==='note'){document.querySelector('#inspection-title').textContent='WORKER ACCESS CARD';document.querySelector('#inspection-description').textContent='B-7 service staff identification. The battered yellow sticky note on the reverse reads ETNA.';document.querySelector('#inspection-specs').textContent='PERSONAL / ACCESS ITEM · RECOVERED FROM LOCKER 106';return;}
+ if(type==='probe'){const model=(workshop.hasProbe?originalArm:doorAccessProbe).clone(true);model.visible=true;const attachment=model.getObjectByName('door-access-probe');if(attachment)attachment.visible=true;model.position.set(.3,2,0);model.scale.setScalar(1.25);itemModel.add(model);document.querySelector('#inspection-title').textContent='ACCESS PROBE / THIRD FINGER';document.querySelector('#inspection-description').textContent=workshop.hasProbe?'Keyed contact finger installed on the original gripper.':'Fabricated probe in inventory. At the maintenance station, place it in the wrist slot and confirm installation.';document.querySelector('#inspection-specs').textContent=(workshop.hasProbe?'WRIST MODIFICATION · INSTALLED':'WRIST MODIFICATION · NOT INSTALLED');return;}
+ if(type==='note'){const model=workshop.makePartModel(itemModel,'card',2.4);model.position.y=.7;document.querySelector('#inspection-title').textContent='WORKER ACCESS CARD';document.querySelector('#inspection-description').textContent='Mara Venn — station worker. Most of the badge has faded. The handwritten terminal password is ETNA.';document.querySelector('#inspection-specs').textContent='PERSONAL / ACCESS ITEM · RECOVERED FROM LOCKER 106';return;}
  const model=(type==='arm'?mountedArm:cell).clone(true);model.visible=true;
  if(type==='cell')model.rotation.x=0;
  model.position.set(0,type==='arm'?1.7:.75,0);model.scale.setScalar(type==='arm'?1.2:2.1);itemModel.add(model);
@@ -880,13 +906,14 @@ const equipButton=document.createElement('button');equipButton.id='equip-inspect
 document.querySelector('.inspection-details').append(equipButton);
 equipButton.addEventListener('click',()=>setArmEquipped(!armEquipped));
 const demoEnding=createDemoEnding({restart:restartDemo,sound:playSound,reducedMotion,onMenu:()=>mainMenu.show()});
-function setArmEquipped(value){
- if(!hasArm)return;
- armEquipped=value;updateInventory();saveProgress();playSound('equip');
- notify(value?'MANIPULATOR INSTALLED':'MANIPULATOR STOWED');refreshDirective();
+function setArmEquipped(){notify('BODY PART REPLACEMENT REQUIRES A SERVICE BAY')}
+function refreshDirective(){
+ if(ended)return;
+ const text=openingDirective({powerOn,hasNote,terminalBooted,doorOpen,...workshop.progress});
+ if(task.textContent!==text){task.textContent=text;task.setAttribute('aria-live','polite');task.parentElement.classList.remove('directive-updated');void task.offsetWidth;task.parentElement.classList.add('directive-updated');}
 }
-function refreshDirective(){task.textContent=!powerOn?'Restore auxiliary power at the generator.':!hasNote?'Find the worker access card in locker 106.':!workshop.specUnlocked?'Use the terminal to recover the fabrication spec.':!workshop.hasProbe?'Dismantle the broken claw and fabricate an Access Probe.':'Use the probe on the exit door socket.'}
 function interactionHint(o){
+ if(o.userData.environmentType)return o.userData.environmentType==='window'?'LOOK OUTSIDE':'EXAMINE';
  if(o.userData.workshopType==='locker')return 'OPEN SALVAGE LOCKER';
  if(o.userData.workshopType==='bench')return 'OPEN WORKSHOP';
  if(o.userData.workshopType==='shard')return 'RECOVER SPEC SHARD';
@@ -894,11 +921,11 @@ function interactionHint(o){
   if(o.userData.workshopType==='broken-claw')return 'DISMANTLE BROKEN CLAW';
  const id=o.userData.name;
  if(id==='MAINTENANCE NOTE')return 'READ MAINTENANCE NOTE';
- if(id==='LOCK-SERVICE MANIPULATOR')return pickup?'RECOVERING':'RECOVER ARM';
+ if(id==='LOCK-SERVICE MANIPULATOR')return 'BODY PART · SERVICE BAY REQUIRED';
  if(id==='SEALED SERVICE CASE')return !caseOpen?'RELEASE CASE':!caseCellTaken?'TAKE POWER CELL':'CASE EMPTY';
  if(id==='AUXILIARY POWER DISTRIBUTION')return powerOn?'POWER ONLINE':'RESTORE POWER';
  if(id==='CONTROL TERMINAL')return powerOn?'ACCESS TERMINAL':'POWER REQUIRED';
- return doorOpen?'FINISH DEMO':workshop.hasProbe?'USE ACCESS PROBE':'ACCESS PROBE REQUIRED';
+ return doorOpen?'FINISH DEMO':workshop.hasProbe?'USE ACCESS PROBE':workshop.hasCraftedProbe?'INSTALL YOUR PROBE FIRST':'ACCESS PROBE REQUIRED';
 }
 function beginPickup(o){
  referenceAssets.releaseArm();pickup={object:o,time:0,start:o.position.clone()};target=null;
@@ -942,7 +969,7 @@ function workLamp(x,y,z,color,intensity){
  const light=new THREE.PointLight(color,0,12,2);light.position.set(x,y-.35,z);scene.add(light);
  workFixtures.push({light,material,intensity});
 }
-for(const [x,y,z,c,i] of [[-9,4.5,6,0xffd6a0,36],[6,4.7,5,0xffd6a0,38],[-7,4.7,-4,0xffd6a0,35],[5,4.6,-7,0xc5e5e8,42],[11.4,4,-9.5,0xe9edcc,35],[0,5,-1,0xe4dfbd,38]])workLamp(x,y,z,c,i);
+for(const [x,y,z,c,i] of [[-9,4.5,6,0xffd6a0,36],[6,4.7,5,0xffd6a0,38],[-7,4.7,-4,0xffd6a0,35],[-10.8,4.6,-8.5,0xc5e5e8,42],[11.4,4,-9.5,0xe9edcc,35],[0,5,-1,0xe4dfbd,38]])workLamp(x,y,z,c,i);
 for(const [x,z] of [[-13.4,5],[-13.4,-5],[0,-10.5],[10,-10.5]]){
  const material=new THREE.MeshStandardMaterial({color:0xa6190d,emissive:0xff1608,emissiveIntensity:2.4});
  box(scene,.36,.25,.15,doorFrame,x,2.8,z);box(scene,.25,.14,.04,material,x,2.8,z+.10,false);
@@ -958,8 +985,8 @@ for(const [x,z] of [[-13.4,5],[-13.4,-5],[0,-10.5],[10,-10.5]]){
 for(const x of [-11.9,-7.2]){box(scene,.12,.1,3.1,hazardPaint,x,.12,6.5);for(const z of [5.1,7.9])box(scene,.18,.7,.18,deckSteel,x,.35,z)}
 for(const z of [4.9,8.1])box(scene,4.8,.06,.1,hazardPaint,-9.55,.12,z);
 label(scene,'REPAIR BAY',-9.5,.16,8.2,0,1.1,0xc9ae75).rotation.x=-Math.PI/2;
-box(scene,3.7,.06,2.8,deckSteel,5,.08,-7);
-for(const x of [3.1,6.9])box(scene,.13,3.8,.25,ivory,x,1.9,-8.5);
+box(scene,3.0,.06,1.7,deckSteel,-10.8,.08,-8.5);
+
 // The old floating CONTROL label was removed with the obsolete control-alcove props.
 label(scene,'EXIT B-7',11.4,3.6,-10.15,0,.7,0xe9d7a4);
 function setStationPower(value){
@@ -967,7 +994,7 @@ function setStationPower(value){
  powerOn=value;powerElapsed=value?0:10;generatorLever.rotation.z=value?.75:0;
  terminalScreen.material=terminalLamp.material=value?terminalLit:terminalDark;
  if(!value){terminalBooted=false;terminalUI.powerOff();}
- playSound(value?'power':'servo');saveProgress();
+ playSound(value?'power':'servo');refreshDirective();saveProgress();
 }
 function updateLighting(dt){
  powerElapsed+=dt;
@@ -1024,7 +1051,10 @@ window.addEventListener('click',unlockAudio);window.addEventListener('pointerdow
 soundButton.addEventListener('click',()=>{soundEnabled=!soundEnabled;backgroundMusic.setEnabled(soundEnabled);soundButton.textContent=soundEnabled?'SOUND ON':'SOUND OFF';soundButton.setAttribute('aria-pressed',String(soundEnabled));if(soundEnabled)unlockAudio();if(audioMaster)audioMaster.gain.setTargetAtTime(soundEnabled?.13:0,audio.currentTime,.05)});
 document.addEventListener('visibilitychange',()=>{if(audioMaster)audioMaster.gain.setTargetAtTime(soundEnabled&&!document.hidden?.13:0,audio.currentTime,.08);if(document.hidden)saveProgress()});
 function playSound(kind){
- if(!audio||!soundEnabled||audio.state!=='running')return;
+ if(!soundEnabled)return;
+ if(!audio)unlockAudio();if(!audio)return;
+ if(audio.state==='suspended'){audio.resume().then(()=>{if(audio.state==='running'&&soundEnabled)playSound(kind)}).catch(()=>{});return;}
+ if(audio.state!=='running')return;
  const now=audio.currentTime,o=audio.createOscillator(),g=audio.createGain();
  const tones={step:[90,42,.1],servo:[180,75,.5],collect:[390,780,.22],equip:[150,310,.2],power:[45,115,1.7],select:[540,620,.07],'terminal-key':[320,210,.025],'terminal-boot':[65,420,1.6],'terminal-ready':[660,990,.18],'terminal-denied':[170,75,.22]};
  const [a,b,d]=tones[kind]||tones.select;o.type=kind==='terminal-key'?'square':kind==='step'?'triangle':'sine';o.frequency.setValueAtTime(a,now);o.frequency.exponentialRampToValueAtTime(b,now+d);g.gain.setValueAtTime(.001,now);g.gain.exponentialRampToValueAtTime(kind==='terminal-key'?.06:kind==='step'?.4:.22,now+.015);g.gain.exponentialRampToValueAtTime(.001,now+d);o.connect(g).connect(audioMaster);o.start(now);o.stop(now+d+.02);o.onended=()=>{o.disconnect();g.disconnect()};
@@ -1032,27 +1062,27 @@ function playSound(kind){
 function saveProgress(){
  if(opening?.active||mainMenu?.active)return;
  if(resettingProgress)return;
- try{const progress={version:1,charge,hasArm,armEquipped,caseOpen,caseCellTaken,hasNote,hasCell,usedCell,cellCount,workshop:workshop.serialize(),powerOn,doorOpen,terminalBooted,x:robot.position.x,z:robot.position.z,heading:robot.rotation.y};if(mainMenu)mainMenu.record(progress);else localStorage.setItem(SAVE_KEY,JSON.stringify(progress));return true}catch{return false}
+ try{const progress={version:1,charge,hasArm,armEquipped,caseOpen,caseCellTaken,hasNote,hasCell,usedCell,cellCount,workshop:workshop.serialize(),observations:roomStory?.serialize(),powerOn,doorOpen,terminalBooted,x:robot.position.x,z:robot.position.z,heading:robot.rotation.y};if(mainMenu)mainMenu.record(progress);else localStorage.setItem(SAVE_KEY,JSON.stringify(progress));return true}catch{return false}
 }
 function restoreProgress(){
  try{
   const p=JSON.parse(localStorage.getItem(SAVE_KEY));if(!p||p.version!==1)return;
   const flag=k=>p[k]===true;
-  hasNote=flag('hasNote');if(hasNote)removeObject(maintenanceNote);hasArm=flag('hasArm');armEquipped=hasArm&&flag('armEquipped');caseOpen=flag('caseOpen');caseCellTaken=flag('caseCellTaken')||flag('hasCell')||flag('usedCell');setCellCount(Number.isInteger(p.cellCount)?p.cellCount:(flag('hasCell')&&!flag('usedCell')?1:0));workshop.restore(p.workshop);
+  hasNote=flag('hasNote');hasArm=flag('hasArm');armEquipped=false;caseOpen=flag('caseOpen');caseCellTaken=flag('caseCellTaken')||flag('hasCell')||flag('usedCell');setCellCount(Number.isInteger(p.cellCount)?p.cellCount:(flag('hasCell')&&!flag('usedCell')?1:0));workshop.restore(p.workshop);roomStory?.restore(p.observations);
   charge=Number.isFinite(p.charge)?THREE.MathUtils.clamp(p.charge,1,100):60;
   if(Number.isFinite(p.x)&&Number.isFinite(p.z))robot.position.set(THREE.MathUtils.clamp(p.x,-12.5,12.5),0,THREE.MathUtils.clamp(p.z,-9.5,9.5));
   if(Number.isFinite(p.heading))robot.rotation.y=p.heading;
   if(!canOccupy(robot.position.x,robot.position.z))robot.position.set(0,0,0);
   if(hasArm)removeObject(arm);lidPivot.rotation.x=caseOpen?-1.35:0;cell.visible=caseOpen&&!caseCellTaken;
   powerOn=flag('powerOn');powerElapsed=10;generatorLever.rotation.z=powerOn?.75:0;terminalScreen.material=terminalLamp.material=powerOn?terminalLit:terminalDark;
-  terminalBooted=powerOn&&flag('terminalBooted');doorOpen=flag('doorOpen');leftLeaf.position.x=doorOpen?-1.85:0;rightLeaf.position.x=doorOpen?1.85:0;
+  terminalBooted=powerOn&&flag('terminalBooted');doorOpen=flag('doorOpen')&&workshop.hasProbe&&powerOn;leftLeaf.position.x=doorOpen?-1.85:0;rightLeaf.position.x=doorOpen?1.85:0;
   controls.target.set(robot.position.x,1.3,robot.position.z);camera.position.set(robot.position.x+12,16,robot.position.z+12);notify('LOCAL PROGRESS RESTORED');
  }catch{}
 }
 window.addEventListener('pagehide',saveProgress);
 function updateStationSystems(dt){
  const active=!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!workshop.isOpen&&!devConsole.classList.contains('open');
- terminalUI.update(dt);updateLighting(dt);animatePickup(dt);stationArt.updateOcclusion(camera,dt);
+ roomStory?.update(paused||ended||terminalOpen||inventory.classList.contains('open')||workshop.isOpen);observation?.update(0);refreshDirective();roomCoach.hidden=!!opening?.active||menuLaunch?.mode!=='new'||(tutorialWalked&&tutorialLooked)||paused||ended||terminalOpen||inventory.classList.contains('open')||workshop.isOpen||devConsole.classList.contains('open');roomCoach.textContent=!tutorialWalked?'↓ MU-1 · Hold W A S D to walk.':'↔ LOOK · Drag empty space to orbit. Scroll to zoom. R resets the camera.';terminalUI.update(dt);updateLighting(dt);animatePickup(dt);stationArt.updateOcclusion(camera,dt);
  if(active){systemTime+=dt;saveElapsed+=dt;stepElapsed+=dt;if(gaitVelocity>.35&&!pickup&&stepElapsed>.56){playSound('step');stepElapsed=0}if(saveElapsed>2){saveElapsed=0;saveProgress()}}
  if(humGain&&audio)humGain.gain.setTargetAtTime(active?(powerOn?.16:.035):0,audio.currentTime,.25);
 }
@@ -1068,8 +1098,8 @@ function moveRobot(dx,dz){
  if(canOccupy(robot.position.x+dx,robot.position.z))robot.position.x+=dx;
  if(canOccupy(robot.position.x,robot.position.z+dz))robot.position.z+=dz;
 }
-function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta();const dt=Math.min(elapsed,.04);if(mainMenu?.active)return;referenceAssets.update(paused||ended?0:dt,powerOn,reducedMotion,!!pickup&&pickup.time>.53);if(opening?.active){controls.enabled=false;if(!paused)opening.update(elapsed);renderer.render(scene,opening.camera);return;}controls.enabled=!firstPerson&&!inventory.classList.contains('open')&&!workshop.isOpen&&!paused&&!devConsole.classList.contains('open')&&!terminalOpen;// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
-const desiredFocus=new THREE.Vector3(robot.position.x-(workshop.isOpen?1.6:0),1.25,robot.position.z);
+function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta();const dt=Math.min(elapsed,.04);if(mainMenu?.active){observation?.update(0);return;}if(observation?.active){controls.enabled=false;observation.update(dt);renderer.render(scene,observation.approachCamera);return;}referenceAssets.update(paused||ended||workshop.isOpen?0:dt,powerOn,reducedMotion,!!pickup&&pickup.time>.53);if(opening?.active){controls.enabled=false;if(!paused)opening.update(elapsed);renderer.render(scene,opening.camera);return;}controls.enabled=!firstPerson&&!inventory.classList.contains('open')&&!workshop.isOpen&&!paused&&!devConsole.classList.contains('open')&&!terminalOpen;// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
+const desiredFocus=workshop.isOpen?new THREE.Vector3(-5.3,1.3,2.2):new THREE.Vector3(robot.position.x,1.25,robot.position.z);
 const followDelta=desiredFocus.sub(controls.target).multiplyScalar(1-Math.exp(-dt*4));
 controls.target.add(followDelta);camera.position.add(followDelta);
 controls.update();if(inventory.classList.contains('open')){renderInventoryPreview();renderItemInspection(dt)}if(!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){let mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0);if(firstPerson){const f=-mz,r=mx;mx=Math.sin(lookHeading)*f+Math.cos(lookHeading)*r;mz=Math.cos(lookHeading)*f-Math.sin(lookHeading)*r;}const len=Math.hypot(mx,mz);const wantsMove=len>0&&!pickup&&!workshop.isOpen;
@@ -1078,7 +1108,7 @@ const targetSpeed=wantsMove?2.25*Math.max(.72,1-(workshop.mass()+cellCount*1.8)*
 gaitVelocity=THREE.MathUtils.damp(gaitVelocity,targetSpeed,wantsMove?6.2:8.5,dt);
 gaitWeight=THREE.MathUtils.damp(gaitWeight,wantsMove?1:0,wantsMove?3.0:5.0,dt);
 if(wantsMove){
- moveRobot(mx/len*gaitVelocity*dt,mz/len*gaitVelocity*dt);
+ moveRobot(mx/len*gaitVelocity*dt,mz/len*gaitVelocity*dt);tutorialWalked=true;
  const desiredHeading=firstPerson?lookHeading:Math.atan2(mx,mz);
  robot.rotation.y+=Math.atan2(Math.sin(desiredHeading-robot.rotation.y),Math.cos(desiredHeading-robot.rotation.y))*Math.min(1,dt*9);
 }
@@ -1108,6 +1138,8 @@ if(!paused&&!ended&&!workshop.isOpen&&!godMode&&charge>0){charge=Math.max(0,char
 if(doorOpening&&!doorOpen){const t=Math.min(1,(performance.now()-hatch.userData.openStarted)/1150);leftLeaf.position.x=-1.85*t;rightLeaf.position.x=1.85*t;if(t>=1){doorOpening=false;doorOpen=true;updateTerminalStatus();task.textContent='Exit door open. Terminal remains available.';notify('DOOR OPEN')}}
 if(firstPerson){firstPersonCamera.position.set(robot.position.x,2.15,robot.position.z);firstPersonCamera.lookAt(robot.position.x+Math.sin(lookHeading)*Math.cos(lookPitch),2.15+Math.sin(lookPitch),robot.position.z+Math.cos(lookHeading)*Math.cos(lookPitch));}
 doorAccessProbe.visible=workshop.hasProbe;workshop.update(dt);updateStationSystems(dt);renderer.render(scene,activeCamera());updateNearbyUI()}
+roomStory=installRoomStory({THREE,scene,interactables,referenceAssets,terminal,exchanger,box,cylinder,pipeBetween,label,notify,sound:playSound,onWindow:()=>observation.show()});
+observation=createObservationView({THREE,viewport,renderer,windowGlass:referenceAssets.windowGlass,sourceCamera:activeCamera,reducedMotion,sound:playSound,onOpen(){Object.keys(keys).forEach(k=>keys[k]=false);controlGuide.hide();roomStory.hide();document.body.classList.add('observing');if(humGain&&audio)humGain.gain.setTargetAtTime(0,audio.currentTime,.2)},onClose(){Object.keys(keys).forEach(k=>keys[k]=false);document.body.classList.remove('observing')}});
 opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();if(menuLaunch?.mode!=='resume'){doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;}updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
 mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound,unlockAudio});
 const returnMenuButton=document.createElement('button');returnMenuButton.textContent='MAIN MENU';returnMenuButton.addEventListener('click',()=>{hideTerminal();closeInventory();saveProgress();setPaused(true);mainMenu.show()});document.querySelector('#pause-restart').after(returnMenuButton);

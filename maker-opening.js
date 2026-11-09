@@ -1,3 +1,4 @@
+import {MAKER_EXIT_ROUTE} from './room-layout.js';
 import * as THREE from 'three';
 import {sampleOpening,OPENING_DURATION} from './opening-timeline.mjs';
 
@@ -71,7 +72,7 @@ export function createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,onCo
   const s=sampleOpening(elapsed);black.style.opacity=s.blackout;
   const repair=new THREE.Vector3(-7.6,0,4.8);
   // Follow clear aisles, skirting the central machinery and east-wall cabinets.
-  const route=[repair,new THREE.Vector3(-3.5,0,3),new THREE.Vector3(8.2,0,1),new THREE.Vector3(8.2,0,-8),new THREE.Vector3(11.4,0,-9.3),new THREE.Vector3(11.4,0,-14.5)];
+  const route=MAKER_EXIT_ROUTE.map(([x,z])=>new THREE.Vector3(x,0,z));
   const lengths=route.slice(1).map((p,i)=>p.distanceTo(route[i]));
   let distance=s.run*lengths.reduce((a,b)=>a+b,0),segment=0;
   while(segment<lengths.length-1&&distance>lengths[segment])distance-=lengths[segment++];

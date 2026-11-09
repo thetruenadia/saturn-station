@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {PROBE_RECIPE,stackParts,recipeStatus,canFabricate,SERVICE_POSITION,placeIngredient,trayComplete} from '../workshop-rules.js';
+import {ROOM_COLLIDERS} from '../reference-assets.js';
+import {createAccessProbe} from '../access-probe.js';
+const THREE=await import(process.env.THREE_MODULE||'three');
+const items=()=>Object.entries(PROBE_RECIPE).flatMap(([type,n])=>Array.from({length:n},(_,i)=>({type,id:type+i})));
+test('obsolete rarity never splits matching components',()=>{assert.equal(stackParts([{type:'gear',rarity:'rare'},{type:'gear',rarity:'common'}])[0].length,2)});
+test('recipe counts distinguish owned, required and missing',()=>{const r=recipeStatus([{type:'gear'}]);assert.deepEqual(r.find(i=>i.type==='gear'),{type:'gear',owned:1,required:2,missing:1});assert.equal(r.find(i=>i.type==='chip').missing,1)});
+test('crafting requires power, discovery, full recipe and physical station',()=>{const ready={items:items(),discovered:true,installed:false,powered:true,atStation:true};assert(canFabricate(ready));for(const key of ['discovered','powered','atStation'])assert(!canFabricate({...ready,[key]:false}));assert(!canFabricate({...ready,installed:true}));assert(!canFabricate({...ready,items:items().slice(1)}))});
+test('guaranteed locker parts plus dismantled claw satisfy recipe without random drops',()=>{const types=['motor','plate','wire','gear','wire','gear','chip','wire'];assert(recipeStatus(types.map(type=>({type}))).every(i=>i.missing===0))});
+test('service position is reachable and clear of every machine footprint',()=>{assert(Math.hypot(SERVICE_POSITION.x+9,SERVICE_POSITION.z-2.2)<2.5);assert(!ROOM_COLLIDERS.some(([x,z,hx,hz])=>Math.abs(SERVICE_POSITION.x-x)<hx+.42&&Math.abs(SERVICE_POSITION.z-z)<hz+.42))});
+test('third finger is integrated into wrist, keyed and retained by inspection clones',()=>{const arm=new THREE.Group(),probe=createAccessProbe(THREE);arm.add(probe);assert.equal(probe.parent,arm);assert.equal(probe.visible,false);assert(probe.getObjectByName('wrist-saddle'));assert(probe.getObjectByName('connector-key'));assert.equal(probe.children.filter(i=>i.name==='electrical-contact').length,2);probe.visible=true;const copy=arm.clone(true);assert.equal(copy.getObjectByName('door-access-probe').visible,true);const b=new THREE.Box3().setFromObject(probe);assert(b.max.y>-1.24&&b.min.y< -1.7);assert(b.max.x-b.min.x<.4)});
+
+test('manual tray rejects wrong types and overfilling without consuming inventory',()=>{const owned=items(),before=JSON.stringify(owned);let tray={};assert.equal(placeIngredient(tray,owned,'card'),tray);assert.equal(placeIngredient(tray,[],'motor'),tray);for(const [type,n] of Object.entries(PROBE_RECIPE))for(let i=0;i<n;i++)tray=placeIngredient(tray,owned,type);assert(trayComplete(tray));assert.equal(placeIngredient(tray,owned,'gear'),tray);assert.equal(JSON.stringify(owned),before);tray={};assert.equal(trayComplete(tray),false);assert.equal(JSON.stringify(owned),before)});

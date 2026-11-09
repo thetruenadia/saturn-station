@@ -22,3 +22,5 @@ test('reduced motion leaves mechanisms static while power indicators still respo
 test('collision footprints describe the authored machines rather than deleted props',()=>{const {result:r}=setup();for(const g of [r.workArm,r.turbine,r.press,r.engine])assert(r.colliders.some(([x,z])=>x===g.position.x&&z===g.position.z));assert(!r.colliders.some(([x,z])=>x===-5&&z===-3));});
 
 test('the collectible geometry rests on the deck inside the lowered work claw',()=>{const {scene,objects:o}=setup();scene.updateMatrixWorld(true);const body=o.arm.getObjectByName('mounted-service-arm');const bounds=new THREE.Box3().setFromObject(body);assert(Math.abs(bounds.min.y-.09)<.001);assert(Math.hypot(o.arm.position.x+9,o.arm.position.z-2.2)<3);});
+
+test('loose claw has only its salvage model and no recovery marker meshes',()=>{const {objects:o}=setup();assert.equal(o.arm.children.length,1);assert.equal(o.arm.children[0].name,'mounted-service-arm');assert(!o.arm.children.some(c=>c.geometry?.type==='TorusGeometry'))});
