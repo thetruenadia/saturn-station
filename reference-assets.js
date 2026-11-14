@@ -1,4 +1,4 @@
-import {ROOM_LAYOUT,ROOM_COLLIDERS,OBSERVATION_PORT} from './room-layout.js?v=window3';
+import {ROOM_LAYOUT,ROOM_COLLIDERS,OBSERVATION_PORT} from './room-layout.js?v=rotor1';
 export {ROOM_COLLIDERS};
 // Reference-led procedural assets for prototype 0.2. Gameplay groups remain stable.
 export function stepFloorBody(body,dt){
@@ -107,11 +107,51 @@ export function installReferenceAssets({THREE,scene,cell,caseGroup,lidPivot,hatc
  for(const x of [-.76,.76]){C(windowGroup,.12,.04,black,x,-h/2,.43,Math.PI/2);for(let i=0;i<4;i++)B(windowGroup,.14,.012,.02,steel,x,-h/2-.05+i*.035,.46);}
  // 07: three distinct perimeter machines. No random duplicate screen props.
  stationArt.compressor.removeFromParent();stationArt.cabinet.removeFromParent();
- const turbine=group('rotary-power-machine',9.8,0,4.8);B(turbine,1.9,.20,1.65,black,0,.14,0);C(turbine,.68,1.35,blue,0,1.10,0,Math.PI/2);
- const flywheel=group('turbine-flywheel',0,1.1,.76,turbine);ring(flywheel,.55,.09,steel,0,0,0);C(flywheel,.16,.18,black,0,0,0,Math.PI/2);for(let i=0;i<6;i++){const spoke=B(flywheel,.065,.92,.07,copper);spoke.rotation.z=i*Math.PI/3;}rotors.push(flywheel);
- for(const z of [-.55,0,.55]){const band=ring(turbine,.71,.055,black,0,1.10,z);}
- for(const side of [-1,1]){B(turbine,.38,.80,.65,blue,side*.70,.65,0);C(turbine,.13,.6,copper,side*.57,1.75,0);gauge(turbine,side*.28,1.60,.64,.12);}
- plaque(turbine,'ROTARY CONVERTER',0,.30,.85,1.04,.13);lamp(turbine,.62,.45,.86);
+ // A large station converter. Its open stator, wound poles and bearing yoke are visible from the aisle.
+ const turbine=group('rotary-power-machine');
+ const iron=wornPaint(0x70766d,638),cast=wornPaint(0x454e49,641),winding=makeMat(0x80583c,.82,.36);
+ const axle=3.15,face=Math.PI/2;
+ B(turbine,6.36,.34,5.0,cast,0,.18,0);
+ B(turbine,5.83,.15,4.60,black,0,.41,0);
+ for(const side of [-1,1]){
+  rounded(turbine,.89,2.14,1.54,.18,iron,side*2.37,1.57,-.59);
+  B(turbine,1.2,.18,1.87,steel,side*2.37,.56,-.59);
+  for(const z of [-1.27,.12])C(turbine,.095,.11,steel,side*2.53,.69,z);
+ }
+ for(const [z,radius,thick,material] of [[-.91,2.38,.36,cast],[-.24,2.46,.25,iron],[.20,2.20,.12,steel],[.33,1.99,.086,iron]]){
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(radius,thick,12,64),material);
+  rim.position.set(0,axle,z);rim.receiveShadow=true;turbine.add(rim);
+ }
+ for(let i=0;i<32;i++){
+  const angle=i*Math.PI/16,x=Math.sin(angle),y=Math.cos(angle);
+  const pole=B(turbine,.24,.48,.71,black,x*2.06,axle+y*2.06,-.31);pole.rotation.z=-angle;
+  for(const z of [-.35,-.13,.09]){
+   const coil=B(turbine,.29,.39,.061,winding,x*1.99,axle+y*1.99,z);coil.rotation.z=-angle;
+  }
+  if(i%2===0)C(turbine,.047,.051,steel,x*2.46,axle+y*2.46,.006,face);
+ }
+ const flywheel=group('turbine-flywheel',0,axle,.38,turbine);
+ ring(flywheel,1.78,.092,cast,0,0,0);
+ C(flywheel,.68,.33,cast,0,0,.02,face);
+ for(let i=0;i<16;i++){
+  const spoke=group('rotor-rib',0,0,0,flywheel);spoke.rotation.z=i*Math.PI/8;
+  const web=B(spoke,.12,1.24,.115,steel,0,1.14,0);web.rotation.z=.15;
+ }
+ C(turbine,.29,2.23,steel,0,axle,.83,face);
+ for(const z of [.62,1.16,1.94])C(turbine,.49,.12,iron,0,axle,z,face);
+ rounded(turbine,1.21,2.32,1.05,.23,iron,0,1.66,1.62);
+ C(turbine,.56,.85,cast,0,axle,1.55,face);
+ C(turbine,.38,.11,iron,0,axle,2.01,face);
+ for(const side of [-1,1]){
+  C(turbine,.09,.77,steel,side*2.25,1.18,1.59);
+  C(turbine,.09,.77,steel,side*.70,1.18,1.59);
+  beam(turbine,[side*.70,1.52,1.59],[side*2.25,1.52,1.59],.048,steel);
+ }
+ rounded(turbine,.70,.84,.31,.09,cast,-2.24,1.61,.25);
+ plaque(turbine,'R-04 / CONVERTER',-2.24,1.71,.42,.63,.15);
+ lamp(turbine,-2.41,1.51,.43);
+ cable(turbine,[[.20,5.68,-.72],[.30,6.25,-.77],[.72,6.36,-1.21],[.75,6.37,-2.22]],.14,black);
+ rotors.push(flywheel);
  const press=group('hydraulic-work-press',10,0,-3.5);rounded(press,1.65,.25,1.48,.16,steel,0,.15,0);rounded(press,.60,2.55,.90,.13,blue,.48,1.50,-.15);C(press,.40,1.10,blue,-.18,2.76,0);C(press,.48,.16,steel,-.18,2.28,0);C(press,.22,.72,steel,-.18,1.88,0);
  const ram=group('press-ram',-.18,1.48,0,press);C(ram,.23,.42,steel);C(ram,.30,.10,black,0,-.25,0);C(press,.42,.38,black,-.18,.48,0);B(press,.70,.12,.67,steel,-.18,.74,0);reciprocators.push({node:ram,base:1.48,amplitude:.16});gauge(press,.40,2.17,.48,.14);plaque(press,'HYDRAULIC / 02',.48,1.41,.33,.38,.13);lamp(press,.62,1.14,.34);cable(press,[[.72,2.35,-.1],[.92,1.7,.1],[.83,.4,.3]],.04);
  const engine=group('vertical-service-engine',-10.5,0,-6.6);B(engine,1.65,.19,1.35,black,0,.14,0);rounded(engine,1.13,1.65,1.02,.12,olive,0,1.1,0);C(engine,.45,1.9,steel,.18,2.59,0);C(engine,.49,.12,black,.18,3.57,0);for(let y=1.9;y<3.5;y+=.17)C(engine,.47,.035,black,.18,y,0);

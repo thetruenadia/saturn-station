@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const s=await fs.readFile(new URL('prototype-3d.js',import.meta.url),'utf8');
 function fn(name){const a=s.indexOf('function '+name+'(');let depth=0,b=s.indexOf('{',a);for(let i=b;i<s.length;i++){if(s[i]==='{')depth++;if(s[i]==='}'&&!--depth)return s.slice(a,i+1)}throw Error(name)}
 const fixture=()=>({light:{intensity:0},material:{emissiveIntensity:0},intensity:40});
-const ctx={powerOn:false,powerElapsed:0,reducedMotion:false,workFixtures:[fixture(),fixture()],redFixtures:[fixture()],ambient:{},keyLight:{},hasArm:false,hasNote:false,cellCount:0,caseOpen:false,hasCell:false,usedCell:false,workshop:{hasProbe:false}};
+const ctx={serviceBay:{update(){}},powerOn:false,powerElapsed:0,reducedMotion:false,workFixtures:[fixture(),fixture()],redFixtures:[fixture()],ambient:{},keyLight:{},hasArm:false,hasNote:false,cellCount:0,caseOpen:false,hasCell:false,usedCell:false,workshop:{hasProbe:false}};
 vm.createContext(ctx);vm.runInContext(fn('ownsInspectionItem')+fn('updateLighting')+fn('interactionHint'),ctx);
 assert.equal(ctx.ownsInspectionItem('arm'),false);ctx.hasArm=true;assert.equal(ctx.ownsInspectionItem('arm'),true);ctx.hasCell=true;ctx.usedCell=true;assert.equal(ctx.ownsInspectionItem('cell'),false);
 ctx.updateLighting(1);assert.equal(ctx.workFixtures[0].light.intensity,0);assert.equal(ctx.redFixtures[0].light.intensity,14);

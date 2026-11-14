@@ -1,4 +1,4 @@
-import {MAKER_EXIT_ROUTE} from './room-layout.js';
+import {MAKER_EXIT_ROUTE} from './room-layout.js?v=rotor1';
 import * as THREE from 'three';
 import {sampleOpening,OPENING_DURATION} from './opening-timeline.mjs';
 

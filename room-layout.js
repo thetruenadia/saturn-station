@@ -1,13 +1,14 @@
 // Functional zones, kept separate from art so collisions and interaction anchors agree.
 export const ROOM_LAYOUT={
  case:{x:-5,z:2,hx:1,hz:.73},generator:{x:-10.8,z:-8.5,hx:1.15,hz:.55},
- terminal:{x:5,z:-5.5,hx:1.1,hz:.6},workArm:{x:-9,z:2.2,hx:1.05,hz:.9},
- turbine:{x:-11,z:-2,hx:1.05,hz:.9},press:{x:-11.4,z:1.8,hx:.95,hz:.85},engine:{x:-11,z:-5.7,hx:.9,hz:.8},exchanger:{x:-5.5,z:-9.2,hx:4.3,hz:.9},
- crewTable:{x:8.3,z:-5,hx:.7,hz:.4},windowShelf:{x:2.1,z:-9,hx:1,hz:.35},seat:{x:7.5,z:-8.9,hx:.4,hz:.4},helmetStand:{x:11.2,z:-2.1,hx:.35,hz:.3}
+ terminal:{x:-.16,z:-9.98,hx:1.1,hz:.6},workArm:{x:-9,z:2.2,hx:1.05,hz:.9},
+ turbine:{x:8.5,z:2.8,hx:3.21,hz:2.56},press:{x:-11.4,z:1.8,hx:.95,hz:.85},engine:{x:-11,z:-5.7,hx:.9,hz:.8},exchanger:{x:-8.9,z:-9.75},
+ crewTable:{x:5.95,z:-9.86,hx:.7,hz:.4},windowShelf:{x:3.3,z:-9.9,hx:1,hz:.35},seat:{x:7.5,z:-9.2,hx:.4,hz:.4},helmetStand:{x:8.67,z:-9.7,hx:.35,hz:.3}
 };
-export const ROOM_COLLIDERS=Object.values(ROOM_LAYOUT).map(p=>[p.x,p.z,p.hx,p.hz]);
-export const LOCKER_BANK={x:6.8,z:-2,spacing:.98};
-export const SPEC_OUTPUT={x:5.4,z:-3.95};
+export const ROOM_COLLIDERS=Object.values(ROOM_LAYOUT).filter(p=>p.hx!==undefined).map(p=>[p.x,p.z,p.hx,p.hz]);
+export const LOCKER_BANK={x:-4.8,z:-9.97,spacing:.98};
+export const SPEC_OUTPUT={x:.47,z:-9.07};
+export const CONVERTER_ACCESS={x:5.52,z:2.8};
 export const WINDOW_APPROACH={x:5,z:-8.8};
 export const OBSERVATION_PORT={x:WINDOW_APPROACH.x,y:4.35,z:-10.52,width:7.7,height:3.9};
 export function roomPointClear(x,z,extra=[]){return x>=-12.5&&x<=12.5&&z>=-9.5&&z<=9.5&&![...ROOM_COLLIDERS,...extra].some(([px,pz,hx,hz])=>Math.abs(x-px)<hx+.42&&Math.abs(z-pz)<hz+.42)}
