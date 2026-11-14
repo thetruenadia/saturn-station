@@ -1,4 +1,4 @@
-import {LOCKER_BANK,SPEC_OUTPUT} from './room-layout.js';
+import {LOCKER_BANK,SPEC_OUTPUT} from './room-layout.js?v=rotor1';
 import {PROBE_RECIPE,stackParts,recipeStatus,canFabricate,placeIngredient,trayComplete} from './workshop-rules.js?v=room2';
 // Workshop prototype: seeded salvage, lockers, loose pickups and physical specification recovery.
 export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,notify,sound,save,cellCount,setCellCount,onCraftProbe,onAccessCard,armModel,isPowered=()=>true,onService=()=>true,onServiceEnd=()=>{},stationModel,salvageModel}){
@@ -25,12 +25,12 @@ export function createWorkshopSystem({THREE,scene,robot,interactables,colliders,
  }
  // Cream-painted factory lockers: four numbered individual compartments in one bank.
  const lockerDoors=[],lockerShelves=[],lockerRoots=[];
- const agedCream=new THREE.MeshStandardMaterial({color:0xb2ad97,metalness:.23,roughness:.91});
- const agedDark=new THREE.MeshStandardMaterial({color:0x6b685c,metalness:.38,roughness:.88});
- const numbered=new THREE.MeshStandardMaterial({color:0x913e35,roughness:.94});
+ const agedCream=new THREE.MeshStandardMaterial({color:0x777b5b,metalness:.23,roughness:.91});
+ const agedDark=new THREE.MeshStandardMaterial({color:0x4d5144,metalness:.38,roughness:.88});
+ const numbered=new THREE.MeshStandardMaterial({color:0xd2b789,roughness:.94});
  function numberPlaque(root,n){
   const canvas=document.createElement('canvas');canvas.width=256;canvas.height=128;
-  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,256,128);ctx.fillStyle='#913e35';ctx.font='bold 74px Georgia,serif';ctx.textAlign='center';ctx.fillText(String(n),128,86);
+  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,256,128);ctx.fillStyle='#d2b789';ctx.font='bold 74px Georgia,serif';ctx.textAlign='center';ctx.fillText(String(n),128,86);
   const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
   const plate=new THREE.Mesh(new THREE.PlaneGeometry(.37,.19),new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide}));
   plate.position.set(0,1.49,.075);root.add(plate);

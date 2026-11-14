@@ -1,8 +1,10 @@
+import {createGeneratorHall} from './generator-hall.js?v=hall7';
 import {createBackgroundMusic} from './background-music.js?v=menu-music3';
-import {ROOM_LAYOUT,OBSERVATION_PORT} from './room-layout.js?v=window3';
-import {installRoomStory} from './room-story.js?v=matte2';
-import {createObservationView} from './observation-view.js?v=window3';
-import {openingDirective,createControlGuide} from './opening-guidance.js?v=box2';
+import {installServiceBay} from './service-bay.js?v=rotor1';
+import {ROOM_LAYOUT,OBSERVATION_PORT,LOCKER_BANK} from './room-layout.js?v=rotor1';
+import {installRoomStory} from './room-story.js?v=rotor1';
+import {createObservationView} from './observation-view.js?v=bay1';
+import {openingDirective,createControlGuide} from './opening-guidance.js?v=hall7';
 import {createAccessProbe} from './access-probe.js?v=polish1';
 import {SERVICE_POSITION} from './workshop-rules.js?v=polish1';
 import {createMainMenu} from './main-menu.js?v=release1';
@@ -10,13 +12,14 @@ import {consumeLaunch} from './menu-saves.js?v=menu1';
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
 import {createTerminalBrowser,createDemoEnding} from './terminal-browser.js?v=polish1';
-import {installReferenceAssets} from './reference-assets.js?v=window3';
+import {installReferenceAssets} from './reference-assets.js?v=rotor1';
 import { applyArtDirection } from './station-art.js?v=etna1';
 
-import {createMakerOpening} from './maker-opening.js?v=story1';
-import {createWorkshopSystem} from './workshop-system.js?v=box3';
+import {createMakerOpening} from './maker-opening.js?v=rotor1';
+import {createWorkshopSystem} from './workshop-system.js?v=rotor1';
 
-let opening,mainMenu,observation,roomStory;let tutorialWalked=false,tutorialLooked=false;
+let opening,mainMenu,observation,roomStory,generatorHall;let tutorialWalked=false,tutorialLooked=false;
+let currentRoom='service-bay';
 let menuLaunch=null;try{menuLaunch=consumeLaunch(sessionStorage)}catch{}
 const viewport=document.querySelector('#viewport');
 const scene=new THREE.Scene();
@@ -35,7 +38,7 @@ viewport.appendChild(renderer.domElement);
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.target.set(0,0,0);controls.enableDamping=true;controls.dampingFactor=.07;controls.enablePan=false;
 controls.minPolarAngle=.55;controls.maxPolarAngle=1.25;controls.minZoom=.65;controls.maxZoom=5.5;
-camera.zoom=1.55;camera.updateProjectionMatrix();
+camera.zoom=1.18;camera.updateProjectionMatrix();
 scene.add(new THREE.HemisphereLight(0xc9c4aa,0x453c30,2.15));
 const keyLight=new THREE.DirectionalLight(0xf1d9b1,2.5);keyLight.position.set(-5,12,7);keyLight.castShadow=true;keyLight.shadow.mapSize.set(2048,2048);keyLight.shadow.camera.left=-12;keyLight.shadow.camera.right=12;keyLight.shadow.camera.top=12;keyLight.shadow.camera.bottom=-12;scene.add(keyLight);
 const emergency=new THREE.PointLight(0xc87937,19,15,2);emergency.position.set(4,4,-3);scene.add(emergency);
@@ -228,12 +231,12 @@ for(let z=-9;z<=9;z+=3.6){
  box(scene,.22,.13,3.1,inkBlack,-13.5,1.5,z);
 }
 // Illustrated industrial set piece: enormous serviced heat-exchanger, catwalk and Saturn observation port.
-const exchanger=new THREE.Group();exchanger.position.set(-5.5,0,-8.5);scene.add(exchanger);
+const exchanger=new THREE.Group();exchanger.position.set(ROOM_LAYOUT.exchanger.x,.74,ROOM_LAYOUT.exchanger.z);scene.add(exchanger);
 const wornOlive=wornOliveMat,oxidisedCopper=wornRustMat,ivory=wornSandMat;
-cylinder(exchanger,1.75,1.75,6.5,wornOlive,0,4.25,0,0,Math.PI/2);
-for(let x=-2.7;x<=2.7;x+=1.35)cylinder(exchanger,1.83,1.83,.22,oxidisedCopper,x,4.25,0,0,Math.PI/2);
-for(let x=-2.4;x<=2.4;x+=.8)box(exchanger,.16,.19,2.9,ivory,x,5.1,0);
-for(let i=0;i<10;i++){const a=i*Math.PI*2/10;cylinder(exchanger,.07,.07,.14,doorFrame,-2.7,4.25+1.55*Math.sin(a),1.55*Math.cos(a),0,Math.PI/2)}
+cylinder(exchanger,1.40,1.40,5.0,wornOlive,0,4.25,0,0,Math.PI/2);
+for(let x=-2;x<=2;x+=1)cylinder(exchanger,1.47,1.47,.22,oxidisedCopper,x,4.25,0,0,Math.PI/2);
+for(let x=-1.9;x<=1.9;x+=.76)box(exchanger,.16,.19,2.25,ivory,x,5.1,0);
+for(let i=0;i<10;i++){const a=i*Math.PI*2/10;cylinder(exchanger,.07,.07,.14,doorFrame,-2.48,4.25+1.24*Math.sin(a),1.24*Math.cos(a),0,Math.PI/2)}
 // Observation window and Enceladus view are constructed by reference-assets.js.
 // Workshop zones: scrap/wake, fabrication, generator and command, with clear central circulation.
 const generatorLight=new THREE.PointLight(0xffc17b,18,10,2);generatorLight.position.set(5,4,-7);scene.add(generatorLight);
@@ -531,7 +534,7 @@ for(const side of [-1,1])for(let i=0;i<3;i++){
   const rivet=new THREE.Mesh(new THREE.SphereGeometry(.025,8,6),rawSteel);
   rivet.position.set(side*.84,-.20,-.34+i*.28);shell.add(rivet);
 }
-robot.position.set(-9,0,6);controls.target.set(-9,1.3,6);camera.position.set(3,16,18);controls.update();robot.rotation.y=Math.PI*.18;
+robot.position.set(-9,0,6);controls.target.set(-8.35,2.25,4.2);camera.position.set(3.65,15,16.2);controls.update();robot.rotation.y=Math.PI*.18;
 // Selective ink outlines: hard structural silhouettes, not a black wireframe on every triangle.
 const inkMaterial=new THREE.LineBasicMaterial({color:0x1c2928,transparent:true,opacity:.6,depthWrite:false});
 const inkMeshes=[];
@@ -579,7 +582,7 @@ function terminalCommand(k){
 }
 function finishDemo(){
  if(ended||!doorOpen)return;
- hideTerminal();closeInventory();setPaused(false);ended=true;target=null;Object.keys(keys).forEach(k=>keys[k]=false);saveProgress();demoEnding.show();
+ hideTerminal();closeInventory();setPaused(false);ended=true;target=null;Object.keys(keys).forEach(k=>keys[k]=false);currentRoom='generator-hall';saveProgress();generatorHall.show();if(humGain&&audio)humGain.gain.setTargetAtTime(0,audio.currentTime,.2);
 }
 function say(s){logMessages.push(s);if(logMessages.length>8)logMessages.shift()}
 let toastTimer;const pickupFeed=document.createElement('ol');pickupFeed.id='pickup-feed';pickupFeed.setAttribute('aria-label','Recent item notifications');viewport.append(pickupFeed);
@@ -737,7 +740,7 @@ else if(cmd==='kill'){charge=0;updateCharge();triggerDeath()}
 else if(cmd==='clear')consoleOutput.textContent='SATURN STATION // 0.2 DEV CONSOLE';
 else consoleLog('UNKNOWN COMMAND. Type help.')}
 let godMode=false;document.querySelector('#console-form').addEventListener('submit',e=>{e.preventDefault();const value=consoleInput.value;consoleLog('> '+value);runCommand(value);consoleInput.value=''});
-window.addEventListener('keydown',e=>{if(mainMenu?.active||observation?.active)return;const k=e.key.toLowerCase();if(opening?.active){if(k==='escape'&&opening.elapsed>0)setPaused(!paused);return;}if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){terminalUI.key(e);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
+window.addEventListener('keydown',e=>{if(mainMenu?.active||observation?.active||generatorHall?.active)return;const k=e.key.toLowerCase();if(opening?.active){if(k==='escape'&&opening.elapsed>0)setPaused(!paused);return;}if(settingsPanel.open){if(k==='escape'){e.preventDefault();settingsPanel.close()}return}if(terminalOpen){terminalUI.key(e);return}if(devConsole.classList.contains('open')){if(k==='f2'){devConsole.classList.remove('open');devConsole.setAttribute('aria-hidden','true');renderer.domElement.focus()}return}
 if(k==='f2'){e.preventDefault();devConsole.classList.add('open');devConsole.setAttribute('aria-hidden','false');consoleInput.focus();return}
 if(workshop.isOpen||workshop.miniOpen){if(k==='escape'){workshop.close();return}if(k==='c'){if(workshop.miniOpen)workshop.open();else workshop.close();return}if(workshop.isOpen)return}
 if(k==='i'&&inventory.classList.contains('open')){closeInventory();return}
@@ -756,12 +759,12 @@ const roomCoach=document.createElement('aside');roomCoach.id='room-coach';roomCo
 const controlGuide=createControlGuide({host:viewport,onOpen(){Object.keys(keys).forEach(k=>keys[k]=false)}});
 const controlsButton=document.createElement('button');controlsButton.id='controls-button';controlsButton.textContent='CONTROLS · H';controlsButton.addEventListener('click',()=>controlGuide.toggle());document.querySelector('.top-right').append(controlsButton);
 const inventoryButton=document.createElement('button');inventoryButton.id='inventory-button';inventoryButton.textContent='INVENTORY · I';inventoryButton.addEventListener('click',()=>{if(inventory.classList.contains('open'))closeInventory();else openInventory();inventoryButton.classList.remove('new-items')});document.querySelector('.top-right').append(inventoryButton);
-function resetCamera(){firstPerson=false;robot.visible=true;camera.position.set(robot.position.x+12,robot.position.y+15,robot.position.z+12);controls.target.set(robot.position.x,1.3,robot.position.z);camera.zoom=1.55;camera.updateProjectionMatrix();notify('CAMERA RESET · DRAG TO ORBIT · SCROLL TO ZOOM')}
+function resetCamera(){firstPerson=false;robot.visible=true;camera.position.set(robot.position.x+12.65,robot.position.y+15,robot.position.z+10.2);controls.target.set(robot.position.x+.65,2.25,robot.position.z-1.8);camera.zoom=1.18;camera.updateProjectionMatrix();notify('CAMERA RESET · DRAG TO ORBIT · SCROLL TO ZOOM')}
 const hintBox=document.createElement('aside');hintBox.id='hint-box';hintBox.hidden=true;hintBox.innerHTML='<strong>MAINTENANCE GUIDANCE</strong><button aria-label="Close hints">×</button><p></p><small>H CLOSE · C WORKSHOP · § VIEW</small>';document.querySelector('#viewport').append(hintBox);
 const hintButton=document.createElement('button');hintButton.id='hint-toggle';hintButton.textContent='?';hintButton.title='Controls (H)';document.querySelector('#viewport').append(hintButton);
 function toggleHint(){controlGuide.toggle()}
 hintButton.onclick=toggleHint;hintBox.querySelector('button').onclick=()=>hintBox.hidden=true;
-window.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='h'&&!observation?.active&&!opening?.active&&!paused&&!devConsole.classList.contains('open')&&!settingsPanel.open&&!mainMenu?.active&&!terminalOpen&&!workshop.isOpen&&!inventory.classList.contains('open'))toggleHint()});
+window.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='h'&&!generatorHall?.active&&!observation?.active&&!opening?.active&&!paused&&!devConsole.classList.contains('open')&&!settingsPanel.open&&!mainMenu?.active&&!terminalOpen&&!workshop.isOpen&&!inventory.classList.contains('open'))toggleHint()});
 
 
 // Drag to look around in first person. Keep orbit controls exclusive to the isometric view.
@@ -924,7 +927,7 @@ function interactionHint(o){
  if(id==='SEALED SERVICE CASE')return !caseOpen?'RELEASE CASE':!caseCellTaken?'TAKE POWER CELL':'CASE EMPTY';
  if(id==='AUXILIARY POWER DISTRIBUTION')return powerOn?'POWER ONLINE':'RESTORE POWER';
  if(id==='CONTROL TERMINAL')return powerOn?'ACCESS TERMINAL':'POWER REQUIRED';
- return doorOpen?'FINISH DEMO':workshop.hasProbe?'USE ACCESS PROBE':workshop.hasCraftedProbe?'INSTALL YOUR PROBE FIRST':'ACCESS PROBE REQUIRED';
+ return doorOpen?'ENTER GENERATOR HALL':workshop.hasProbe?'USE ACCESS PROBE':workshop.hasCraftedProbe?'INSTALL YOUR PROBE FIRST':'ACCESS PROBE REQUIRED';
 }
 function beginPickup(o){
  referenceAssets.releaseArm();pickup={object:o,time:0,start:o.position.clone()};target=null;
@@ -959,6 +962,7 @@ scene.traverse(o=>{
  if(!roofMaterials.has(o.material)){const m=o.material.clone();m.transparent=true;m.opacity=.16;m.depthWrite=false;roofMaterials.set(o.material,m)}
  o.material=roofMaterials.get(o.material);o.children.forEach(c=>{if(c.isLineSegments)c.visible=false});
 });
+const serviceBay=installServiceBay({THREE,scene,layout:ROOM_LAYOUT,lockers:LOCKER_BANK,box,cylinder,wornPaint});
 const workFixtures=[],redFixtures=[];
 const lampCableMaterial=new THREE.MeshLambertMaterial({color:0x242623});
 function workLamp(x,y,z,color,intensity){
@@ -969,7 +973,7 @@ function workLamp(x,y,z,color,intensity){
  const light=new THREE.PointLight(color,0,12,2);light.position.set(x,y-.35,z);scene.add(light);
  workFixtures.push({light,material,intensity});
 }
-for(const [x,y,z,c,i] of [[-9,4.5,6,0xffd6a0,36],[6,4.7,5,0xffd6a0,38],[-7,4.7,-4,0xffd6a0,35],[-10.8,4.6,-8.5,0xc5e5e8,42],[11.4,4,-9.5,0xe9edcc,35],[0,5,-1,0xe4dfbd,38]])workLamp(x,y,z,c,i);
+for(const [x,y,z,c,i] of [[-9,4.5,6,0xffd6a0,36],[-1.6,4.7,-8.7,0xd6e9d8,27],[-7,4.7,-4,0xffd6a0,35],[-10.8,4.6,-8.5,0xc5e5e8,42],[11.4,4,-9.5,0xe9edcc,35],[-8,5,-.9,0xe4dfbd,29]])workLamp(x,y,z,c,i);
 for(const [x,z] of [[-13.4,5],[-13.4,-5],[0,-10.5],[10,-10.5]]){
  const material=new THREE.MeshStandardMaterial({color:0xa6190d,emissive:0xff1608,emissiveIntensity:2.4});
  box(scene,.36,.25,.15,doorFrame,x,2.8,z);box(scene,.25,.14,.04,material,x,2.8,z+.10,false);
@@ -997,6 +1001,7 @@ function setStationPower(value){
 }
 function updateLighting(dt){
  powerElapsed+=dt;
+ serviceBay.update(powerOn,powerElapsed,reducedMotion);
  // Staggered ignition dips once per fitting; no repeated full-screen strobe.
  workFixtures.forEach((f,i)=>{
   const t=powerElapsed-i*.18;
@@ -1061,7 +1066,7 @@ function playSound(kind){
 function saveProgress(){
  if(opening?.active||mainMenu?.active)return;
  if(resettingProgress)return;
- try{const progress={version:1,charge,hasArm,armEquipped,caseOpen,caseCellTaken,hasNote,hasCell,usedCell,cellCount,workshop:workshop.serialize(),observations:roomStory?.serialize(),powerOn,doorOpen,terminalBooted,x:robot.position.x,z:robot.position.z,heading:robot.rotation.y};if(mainMenu)mainMenu.record(progress);else localStorage.setItem(SAVE_KEY,JSON.stringify(progress));return true}catch{return false}
+ try{const progress={version:1,room:currentRoom,charge,hasArm,armEquipped,caseOpen,caseCellTaken,hasNote,hasCell,usedCell,cellCount,workshop:workshop.serialize(),observations:roomStory?.serialize(),powerOn,doorOpen,terminalBooted,x:robot.position.x,z:robot.position.z,heading:robot.rotation.y};if(mainMenu)mainMenu.record(progress);else localStorage.setItem(SAVE_KEY,JSON.stringify(progress));return true}catch{return false}
 }
 function restoreProgress(){
  try{
@@ -1075,7 +1080,8 @@ function restoreProgress(){
   if(hasArm)removeObject(arm);lidPivot.rotation.x=caseOpen?-1.35:0;cell.visible=caseOpen&&!caseCellTaken;
   powerOn=flag('powerOn');powerElapsed=10;generatorLever.rotation.z=powerOn?.75:0;terminalScreen.material=terminalLamp.material=powerOn?terminalLit:terminalDark;
   terminalBooted=powerOn&&flag('terminalBooted');doorOpen=flag('doorOpen')&&workshop.hasProbe&&powerOn;leftLeaf.position.x=doorOpen?-1.85:0;rightLeaf.position.x=doorOpen?1.85:0;
-  controls.target.set(robot.position.x,1.3,robot.position.z);camera.position.set(robot.position.x+12,16,robot.position.z+12);notify('LOCAL PROGRESS RESTORED');
+  controls.target.set(robot.position.x+.65,2.25,robot.position.z-1.8);camera.position.set(robot.position.x+12.65,15,robot.position.z+10.2);notify('LOCAL PROGRESS RESTORED');
+  if(p.room==='generator-hall'&&doorOpen){currentRoom='generator-hall';ended=true;generatorHall.show();}
  }catch{}
 }
 window.addEventListener('pagehide',saveProgress);
@@ -1097,8 +1103,8 @@ function moveRobot(dx,dz){
  if(canOccupy(robot.position.x+dx,robot.position.z))robot.position.x+=dx;
  if(canOccupy(robot.position.x,robot.position.z+dz))robot.position.z+=dz;
 }
-function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta();const dt=Math.min(elapsed,.04);if(mainMenu?.active){observation?.update(0);return;}if(observation?.active){controls.enabled=false;observation.update(dt);renderer.render(scene,observation.approachCamera);return;}referenceAssets.update(paused||ended||workshop.isOpen?0:dt,powerOn,reducedMotion,!!pickup&&pickup.time>.53);if(opening?.active){controls.enabled=false;if(!paused)opening.update(elapsed);renderer.render(scene,opening.camera);return;}controls.enabled=!firstPerson&&!inventory.classList.contains('open')&&!workshop.isOpen&&!paused&&!devConsole.classList.contains('open')&&!terminalOpen;// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
-const desiredFocus=workshop.isOpen?new THREE.Vector3(-5.3,1.3,2.2):new THREE.Vector3(robot.position.x,1.25,robot.position.z);
+function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta();const dt=Math.min(elapsed,.04);if(generatorHall?.active)return;if(mainMenu?.active){observation?.update(0);return;}if(observation?.active){controls.enabled=false;observation.update(dt);renderer.render(scene,observation.approachCamera);return;}referenceAssets.update(paused||ended||workshop.isOpen?0:dt,powerOn,reducedMotion,!!pickup&&pickup.time>.53);if(opening?.active){controls.enabled=false;if(!paused)opening.update(elapsed);renderer.render(scene,opening.camera);return;}controls.enabled=!firstPerson&&!inventory.classList.contains('open')&&!workshop.isOpen&&!paused&&!devConsole.classList.contains('open')&&!terminalOpen;// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
+const desiredFocus=workshop.isOpen?new THREE.Vector3(-5.3,1.3,2.2):new THREE.Vector3(robot.position.x+.65,2.25,robot.position.z-1.8);
 const followDelta=desiredFocus.sub(controls.target).multiplyScalar(1-Math.exp(-dt*4));
 controls.target.add(followDelta);camera.position.add(followDelta);
 controls.update();if(inventory.classList.contains('open')){renderInventoryPreview();renderItemInspection(dt)}if(!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){let mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0);if(firstPerson){const f=-mz,r=mx;mx=Math.sin(lookHeading)*f+Math.cos(lookHeading)*r;mz=Math.cos(lookHeading)*f-Math.sin(lookHeading)*r;}const len=Math.hypot(mx,mz);const wantsMove=len>0&&!pickup&&!workshop.isOpen;
@@ -1139,6 +1145,7 @@ if(firstPerson){firstPersonCamera.position.set(robot.position.x,2.15,robot.posit
 doorAccessProbe.visible=workshop.hasProbe;workshop.update(dt);updateStationSystems(dt);renderer.render(scene,activeCamera());updateNearbyUI()}
 roomStory=installRoomStory({THREE,scene,interactables,referenceAssets,terminal,exchanger,box,cylinder,pipeBetween,label,notify,sound:playSound,onWindow:()=>observation.show()});
 observation=createObservationView({THREE,viewport,renderer,windowGlass:referenceAssets.windowGlass,sourceCamera:activeCamera,reducedMotion,sound:playSound,onOpen(){Object.keys(keys).forEach(k=>keys[k]=false);controlGuide.hide();roomStory.hide();document.body.classList.add('observing');if(humGain&&audio)humGain.gain.setTargetAtTime(0,audio.currentTime,.2)},onClose(){Object.keys(keys).forEach(k=>keys[k]=false);document.body.classList.remove('observing')}});
+generatorHall=createGeneratorHall({THREE,robot,reducedMotion,onReturn(){currentRoom='service-bay';ended=false;saveProgress();Object.keys(keys).forEach(k=>keys[k]=false);renderer.domElement.focus()},onComplete(){currentRoom='service-bay';saveProgress();demoEnding.show()}});
 opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();if(menuLaunch?.mode!=='resume'){doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;}updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
 mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound,unlockAudio,onVisibility:visible=>backgroundMusic.setActive(visible)});
 const returnMenuButton=document.createElement('button');returnMenuButton.textContent='MAIN MENU';returnMenuButton.addEventListener('click',()=>{hideTerminal();closeInventory();saveProgress();setPaused(true);mainMenu.show()});document.querySelector('#pause-restart').after(returnMenuButton);
