@@ -18,6 +18,14 @@ test('hall has a vessel extending above and below the landing and finite geometr
 test('the service landing, descending stairs and lower gallery meet at the same height',()=>{
  assert.equal(hallFloorHeight(-6,8),0);assert.equal(hallFloorHeight(-32,8),0);
  let previous=0;for(let z=8;z>=-20;z-=.1){const y=hallFloorHeight(-32,z);assert(y!==null);assert(Math.abs(y-previous)<.04);previous=y}
- assert.equal(hallFloorHeight(-32,-20),-9);assert.equal(hallFloorHeight(-36,-20),-9);assert.equal(hallFloorHeight(-36,-60),-9);
+ assert.equal(hallFloorHeight(-32,-20),-9);assert.equal(hallFloorHeight(-36,-20,-9),-9);assert.equal(hallFloorHeight(-36,-60,-9),-9);
  assert.equal(hallFloorHeight(-29,-5),null);assert.equal(hallFloorHeight(-4,10),null);
+});
+
+test('successive side-wall stair flights stay attached to both gallery levels',()=>{
+ for(const side of [-1,1])for(let level=0;level<5;level++){
+  const y=-23+level*14,start=level%2?-43:-10,end=level%2?-10:-43;let height=y;
+  for(let i=0;i<=330;i++){const z=start+(end-start)*i/330,next=hallFloorHeight(side*(level%2?29:32),z,height);assert(next!==null);assert(Math.abs(next-height)<.18);height=next}
+  assert(Math.abs(height-(y+14))<.15);assert.equal(hallFloorHeight(side*36,end,height),y+14);
+ }
 });

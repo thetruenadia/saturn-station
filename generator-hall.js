@@ -22,7 +22,17 @@ export function createGeneratorHallScene(THREE){
  function drum(top,bottom,height,m,x,y,z,parent=scene){const o=new THREE.Mesh(new THREE.CylinderGeometry(top,bottom,height,40),m);o.position.set(x,y,z);parent.add(o);return o}
  function ring(radius,tube,m,x,y,z,parent=scene){const o=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,8,64),m);o.rotation.x=Math.PI/2;o.position.set(x,y,z);parent.add(o);return o}
  function rail(a,b,y,broken=false){const [ax,az]=a,[bx,bz]=b,length=Math.hypot(bx-ax,bz-az);for(let s=0;s<=length;s+=2.3){if(broken&&s>length*.55)continue;const t=s/length;box(.08,1.35,.08,iron,ax+(bx-ax)*t,y+.67,az+(bz-az)*t)}for(const h of [.55,1.3])pipe([[ax,y+h,az],[bx,y+h,bz]],.045,brass)}
- function catwalk(x,y,z,width,length){box(width,.22,length,iron,x,y-.11,z);for(let zz=z-length/2+.15;zz<z+length/2;zz+=.36)box(width-.1,.025,.065,brass,x,y+.02,zz);rail([x-width/2,z-length/2],[x-width/2,z+length/2],y);rail([x+width/2,z-length/2],[x+width/2,z+length/2],y)}
+ function catwalk(x,y,z,width,length){
+  box(width,.22,length,iron,x,y-.11,z);
+  for(let zz=z-length/2+.15;zz<z+length/2;zz+=.36)box(width-.1,.025,.065,brass,x,y+.02,zz);
+  const start=z-length/2,end=z+length/2;
+  const outside=x<0?x-width/2:x+width/2,inside=x<0?x+width/2:x-width/2;
+  rail([outside,start],[outside,end],y);
+  const gaps=Math.abs(x)===36?[-43,...(x<0&&y===-9?[-20]:[]),-10]:[];
+  let previous=start;
+  for(const gap of gaps){rail([inside,previous],[inside,gap-1.7],y);previous=gap+1.7}
+  rail([inside,previous],[inside,end],y);
+ }
  function stairFlight(a,b,width=2.2){
   const [ax,ay,az]=a,[bx,by,bz]=b,steps=Math.ceil(Math.abs(by-ay)/.22),dx=bx-ax,dz=bz-az;
   const length=Math.hypot(dx,dz),angle=Math.atan2(dx,dz),side=new THREE.Vector3(Math.cos(angle),0,-Math.sin(angle));
@@ -82,8 +92,8 @@ export function createGeneratorHallScene(THREE){
  for(const x of [-5.4,5.4])pipe([[x,-1,5],[x,-5,11],[x,-10,17]],.3,iron);
  // Every stair terminates on a landing. The side-wall flights connect successive gallery levels.
  for(const side of [-1,1])for(let y=-23,level=0;y<47;y+=14,level++){
-  const z=level%2?-43:-10,endZ=level%2?-10:-43,x=side*32;
-  box(6,.22,3.2,iron,side*34,y-.11,z);box(6,.22,3.2,iron,side*34,y+13.89,endZ);
+  const z=level%2?-43:-10,endZ=level%2?-10:-43,x=side*(level%2?29:32);
+  box(10,.22,3.2,iron,side*32,y-.11,z);box(10,.22,3.2,iron,side*32,y+13.89,endZ);
   stairFlight([x,y,z],[x,y+14,endZ]);
  }
  // Walkable route from the service landing down to the lower gallery.
@@ -102,42 +112,86 @@ export function createGeneratorHallScene(THREE){
  const returnMark=box(2.7,3.5,.25,dark,0,1.75,20);box(.15,3.5,.15,brass,-1.48,1.75,19.9);box(.15,3.5,.15,brass,1.48,1.75,19.9);
  return {scene,furnaceLight,returnMark};
 }
-export function hallFloorHeight(x,z){
+export function hallFloorHeight(x,z,currentHeight){
+ const heights=[];
  if((x>=-5.8&&x<=5.8&&z>=4.6&&z<=11.8)||(x>=-1.25&&x<=1.25&&z>=11.5&&z<=19.2)){
-  if(x< -2.85&&z>8.5&&z<11.05)return null;
-  return 0;
+  if(!(x< -2.85&&z>8.5&&z<11.05))heights.push(0);
  }
- if(x>=-33.1&&x<=-5.7&&z>=8&&z<=9.2)return 0;
- if(x>=-33&&x<=-31&&z>=-20&&z<=8)return -(8-z)*9/28;
- if(x>=-37.05&&x<=-30.7&&z>=-21.25&&z<=-19.9)return -9;
- if(x>=-37.05&&x<=-34.95&&z>=-85.3&&z<=21.3)return -9;
- return null;
+ if(x>=-33.1&&x<=-5.7&&z>=8&&z<=9.2)heights.push(0);
+ if(x>=-33&&x<=-31&&z>=-20&&z<=8)heights.push(-(8-z)*9/28);
+ if(x>=-37.05&&x<=-30.7&&z>=-21.25&&z<=-19.9)heights.push(-9);
+ for(let y=-23,level=0;y<=47;y+=14,level++){
+  if(Math.abs(x)>=34.95&&Math.abs(x)<=37.05&&z>=-85.3&&z<=21.3)heights.push(y);
+  if(x>=-37.05&&x<=37.05&&z>=-86.1&&z<=-84)heights.push(y);
+  if(Math.abs(x)>=27.9&&Math.abs(x)<=37.05&&(Math.abs(z+43)<=.3||Math.abs(z+10)<=.3))heights.push(y);
+  const stairX=level%2?29:32;
+  if(y<47&&Math.abs(Math.abs(x)-stairX)<=.9&&z>=-43&&z<=-10){
+   const t=level%2?(z+43)/33:(-10-z)/33;heights.push(y+14*t);
+  }
+ }
+ if(!heights.length)return null;
+ if(currentHeight===undefined)return heights[0];
+ const nearest=heights.reduce((a,b)=>Math.abs(a-currentHeight)<Math.abs(b-currentHeight)?a:b);
+ return Math.abs(nearest-currentHeight)<.55?nearest:null;
 }
-export function hallPointClear(x,z){return hallFloorHeight(x,z)!==null}
-export function createGeneratorHall({THREE,onReturn,onComplete,reducedMotion=false}){
+export function hallPointClear(x,z,height){return hallFloorHeight(x,z,height)!==null}
+export function createGeneratorHall({THREE,robot,onReturn,onComplete,reducedMotion=false}){
  const panel=document.createElement('dialog');panel.id='generator-hall';panel.setAttribute('aria-label','Generator hall');
- panel.innerHTML='<div class="hall-canvas"></div><div class="hall-arrival" aria-hidden="true"></div><div class="hall-actions"><button data-return>RETURN TO SERVICE BAY</button><button data-complete>END DEMO</button></div><p class="hall-controls">W A S D · WALK &nbsp; DRAG · LOOK &nbsp; ESC · RETURN</p><p class="hall-location" aria-live="polite">GENERATOR 04</p>';
+ panel.innerHTML='<div class="hall-canvas"></div><div class="hall-arrival" aria-hidden="true"></div><div class="hall-actions"><button data-view>ISOMETRIC · §</button><button data-return>RETURN TO SERVICE BAY</button><button data-complete>END DEMO</button></div><p class="hall-controls">W A S D · WALK &nbsp; DRAG · CAMERA &nbsp; SCROLL · ZOOM &nbsp; § · VIEW &nbsp; R · RESET</p><p class="hall-location" aria-live="polite">GENERATOR 04</p>';
  document.body.append(panel);
  const {scene,furnaceLight}=createGeneratorHallScene(THREE);
  const camera=new THREE.PerspectiveCamera(65,1,.1,240);const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.35;panel.querySelector('.hall-canvas').append(renderer.domElement);
+ const isoCamera=new THREE.OrthographicCamera(-16,16,12,-12,.1,240);
+ const unit=robot?robot.clone(true):new THREE.Group();unit.visible=true;unit.name='MU-1 in generator hall';scene.add(unit);
+ const occluders=[];scene.traverse(o=>{if(o.isMesh&&!unit.getObjectById(o.id)&&!o.material.transparent)occluders.push(o)});
+ const faded=new Map(),raycaster=new THREE.Raycaster();
+ function restoreOcclusion(){for(const [o,original] of faded){const temporary=o.material;o.material=original;temporary.dispose()}faded.clear()}
+ function clearView(){
+  restoreOcclusion();if(!isometric)return;
+  const centre=unit.position.clone().add(new THREE.Vector3(0,1.1,0));const delta=centre.clone().sub(isoCamera.position),distance=delta.length();
+  raycaster.set(isoCamera.position,delta.normalize());raycaster.far=distance-.75;
+  for(const {object} of raycaster.intersectObjects(occluders,false)){
+   if(faded.has(object)||Array.isArray(object.material))continue;
+   const original=object.material,material=original.clone();material.transparent=true;material.opacity=.09;material.depthWrite=false;
+   faded.set(object,original);object.material=material;
+  }
+ }
+ let isometric=true,orbit=Math.PI/4,elevation=.72,zoom=1;
+ function syncView(){unit.visible=isometric;panel.querySelector('[data-view]').textContent=isometric?'FIRST PERSON · §':'ISOMETRIC · §';restoreOcclusion()}
+ panel.querySelector('[data-view]').onclick=()=>{isometric=!isometric;syncView()};
  const pos=new THREE.Vector3(0,1.75,17.7),keys=new Set();let active=false,heading=0,pitch=.02,dragging=false,lastX=0,lastY=0,elapsed=0,lastTime=0,frame=0;
  function sign(text,x,y,z,size=1.8){const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=256;const c=canvas.getContext('2d');c.clearRect(0,0,1024,256);c.fillStyle='#c4bb91';c.font='bold 82px monospace';c.textAlign='center';c.fillText(text,512,160);const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;const plane=new THREE.Mesh(new THREE.PlaneGeometry(size*4,size),new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false}));plane.position.set(x,y,z);scene.add(plane)}
  sign('B-7 / SERVICE',0,2.4,19.79,.46);
  const exitSign=scene.children.at(-1);exitSign.rotation.y=Math.PI;exitSign.position.z=19.78;
- function resize(){if(!active)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false)}
- function hide(complete=false){if(!active)return;active=false;keys.clear();dragging=false;cancelAnimationFrame(frame);panel.close();if(complete)onComplete();else onReturn()}
+ function resize(){if(!active)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const aspect=innerWidth/innerHeight;isoCamera.left=-12*aspect;isoCamera.right=12*aspect;isoCamera.top=12;isoCamera.bottom=-12;isoCamera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false)}
+ function hide(complete=false){if(!active)return;active=false;keys.clear();dragging=false;cancelAnimationFrame(frame);restoreOcclusion();panel.close();if(complete)onComplete();else onReturn()}
  panel.querySelector('[data-return]').onclick=()=>hide();panel.querySelector('[data-complete]').onclick=()=>hide(true);panel.addEventListener('cancel',e=>{e.preventDefault();hide()});
- panel.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['w','a','s','d','arrowleft','arrowright','arrowup','arrowdown'].includes(k)){keys.add(k);e.preventDefault()}if(k==='e'&&pos.z>16)hide()});panel.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+ panel.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['w','a','s','d','arrowleft','arrowright','arrowup','arrowdown'].includes(k)){keys.add(k);e.preventDefault()}if(['§','`'].includes(k)){e.preventDefault();isometric=!isometric;syncView()}if(k==='r'){orbit=Math.PI/4;elevation=.72;zoom=1;heading=0;pitch=.02}if(k==='e'&&pos.z>16)hide()});panel.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
  renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
- renderer.domElement.addEventListener('pointermove',e=>{if(!dragging)return;heading-=(e.clientX-lastX)*.0035;pitch=THREE.MathUtils.clamp(pitch-(e.clientY-lastY)*.0035,-1.15,1.15);lastX=e.clientX;lastY=e.clientY});for(const name of ['pointerup','pointercancel','lostpointercapture'])renderer.domElement.addEventListener(name,()=>dragging=false);
+ renderer.domElement.addEventListener('pointermove',e=>{if(!dragging)return;if(isometric){orbit-=(e.clientX-lastX)*.005;elevation=THREE.MathUtils.clamp(elevation+(e.clientY-lastY)*.003,.32,1.15)}else{heading-=(e.clientX-lastX)*.0035;pitch=THREE.MathUtils.clamp(pitch-(e.clientY-lastY)*.0035,-1.15,1.15);}lastX=e.clientX;lastY=e.clientY});for(const name of ['pointerup','pointercancel','lostpointercapture'])renderer.domElement.addEventListener(name,()=>dragging=false);
+ renderer.domElement.addEventListener('wheel',e=>{if(!isometric)return;e.preventDefault();zoom=THREE.MathUtils.clamp(zoom*Math.exp(-e.deltaY*.001),.42,2.5)},{passive:false});
  window.addEventListener('blur',()=>{keys.clear();dragging=false});window.addEventListener('resize',resize);
  function tick(now){if(!active)return;const dt=Math.min(.05,(now-lastTime)/1000);lastTime=now;elapsed+=dt;
-  const walk=elapsed>(reducedMotion?0:2.1);if(walk){const forward=(keys.has('w')?1:0)-(keys.has('s')?1:0),side=(keys.has('d')?1:0)-(keys.has('a')?1:0),length=Math.hypot(forward,side)||1;const dx=(-Math.sin(heading)*forward+Math.cos(heading)*side)/length*dt*2.4,dz=(-Math.cos(heading)*forward-Math.sin(heading)*side)/length*dt*2.4;if(hallPointClear(pos.x+dx,pos.z))pos.x+=dx;if(hallPointClear(pos.x,pos.z+dz))pos.z+=dz;pos.y=(hallFloorHeight(pos.x,pos.z)??0)+1.75}
+  const walk=elapsed>(reducedMotion?0:2.1);
+  if(walk){
+   const forward=(keys.has('w')?1:0)-(keys.has('s')?1:0),side=(keys.has('d')?1:0)-(keys.has('a')?1:0),length=Math.hypot(forward,side)||1;
+   const dx=(isometric?side:-Math.sin(heading)*forward+Math.cos(heading)*side)/length*dt*2.4;
+   const dz=(isometric?-forward:-Math.cos(heading)*forward-Math.sin(heading)*side)/length*dt*2.4;
+   let floor=pos.y-1.75;
+   const nextX=hallFloorHeight(pos.x+dx,pos.z,floor);
+   if(nextX!==null){pos.x+=dx;floor=nextX}
+   const nextZ=hallFloorHeight(pos.x,pos.z+dz,floor);
+   if(nextZ!==null){pos.z+=dz;floor=nextZ}
+   pos.y=floor+1.75;
+   if(Math.hypot(dx,dz)>.001)unit.rotation.y=Math.atan2(dx,dz);
+  }
   else{const t=Math.min(1,elapsed/2.1);pos.z=17.7-5.7*t*t*(3-2*t)}
   if(keys.has('arrowleft'))heading+=dt*.8;if(keys.has('arrowright'))heading-=dt*.8;if(keys.has('arrowup'))pitch=Math.min(1.15,pitch+dt*.6);if(keys.has('arrowdown'))pitch=Math.max(-1.15,pitch-dt*.6);
+  unit.position.set(pos.x,pos.y-1.75,pos.z);unit.visible=isometric;
+  isoCamera.position.set(pos.x+Math.sin(orbit)*23*Math.cos(elevation),pos.y+23*Math.sin(elevation),pos.z+Math.cos(orbit)*23*Math.cos(elevation));isoCamera.zoom=zoom;isoCamera.lookAt(pos.x,pos.y-.5,pos.z);isoCamera.updateProjectionMatrix();clearView();
   camera.position.copy(pos);camera.rotation.set(pitch,heading,0,'YXZ');furnaceLight.intensity=reducedMotion?210:210+Math.sin(elapsed*.7)*15;
   panel.querySelector('.hall-location').classList.toggle('visible',elapsed>.8&&elapsed<5.4);
-  panel.classList.toggle('arrived',reducedMotion||elapsed>.9);renderer.render(scene,camera);frame=requestAnimationFrame(tick);
+  panel.classList.toggle('arrived',reducedMotion||elapsed>.9);renderer.render(scene,isometric?isoCamera:camera);frame=requestAnimationFrame(tick);
  }
- return {get active(){return active},show(){if(active)return;active=true;elapsed=0;heading=0;pitch=.02;pos.set(0,1.75,reducedMotion?12:17.7);panel.classList.remove('arrived');panel.showModal();resize();panel.querySelector('[data-return]').focus({preventScroll:true});lastTime=performance.now();frame=requestAnimationFrame(tick)},hide};
+ return {get active(){return active},show(){if(active)return;active=true;elapsed=0;keys.clear();orbit=Math.PI/4;elevation=.72;zoom=1;isometric=true;syncView();heading=0;pitch=.02;pos.set(0,1.75,reducedMotion?12:17.7);panel.classList.remove('arrived');panel.showModal();resize();panel.querySelector('[data-return]').focus({preventScroll:true});lastTime=performance.now();frame=requestAnimationFrame(tick)},hide};
 }

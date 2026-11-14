@@ -1,10 +1,10 @@
-import {createGeneratorHall} from './generator-hall.js?v=hall5';
+import {createGeneratorHall} from './generator-hall.js?v=hall7';
 import {createBackgroundMusic} from './background-music.js?v=menu-music3';
 import {installServiceBay} from './service-bay.js?v=rotor1';
 import {ROOM_LAYOUT,OBSERVATION_PORT,LOCKER_BANK} from './room-layout.js?v=rotor1';
 import {installRoomStory} from './room-story.js?v=rotor1';
 import {createObservationView} from './observation-view.js?v=bay1';
-import {openingDirective,createControlGuide} from './opening-guidance.js?v=hall5';
+import {openingDirective,createControlGuide} from './opening-guidance.js?v=hall7';
 import {createAccessProbe} from './access-probe.js?v=polish1';
 import {SERVICE_POSITION} from './workshop-rules.js?v=polish1';
 import {createMainMenu} from './main-menu.js?v=release1';
@@ -1145,7 +1145,7 @@ if(firstPerson){firstPersonCamera.position.set(robot.position.x,2.15,robot.posit
 doorAccessProbe.visible=workshop.hasProbe;workshop.update(dt);updateStationSystems(dt);renderer.render(scene,activeCamera());updateNearbyUI()}
 roomStory=installRoomStory({THREE,scene,interactables,referenceAssets,terminal,exchanger,box,cylinder,pipeBetween,label,notify,sound:playSound,onWindow:()=>observation.show()});
 observation=createObservationView({THREE,viewport,renderer,windowGlass:referenceAssets.windowGlass,sourceCamera:activeCamera,reducedMotion,sound:playSound,onOpen(){Object.keys(keys).forEach(k=>keys[k]=false);controlGuide.hide();roomStory.hide();document.body.classList.add('observing');if(humGain&&audio)humGain.gain.setTargetAtTime(0,audio.currentTime,.2)},onClose(){Object.keys(keys).forEach(k=>keys[k]=false);document.body.classList.remove('observing')}});
-generatorHall=createGeneratorHall({THREE,reducedMotion,onReturn(){currentRoom='service-bay';ended=false;saveProgress();Object.keys(keys).forEach(k=>keys[k]=false);renderer.domElement.focus()},onComplete(){currentRoom='service-bay';saveProgress();demoEnding.show()}});
+generatorHall=createGeneratorHall({THREE,robot,reducedMotion,onReturn(){currentRoom='service-bay';ended=false;saveProgress();Object.keys(keys).forEach(k=>keys[k]=false);renderer.domElement.focus()},onComplete(){currentRoom='service-bay';saveProgress();demoEnding.show()}});
 opening=createMakerOpening({scene,robot,leftLeaf,rightLeaf,viewport,isSoundEnabled:()=>soundEnabled,onComplete(){setPaused(false);restoreProgress();if(menuLaunch?.mode!=='resume'){doorOpen=false;doorOpening=false;leftLeaf.position.x=rightLeaf.position.x=0;}updateTerminalStatus();updateInventory();updateCharge();Object.keys(keys).forEach(k=>keys[k]=false);refreshDirective();}});
 mainMenu=createMainMenu({saveCurrent:saveProgress,sound:playSound,unlockAudio,onVisibility:visible=>backgroundMusic.setActive(visible)});
 const returnMenuButton=document.createElement('button');returnMenuButton.textContent='MAIN MENU';returnMenuButton.addEventListener('click',()=>{hideTerminal();closeInventory();saveProgress();setPaused(true);mainMenu.show()});document.querySelector('#pause-restart').after(returnMenuButton);
