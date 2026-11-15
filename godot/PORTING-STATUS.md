@@ -24,6 +24,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Port terminal commands 1/2/3: report the isolated link, close the exit, and shut down auxiliary power.
 - [x] Add a cinematic observation-window interaction, recoverable ETNA note and short narration at major workshop props.
 - [x] Add a centered top-screen task directive plus pickup and power-restored notices.
+- [x] Port the in-game pause and settings screens with resume/restart, master volume, sound toggle, and saved brightness controls.
 - [x] Keep a persistent, concise movement and camera control legend on the gameplay screen.
 - [x] Add a five-slot quick inventory strip with numbered keyboard selection.
 - [x] Port click-to-select object interactions and E-triggered auto-approach, with WASD interruption and state-aware target prompts.

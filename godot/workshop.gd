@@ -81,6 +81,13 @@ var notice: Label
 var notice_tween: Tween
 var sound_player: AudioStreamPlayer
 var ambient_player: AudioStreamPlayer
+var world_environment: WorldEnvironment
+var pause_overlay: ColorRect
+var pause_content: VBoxContainer
+var pause_settings_active := false
+var master_volume := 0.8
+var brightness := 1.0
+var sound_enabled := true
 var opening_active := false
 var opening_started := false
 var opening_elapsed := 0.0
@@ -187,15 +194,23 @@ func _ready() -> void:
 	var preferences := ConfigFile.new()
 	if preferences.load("user://saturn-station-prefs.cfg") == OK:
 		isometric = bool(preferences.get_value("view", "isometric", true))
-	var env := WorldEnvironment.new()
+		master_volume = float(preferences.get_value("sound", "volume", 0.8))
+		brightness = float(preferences.get_value("display", "brightness", 1.0))
+		sound_enabled = bool(preferences.get_value("sound", "enabled", true))
+	var master_bus := AudioServer.get_bus_index("Master")
+	if master_bus >= 0:
+		AudioServer.set_bus_volume_db(master_bus,linear_to_db(maxf(master_volume,0.001)))
+		AudioServer.set_bus_mute(master_bus,not sound_enabled)
+	world_environment = WorldEnvironment.new()
 	var atmosphere := Environment.new()
 	atmosphere.background_mode = Environment.BG_COLOR
 	atmosphere.background_color = Color("242923")
 	atmosphere.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	atmosphere.ambient_light_color = Color("c9c4aa")
 	atmosphere.ambient_light_energy = 0.65
-	env.environment = atmosphere
-	add_child(env)
+	atmosphere.tonemap_exposure = brightness
+	world_environment.environment = atmosphere
+	add_child(world_environment)
 	sound_player = AudioStreamPlayer.new()
 	sound_player.name = "WorkshopSoundEffects"
 	add_child(sound_player)
@@ -331,6 +346,7 @@ func _ready() -> void:
 	observation_prompt.add_theme_color_override("font_color", Color("d6d2bf"))
 	observation_prompt.hide()
 	setup_progression(layer)
+	_build_pause_screen(layer)
 	if persistence_enabled:
 		_load_progress()
 	update_camera()
@@ -766,9 +782,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				elif inventory_open:
 					inventory_open = false
 				else:
-					paused = not paused
-					if paused:
-						move_target = Vector2.ZERO
+					set_paused(not paused)
 			KEY_I:
 				if not paused and charge > 0:
 					if mode == "inventory":
@@ -934,6 +948,155 @@ func select_hotbar_slot(index: int) -> void:
 	if index < items.size():
 		show_notice("SELECTED  ·  " + items[index].to_upper())
 	_refresh_hotbar()
+
+func _build_pause_screen(layer: CanvasLayer) -> void:
+	var settings_button := Button.new()
+	settings_button.name = "GameplaySettingsButton"
+	settings_button.text = "SETTINGS"
+	settings_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	settings_button.position = Vector2(-138,20)
+	settings_button.size = Vector2(116,40)
+	settings_button.pressed.connect(_open_pause_settings)
+	layer.add_child(settings_button)
+	pause_overlay = ColorRect.new()
+	pause_overlay.name = "PauseScreen"
+	pause_overlay.color = Color(0.015,0.02,0.018,0.82)
+	pause_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pause_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.add_child(pause_overlay)
+	pause_overlay.hide()
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pause_overlay.add_child(center)
+	var card := PanelContainer.new()
+	card.name = "PauseCard"
+	card.custom_minimum_size = Vector2(430,0)
+	center.add_child(card)
+	pause_content = VBoxContainer.new()
+	pause_content.add_theme_constant_override("separation",12)
+	card.add_child(pause_content)
+	_refresh_pause_screen(false)
+
+func set_paused(value: bool) -> void:
+	paused = value
+	if pause_overlay:
+		pause_overlay.visible = value
+	if value:
+		move_target = Vector2.ZERO
+	else:
+		pause_settings_active = false
+
+func _open_pause_settings() -> void:
+	set_paused(true)
+	_refresh_pause_screen(true)
+
+func _refresh_pause_screen(show_settings: bool) -> void:
+	pause_settings_active = show_settings
+	if not pause_content:
+		return
+	for child in pause_content.get_children():
+		pause_content.remove_child(child)
+		child.queue_free()
+	var heading := Label.new()
+	heading.text = "MU-1 / PREFERENCES" if show_settings else "SRV-09 / SYSTEM INTERRUPT"
+	heading.add_theme_font_size_override("font_size",13)
+	heading.add_theme_color_override("font_color",Color("c6b97f"))
+	pause_content.add_child(heading)
+	var title := Label.new()
+	title.text = "SETTINGS" if show_settings else "PAUSED"
+	title.add_theme_font_size_override("font_size",34)
+	pause_content.add_child(title)
+	if show_settings:
+		var volume_label := Label.new()
+		volume_label.text = "MASTER VOLUME  ·  %.0f%%" % (master_volume*100.0)
+		pause_content.add_child(volume_label)
+		var volume_slider := HSlider.new()
+		volume_slider.name = "MasterVolumeSlider"
+		volume_slider.min_value = 0.0
+		volume_slider.max_value = 1.0
+		volume_slider.step = 0.05
+		volume_slider.value = master_volume
+		volume_slider.value_changed.connect(func(value: float) -> void:
+			_set_master_volume(value)
+			volume_label.text = "MASTER VOLUME  ·  %.0f%%" % (master_volume*100.0)
+		)
+		pause_content.add_child(volume_slider)
+		var sound_toggle := CheckButton.new()
+		sound_toggle.name = "SoundEnabledToggle"
+		sound_toggle.text = "SOUND ENABLED"
+		sound_toggle.button_pressed = sound_enabled
+		sound_toggle.toggled.connect(_set_sound_enabled)
+		pause_content.add_child(sound_toggle)
+		var brightness_label := Label.new()
+		brightness_label.text = "BRIGHTNESS  ·  %.0f%%" % (brightness*100.0)
+		pause_content.add_child(brightness_label)
+		var brightness_slider := HSlider.new()
+		brightness_slider.name = "BrightnessSlider"
+		brightness_slider.min_value = 0.5
+		brightness_slider.max_value = 1.8
+		brightness_slider.step = 0.05
+		brightness_slider.value = brightness
+		brightness_slider.value_changed.connect(func(value: float) -> void:
+			_set_brightness(value)
+			brightness_label.text = "BRIGHTNESS  ·  %.0f%%" % (brightness*100.0)
+		)
+		pause_content.add_child(brightness_slider)
+		var back := Button.new()
+		back.text = "BACK TO PAUSE MENU"
+		back.pressed.connect(func() -> void: _refresh_pause_screen(false))
+		pause_content.add_child(back)
+		return
+	var subtitle := Label.new()
+	subtitle.text = "Unit processes suspended."
+	pause_content.add_child(subtitle)
+	var resume := Button.new()
+	resume.text = "RESUME"
+	resume.pressed.connect(func() -> void: set_paused(false))
+	pause_content.add_child(resume)
+	var settings := Button.new()
+	settings.text = "SETTINGS"
+	settings.pressed.connect(_open_pause_settings)
+	pause_content.add_child(settings)
+	var restart := Button.new()
+	restart.text = "RESTART DEMO"
+	restart.pressed.connect(restart_demo)
+	pause_content.add_child(restart)
+
+func _save_game_preferences() -> void:
+	if not persistence_enabled:
+		return
+	var preferences := ConfigFile.new()
+	preferences.load("user://saturn-station-prefs.cfg")
+	preferences.set_value("sound","volume",master_volume)
+	preferences.set_value("sound","enabled",sound_enabled)
+	preferences.set_value("display","brightness",brightness)
+	preferences.save("user://saturn-station-prefs.cfg")
+
+func _set_master_volume(value: float) -> void:
+	master_volume = clampf(value,0.0,1.0)
+	var bus := AudioServer.get_bus_index("Master")
+	if bus >= 0:
+		AudioServer.set_bus_volume_db(bus,linear_to_db(maxf(master_volume,0.001)))
+	_save_game_preferences()
+
+func _set_sound_enabled(value: bool) -> void:
+	sound_enabled = value
+	var bus := AudioServer.get_bus_index("Master")
+	if bus >= 0:
+		AudioServer.set_bus_mute(bus,not sound_enabled)
+	_save_game_preferences()
+
+func _set_brightness(value: float) -> void:
+	brightness = clampf(value,0.5,1.8)
+	if world_environment and world_environment.environment:
+		world_environment.environment.tonemap_exposure = brightness
+	_save_game_preferences()
+
+func restart_demo() -> void:
+	if FileAccess.file_exists(SAVE_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	get_tree().set_meta("start_maker_opening",true)
+	get_tree().change_scene_to_file("res://workshop.tscn")
 
 func _refresh_hotbar() -> void:
 	if hotbar_labels.size() != 5:
