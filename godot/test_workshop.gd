@@ -29,6 +29,17 @@ func run_workshop() -> void:
 	assert(workshop.get_node("ExposedStationInfrastructure").get_child_count() > 30)
 	assert(workshop.targets.has("Observation window"))
 	assert(workshop.note_visual.visible)
+	workshop.start_maker_opening()
+	assert(workshop.opening_active and workshop.camera.projection == Camera3D.PROJECTION_PERSPECTIVE)
+	workshop._begin_maker_timeline()
+	workshop.opening_elapsed = 30.0
+	workshop._update_maker_opening()
+	assert(workshop.opening_finished and workshop.opening_button.visible)
+	var skip_key := InputEventKey.new()
+	skip_key.pressed = true
+	skip_key.physical_keycode = KEY_Y
+	workshop._unhandled_input(skip_key)
+	assert(not workshop.opening_active and workshop.visual.visible)
 	workshop.nearby = "Observation window"
 	workshop.interact()
 	assert(workshop.observation_active and workshop.observation_prompt.visible)
