@@ -75,6 +75,7 @@ var observation_counts: Dictionary = {}
 var shard: MeshInstance3D
 var claw: MeshInstance3D
 var recovered_arm: Node3D
+var arm_pickup_active := false
 var inventory_inspection := ""
 var note_visual: MeshInstance3D
 var exit_door: MeshInstance3D
@@ -851,7 +852,7 @@ func _physics_process(delta: float) -> void:
 			_save_progress()
 	if charge <= 0.0 and not death_active:
 		_show_death_screen()
-	var active: bool = not paused and mode == "" and charge > 0 and not progression.finished
+	var active: bool = not paused and mode == "" and charge > 0 and not progression.finished and not arm_pickup_active
 	var direction := Vector3.ZERO
 	if active:
 		var forward := Vector3(-sin(yaw),0,-cos(yaw))
@@ -1369,10 +1370,10 @@ func interact() -> void:
 			open_menu("bench")
 		"Lock-service manipulator":
 			if progression.salvage_claw():
-				claw.hide()
-				message = "The loose manipulator is free. Gears, a chip and wire came away with it."
-				show_notice("MANIPULATOR RECOVERED  ·  I TO INSPECT AND EQUIP")
-				_refresh_hotbar()
+				message = "The gripper jaws release with a hard servo click."
+				show_notice("RECOVERING MANIPULATOR  ·  STAND CLEAR")
+				play_tone(180.0,0.18,0.05)
+				_animate_manipulator_pickup()
 				_save_progress()
 		"Specification shard":
 			if progression.collect_spec():
@@ -1421,6 +1422,35 @@ func interact() -> void:
 		_:
 			if nearby.begins_with("Locker "):
 				open_menu(nearby)
+
+func _animate_manipulator_pickup() -> void:
+	if arm_pickup_active:
+		return
+	arm_pickup_active = true
+	var mount_parent := recovered_arm.get_parent() as Node3D
+	var mount_transform := recovered_arm.transform
+	recovered_arm.reparent(self,true)
+	recovered_arm.show()
+	recovered_arm.global_position = claw.global_position + Vector3(0,0.8,0)
+	recovered_arm.global_rotation = visual.global_rotation
+	var target_position: Vector3 = mount_parent.to_global(mount_transform.origin)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(recovered_arm,"global_position",target_position,0.88).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(recovered_arm,"global_rotation",visual.global_rotation,0.88).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	tween.set_parallel(false)
+	await tween.finished
+	if not is_instance_valid(recovered_arm):
+		return
+	recovered_arm.reparent(mount_parent,false)
+	recovered_arm.transform = mount_transform
+	recovered_arm.hide()
+	claw.hide()
+	arm_pickup_active = false
+	message = "Manipulator recovered. Gears, a chip and wire came away with it."
+	show_notice("MANIPULATOR STORED  ·  I TO INSPECT AND EQUIP")
+	play_tone(390.0,0.22,0.055)
+	_refresh_hotbar()
 
 func open_menu(next: String) -> void:
 	mode = next

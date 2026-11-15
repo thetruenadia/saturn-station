@@ -168,6 +168,8 @@ func run_workshop() -> void:
 	assert(not workshop.powered and workshop.message.contains("stiff to move"))
 	approach_target("Lock-service manipulator")
 	workshop.interact()
+	assert(workshop.arm_pickup_active and workshop.claw.visible)
+	await create_timer(1.0).timeout
 	assert(workshop.progression.manipulator_recovered and not workshop.progression.arm_equipped)
 	assert(not workshop.claw.visible and not workshop.recovered_arm.visible)
 	assert(workshop.progression.inventory.get("manipulator",0) == 1)

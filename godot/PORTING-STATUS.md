@@ -31,6 +31,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Add rotating 3D inventory inspection for the recovered manipulator, power cell, access card, note and fabrication parts; adapt the inventory grid to narrow windows.
 - [x] Port click-to-select object interactions and E-triggered auto-approach, with WASD interruption and state-aware target prompts.
 - [x] Port the loose manipulator recovery and equipment-mount flow: its model begins in the maintenance claw, disappears on recovery, enters storage, and must be fitted before operating the case or switch.
+- [x] Animate the recovered manipulator from the maintenance claw to MU-1 before storing it, with servo and recovery sounds.
 - [x] Add a 20-slot item grid with item descriptions and manipulator equip/stow controls.
 - [x] Add crew belongings, sorted repair rejects, wall utility wiring and floor routes as linked, inspectable room details.
 - [x] Render the worker access card with a faded portrait, name and ETNA password when inspected.
