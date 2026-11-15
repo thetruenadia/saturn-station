@@ -27,6 +27,30 @@ func run_workshop() -> void:
 	assert(workshop.visual.get_node("Body/CastChassis/LowCastHull") != null)
 	assert(not workshop.visual.get_node("Body/CastChassis/RecoveredYellowServiceArm").visible)
 	assert(workshop.get_node("ExposedStationInfrastructure").get_child_count() > 30)
+	assert(workshop.targets.has("Observation window"))
+	assert(workshop.note_visual.visible)
+	workshop.nearby = "Observation window"
+	workshop.interact()
+	assert(workshop.observation_active and workshop.observation_prompt.visible)
+	assert(not workshop.observation_prompt.text.contains("Enceladus"))
+	var return_key := InputEventKey.new()
+	return_key.pressed = true
+	return_key.physical_keycode = KEY_E
+	workshop._unhandled_input(return_key)
+	assert(not workshop.observation_active)
+	workshop.nearby = "Handwritten note"
+	workshop.interact()
+	assert(workshop.progression.note_taken and workshop.progression.inventory.get("note",0) == 1)
+	assert(not workshop.note_visual.visible)
+	workshop.open_menu("inventory")
+	assert(workshop.menu.get_child_count() > 0)
+	workshop.open_menu("note")
+	assert(workshop.menu.get_child_count() > 0)
+	workshop.close_menu()
+	workshop.nearby = "Crew table"
+	workshop.interact()
+	assert(workshop.narration.visible and workshop.narration.text.contains("Two mugs"))
+	workshop.narration.hide()
 	workshop.visual.call("set_moving",true)
 	workshop.visual.call("_process",0.18)
 	assert(float(workshop.visual.get("stride")) > 0.0)
