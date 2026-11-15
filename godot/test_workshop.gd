@@ -171,6 +171,7 @@ func run_workshop() -> void:
 	assert(workshop.targets.has("Observation window"))
 	assert(workshop.targets.has("Mara's cup") and workshop.targets.has("Sorted rejects"))
 	assert(workshop.note_visual.visible)
+	assert(workshop.exit_passage.get_child_count() >= 4)
 	approach_target("Service case")
 	workshop.update_camera()
 	workshop._update_interaction_marker()
@@ -181,15 +182,20 @@ func run_workshop() -> void:
 	workshop.close_menu()
 	workshop.start_maker_opening()
 	assert(workshop.opening_active and workshop.camera.projection == Camera3D.PROJECTION_PERSPECTIVE)
+	assert(workshop.opening_lap.visible and workshop.opening_lamp.visible)
+	assert(workshop.opening_tone_events.size() == 7)
 	workshop._begin_maker_timeline()
 	workshop.opening_elapsed = 30.0
 	workshop._update_maker_opening()
 	assert(workshop.opening_finished and workshop.opening_button.visible)
+	for tone_event in workshop.opening_tone_events.values():
+		assert(tone_event.size() == 3 and tone_event[2])
 	var skip_key := InputEventKey.new()
 	skip_key.pressed = true
 	skip_key.physical_keycode = KEY_Y
 	workshop._unhandled_input(skip_key)
 	assert(not workshop.opening_active and workshop.visual.visible)
+	assert(not workshop.opening_lap.visible and not workshop.opening_lamp.visible)
 	assert(workshop.controls_hint.visible)
 	approach_target("Observation window")
 	workshop.interact()

@@ -20,6 +20,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 ## Remaining parity work
 
 - [x] Port the continuous Maker opening, its skip behavior and handoff to gameplay.
+- [x] Add the opening's seated service chassis, dim exit passage and timed mechanical boot cues.
 - [x] Port the original menu track with an on/off setting and stop/reset when starting or continuing the demo.
 - [x] Add a low looping workshop power-room ambience; stop it on the menu backdrop so menu music remains separate.
 - [x] Port window inspection and its cinematic Enceladus view.
