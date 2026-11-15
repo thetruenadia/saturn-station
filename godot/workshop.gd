@@ -2075,6 +2075,8 @@ func _make_inventory_preview(item_type: String, available_width: float) -> ItemP
 		manipulator.show()
 		manipulator.position = Vector3(0,0.78,0)
 		manipulator.scale = Vector3(1.1,1.1,1.1)
+	elif item_type == "cell":
+		_build_power_cell_preview(stage)
 	else:
 		var model := MeshInstance3D.new()
 		var model_material := StandardMaterial3D.new()
@@ -2082,13 +2084,6 @@ func _make_inventory_preview(item_type: String, available_width: float) -> ItemP
 		model_material.metallic = 0.28
 		model_material.roughness = 0.62
 		match item_type:
-			"cell":
-				var mesh := CylinderMesh.new()
-				mesh.top_radius = 0.3
-				mesh.bottom_radius = 0.34
-				mesh.height = 0.92
-				model.mesh = mesh
-				model_material.albedo_color = Color("73816d")
 			"card":
 				var mesh := BoxMesh.new()
 				mesh.size = Vector3(0.82,1.12,0.055)
@@ -2125,6 +2120,113 @@ func _make_inventory_preview(item_type: String, available_width: float) -> ItemP
 		model.material_override = model_material
 		stage.add_child(model)
 	return preview
+
+func _build_power_cell_preview(stage: Node3D) -> void:
+	var frame_material := StandardMaterial3D.new()
+	frame_material.albedo_color = Color("30342f")
+	frame_material.metallic = 0.82
+	frame_material.roughness = 0.34
+	var copper_material := StandardMaterial3D.new()
+	copper_material.albedo_color = Color("b85f2d")
+	copper_material.metallic = 0.78
+	copper_material.roughness = 0.3
+	var amber_material := StandardMaterial3D.new()
+	amber_material.albedo_color = Color(0.78,0.39,0.14,0.34)
+	amber_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	amber_material.metallic = 0.08
+	amber_material.roughness = 0.27
+	var board_material := StandardMaterial3D.new()
+	board_material.albedo_color = Color("716f5b")
+	board_material.metallic = 0.36
+	board_material.roughness = 0.64
+	var frame := MeshInstance3D.new()
+	frame.name = "PowerPackFrame"
+	var base_mesh := BoxMesh.new()
+	base_mesh.size = Vector3(1.12,0.16,0.86)
+	frame.mesh = base_mesh
+	frame.material_override = frame_material
+	frame.position.y = -0.32
+	stage.add_child(frame)
+	for side in [-1,1]:
+		var rail := MeshInstance3D.new()
+		rail.name = "SideRail_%d" % side
+		var rail_mesh := BoxMesh.new()
+		rail_mesh.size = Vector3(0.11,0.68,0.88)
+		rail.mesh = rail_mesh
+		rail.material_override = frame_material
+		rail.position = Vector3(float(side)*0.5,0,0)
+		stage.add_child(rail)
+	for edge in [-1,1]:
+		var brace := MeshInstance3D.new()
+		brace.name = "CrossBrace_%d" % edge
+		var brace_mesh := BoxMesh.new()
+		brace_mesh.size = Vector3(0.94,0.09,0.09)
+		brace.mesh = brace_mesh
+		brace.material_override = frame_material
+		brace.position = Vector3(0,-0.23,float(edge)*0.37)
+		stage.add_child(brace)
+	for index in range(4):
+		var z := -0.27 + float(index)*0.18
+		var cell := MeshInstance3D.new()
+		cell.name = "CopperCell_%02d" % index
+		var cell_mesh := CylinderMesh.new()
+		cell_mesh.top_radius = 0.105
+		cell_mesh.bottom_radius = 0.105
+		cell_mesh.height = 0.78
+		cell_mesh.radial_segments = 20
+		cell.mesh = cell_mesh
+		cell.material_override = copper_material
+		cell.rotation.z = PI*0.5
+		cell.position = Vector3(0,0.13,z)
+		stage.add_child(cell)
+		for winding_index in range(7):
+			var winding := MeshInstance3D.new()
+			winding.name = "CellWinding_%02d_%02d" % [index,winding_index]
+			var winding_mesh := TorusMesh.new()
+			winding_mesh.inner_radius = 0.108
+			winding_mesh.outer_radius = 0.128
+			winding_mesh.rings = 8
+			winding_mesh.ring_segments = 8
+			winding.mesh = winding_mesh
+			winding.material_override = copper_material
+			winding.rotation.z = PI*0.5
+			winding.position = Vector3(-0.30+float(winding_index)*0.10,0.13,z)
+			stage.add_child(winding)
+	for side in [-1,1]:
+		var cover := MeshInstance3D.new()
+		cover.name = "AmberCover_%d" % side
+		var cover_mesh := BoxMesh.new()
+		cover_mesh.size = Vector3(0.035,0.52,0.75)
+		cover.mesh = cover_mesh
+		cover.material_override = amber_material
+		cover.position.x = float(side)*0.43
+		stage.add_child(cover)
+	for z in [-0.34,0.34]:
+		var lug := MeshInstance3D.new()
+		lug.name = "MountingLug_%s" % str(z)
+		var lug_mesh := BoxMesh.new()
+		lug_mesh.size = Vector3(0.18,0.10,0.12)
+		lug.mesh = lug_mesh
+		lug.material_override = frame_material
+		lug.position = Vector3(0,-0.39,z)
+		stage.add_child(lug)
+	var circuit := MeshInstance3D.new()
+	circuit.name = "ControlBoard"
+	var circuit_mesh := BoxMesh.new()
+	circuit_mesh.size = Vector3(0.36,0.035,0.20)
+	circuit.mesh = circuit_mesh
+	circuit.material_override = board_material
+	circuit.position = Vector3(0,0.36,0.15)
+	stage.add_child(circuit)
+	for index in range(3):
+		var port := MeshInstance3D.new()
+		port.name = "Connector_%02d" % index
+		var port_mesh := BoxMesh.new()
+		port_mesh.size = Vector3(0.17,0.09,0.12)
+		port.mesh = port_mesh
+		port.material_override = frame_material
+		port.position = Vector3(-0.20+float(index)*0.20,0.37,0.28)
+		stage.add_child(port)
 
 func _inventory_items() -> Array[String]:
 	var result: Array[String] = []
