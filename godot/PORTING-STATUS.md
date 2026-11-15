@@ -19,7 +19,8 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [ ] Port the continuous Maker opening, its skip behavior and handoff to gameplay.
 - [ ] Port menu-only music, interaction sounds, terminal boot/key sounds and ambient audio.
 - [ ] Port window inspection and its cinematic Enceladus view.
-- [ ] Expand the terminal beyond ETNA and spec release: command/file sections, record-entry save and boot flow.
+- [x] Add terminal boot flow, ETNA password, commands/files sections and a saved record-entry section.
+- [ ] Add terminal boot/key sounds and expand the file archive to match the browser's full contents.
 - [ ] Match tutorial prompts, directives, notices, pickup feedback and item inspection to the browser game's current clarity work.
 - [ ] Port the full interactive prop/narration coverage, including room storytelling and the remaining functional objects.
 - [ ] Replace the remaining simplified props and materials with higher-detail native assets while preserving the worn, cable-dense industrial aesthetic.

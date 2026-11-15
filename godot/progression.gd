@@ -16,6 +16,7 @@ var probe_installed := false
 var install_placed := false
 var door_open := false
 var finished := false
+var record_entry := ""
 
 func add(type: String, count := 1) -> void:
 	inventory[type] = inventory.get(type,0)+count
@@ -126,7 +127,7 @@ func snapshot() -> Dictionary:
 		"spec_released": spec_released, "spec_unlocked": spec_unlocked,
 		"claw_salvaged": claw_salvaged, "probe_crafted": probe_crafted,
 		"probe_installed": probe_installed, "install_placed": install_placed,
-		"door_open": door_open, "finished": finished
+		"door_open": door_open, "finished": finished, "record_entry": record_entry
 	}
 
 func restore(data: Dictionary) -> void:
@@ -146,3 +147,4 @@ func restore(data: Dictionary) -> void:
 	install_placed = bool(data.get("install_placed", false))
 	door_open = bool(data.get("door_open", false))
 	finished = bool(data.get("finished", false))
+	record_entry = str(data.get("record_entry", ""))

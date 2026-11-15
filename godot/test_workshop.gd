@@ -28,7 +28,7 @@ func run_workshop() -> void:
 	assert(not workshop.visual.get_node("Body/CastChassis/RecoveredYellowServiceArm").visible)
 	assert(workshop.get_node("ExposedStationInfrastructure").get_child_count() > 30)
 	workshop.visual.call("set_moving",true)
-	await create_timer(0.18).timeout
+	workshop.visual.call("_process",0.18)
 	assert(float(workshop.visual.get("stride")) > 0.0)
 	workshop.visual.call("set_moving",false)
 
@@ -51,12 +51,27 @@ func run_workshop() -> void:
 	workshop.nearby = "ETNA terminal"
 	workshop.interact()
 	assert(workshop.mode == "terminal" and workshop.interface.visible)
+	assert(not workshop.terminal_booted)
+	await create_timer(1.35).timeout
+	assert(workshop.terminal_booted)
 	var password := LineEdit.new()
 	password.text = "ETNA"
 	workshop.authenticate(password)
 	assert(workshop.progression.authenticated)
-	workshop.export_spec()
+	assert(workshop.terminal_section == "commands")
+	workshop.run_terminal_command("HELP")
+	assert(workshop.message.contains("STATUS") and workshop.message.contains("SPEC"))
+	workshop.select_terminal_section("files")
+	workshop.show_terminal_file("GENERATOR 04 MAINTENANCE")
+	assert(workshop._terminal_file_text("GENERATOR 04 MAINTENANCE").contains("isolated"))
+	workshop.select_terminal_section("record")
+	var record := TextEdit.new()
+	record.text = "Service bay recovered. Route to Generator 04."
+	workshop.save_record_entry(record)
+	assert(workshop.progression.record_entry.contains("Generator 04"))
+	workshop.run_terminal_command("SPEC")
 	assert(workshop.progression.spec_released and workshop.shard.visible)
+	workshop.close_menu()
 	workshop.nearby = "Specification shard"
 	workshop.interact()
 	assert(workshop.progression.spec_unlocked and not workshop.shard.visible)

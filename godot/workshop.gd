@@ -28,6 +28,9 @@ var probe_visual: Node3D
 var message := ""
 var dragging := false
 var isometric := true
+var terminal_booted := false
+var terminal_section := "commands"
+var terminal_file := ""
 var persistence_enabled := true
 const SAVE_PATH := "user://saturn-station.save"
 var room := [
@@ -345,8 +348,14 @@ func open_menu(next: String) -> void:
 	mode = next
 	dragging = false
 	visual.call("set_servicing", next == "bench")
+	if next == "terminal":
+		terminal_booted = false
+		terminal_section = "commands"
+		terminal_file = ""
 	interface.show()
 	refresh_menu()
+	if next == "terminal":
+		_boot_terminal()
 
 func close_menu() -> void:
 	mode = ""
@@ -379,7 +388,51 @@ func take_part(index: int, type: String) -> void:
 
 func authenticate(password: LineEdit) -> void:
 	message = progression.login(password.text)
+	if progression.authenticated:
+		terminal_section = "commands"
 	_save_progress()
+	refresh_menu()
+
+func _boot_terminal() -> void:
+	await get_tree().create_timer(1.25).timeout
+	if mode == "terminal":
+		terminal_booted = true
+		message = "Terminal ready. Enter access password."
+		refresh_menu()
+
+func select_terminal_section(section: String) -> void:
+	terminal_section = section
+	terminal_file = ""
+	refresh_menu()
+
+func run_terminal_command(command: String) -> void:
+	match command:
+		"HELP":
+			message = "AVAILABLE: STATUS · POWER · SPEC · LOG · HELP"
+		"STATUS":
+			message = "GRID %s · PROBE %s · RECORD %s" % ["ONLINE" if powered else "OFFLINE", "INSTALLED" if progression.probe_installed else "ABSENT", "SAVED" if progression.record_entry != "" else "EMPTY"]
+		"POWER":
+			message = "AUXILIARY DISTRIBUTION: ONLINE" if powered else "AUXILIARY DISTRIBUTION: OFFLINE"
+		"SPEC":
+			if progression.release_spec():
+				shard.show()
+				message = "WRIST ACCESS PROBE SPECIFICATION RELEASED. RECOVER THE SHARD."
+			else:
+				message = "SPECIFICATION LOCKED. AUTHENTICATE AND RESTORE AUXILIARY POWER."
+		"LOG":
+			terminal_section = "record"
+			message = "RECORD ENTRY TERMINAL READY."
+	_save_progress()
+	refresh_menu()
+
+func show_terminal_file(name: String) -> void:
+	terminal_file = name
+	refresh_menu()
+
+func save_record_entry(editor: TextEdit) -> void:
+	progression.record_entry = editor.text.strip_edges()
+	_save_progress()
+	message = "Record entry saved to the station log."
 	refresh_menu()
 
 func export_spec() -> void:
@@ -463,14 +516,47 @@ func refresh_menu() -> void:
 			line("Mara Venn / Staff access card")
 			line("Handwritten note: ETNA")
 		"terminal":
-			if not progression.authenticated:
+			if not terminal_booted:
+				line("PSP-6 WAVE TERMINAL / SELF TEST")
+				line("Checking CRT phosphor ... OK")
+				line("Checking aux bus ... " + ("OK" if powered else "WAITING FOR POWER"))
+				line("Loading station directory ...")
+			elif not progression.authenticated:
+				line("RESTRICTED SERVICE CONSOLE")
+				line("Enter the handwritten access password.")
 				var password := LineEdit.new()
 				password.placeholder_text = "Password"
 				menu.add_child(password)
 				action("Authenticate",authenticate.bind(password))
 			else:
-				line("ETNA / auxiliary grid online")
-				action("Export access probe specification",export_spec,not progression.spec_unlocked and not progression.spec_released)
+				line("ETNA / LOCAL STATION BROWSER")
+				for section in ["commands", "files", "record"]:
+					action(section.to_upper(), select_terminal_section.bind(section), terminal_section != section)
+				match terminal_section:
+					"commands":
+						line("COMMAND DIRECTORY")
+						action("HELP", run_terminal_command.bind("HELP"))
+						action("STATUS", run_terminal_command.bind("STATUS"))
+						action("POWER", run_terminal_command.bind("POWER"))
+						action("SPEC", run_terminal_command.bind("SPEC"), not progression.spec_unlocked and not progression.spec_released)
+						action("LOG", run_terminal_command.bind("LOG"))
+					"files":
+						if terminal_file == "":
+							line("STATION FILES")
+							for file_name in ["SYSTEM STATUS", "GENERATOR 04 MAINTENANCE", "STAFF DIRECTORY", "INCIDENT LOG"]:
+								action(file_name, show_terminal_file.bind(file_name))
+						else:
+							line("/STATION/" + terminal_file.replace(" ", "_") + ".TXT")
+							line(_terminal_file_text(terminal_file))
+							action("BACK TO FILES", show_terminal_file.bind(""))
+					"record":
+						line("PERSONAL RECORD ENTRY · SAVES WITH THIS SHIFT")
+						var editor := TextEdit.new()
+						editor.custom_minimum_size = Vector2(0, 110)
+						editor.placeholder_text = "Type a short station log entry..."
+						editor.text = progression.record_entry
+						menu.add_child(editor)
+						action("SAVE RECORD", save_record_entry.bind(editor))
 		"bench":
 			if not progression.spec_unlocked:
 				line("Specification required.")
@@ -491,6 +577,18 @@ func refresh_menu() -> void:
 					action("Recover "+item.capitalize(),take_part.bind(index,item),progression.lockers[index].get(item,0)>0)
 	line(message)
 	action("Close",close_menu)
+
+func _terminal_file_text(file_name: String) -> String:
+	match file_name:
+		"SYSTEM STATUS":
+			return "Auxiliary grid: %s\nProbe socket: %s\nStaff access: authenticated" % ["online" if powered else "offline", "occupied" if progression.probe_installed else "empty"]
+		"GENERATOR 04 MAINTENANCE":
+			return "Auxiliary route only. Main vessel remains isolated.\nInspection crew count: 2.\nLast entry: 18 months ago."
+		"STAFF DIRECTORY":
+			return "MARA VENN · service crew · B-7\nCurrent assignment: lower exchanger bay."
+		"INCIDENT LOG":
+			return progression.record_entry if progression.record_entry != "" else "No local record entries saved."
+	return "File could not be read."
 
 func enter_generator_hall() -> void:
 	get_tree().change_scene_to_file("res://generator_hall.tscn")

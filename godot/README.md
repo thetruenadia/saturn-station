@@ -8,7 +8,7 @@ Controls: WASD walk, E interact, I inventory, C maintenance bench, Q use a cell,
 
 ## Still being ported
 
-This is a staged migration, not yet a feature-complete replacement. The Maker opening cinematic, menu music and game sound effects, window observation sequence, full terminal command/file/record browser, tutorial/directive polish, richer item inspection and pickup feedback, and the browser build's full materials and prop interactions still need native Godot implementations. The terminal currently covers ETNA authentication and probe specification release. Workshop salvage remains a guaranteed recovery interface, rather than individually manipulable 3D components.
+This is a staged migration, not yet a feature-complete replacement. The Maker opening cinematic, menu music and game sound effects, window observation sequence, tutorial/directive polish, richer item inspection and pickup feedback, and the browser build's full materials and prop interactions still need native Godot implementations. The terminal has a boot flow, ETNA authentication, command and file sections, a persistent record-entry section, and probe specification release. Workshop salvage remains a guaranteed recovery interface, rather than individually manipulable 3D components.
 
 ## Regression checks
 
