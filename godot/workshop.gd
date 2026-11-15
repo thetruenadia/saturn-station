@@ -43,6 +43,7 @@ var fabrication_tray: FabricationTray
 var mode := ""
 var nearby := ""
 var targets: Dictionary = {}
+var observation_counts: Dictionary = {}
 var shard: MeshInstance3D
 var claw: MeshInstance3D
 var note_visual: MeshInstance3D
@@ -205,6 +206,7 @@ func _ready() -> void:
 		sign.position.y = 1.6
 		if item[0] == "Auxiliary power":
 			power_lamp = block(station, Vector3(0,1.3,0.45), Vector3(0.5,0.25,0.1), "70412a")
+	_build_room_story_props()
 	for n in range(4):
 		block(self, Vector3(-13.4,2.2+n*0.25,0), Vector3(0.13,0.13,20), "655347")
 	player = CharacterBody3D.new()
@@ -323,6 +325,82 @@ func _opening_box(parent: Node3D, position: Vector3, size: Vector3, color: Strin
 	parent.add_child(mesh)
 	mesh.position = position
 	return mesh
+
+func _story_cable(a: Vector3, b: Vector3, radius: float, color: String) -> void:
+	var delta := b-a
+	var cable := MeshInstance3D.new()
+	var shape := CylinderMesh.new()
+	shape.top_radius = radius
+	shape.bottom_radius = radius
+	shape.height = delta.length()
+	shape.radial_segments = 7
+	cable.mesh = shape
+	cable.material_override = material(color)
+	add_child(cable)
+	cable.position = (a+b)*0.5
+	cable.quaternion = Quaternion(Vector3.UP,delta.normalized())
+
+func _build_room_story_props() -> void:
+	# Crew details sit on the existing table and wall-connected utility route.
+	var cup := MeshInstance3D.new()
+	var cup_shape := CylinderMesh.new()
+	cup_shape.top_radius = 0.095
+	cup_shape.bottom_radius = 0.075
+	cup_shape.height = 0.19
+	cup.mesh = cup_shape
+	cup.material_override = material("837d66")
+	add_child(cup)
+	cup.position = Vector3(8.16,1.21,-5.0)
+	var handle := MeshInstance3D.new()
+	var handle_shape := TorusMesh.new()
+	handle_shape.inner_radius = 0.055
+	handle_shape.outer_radius = 0.075
+	handle.mesh = handle_shape
+	handle.material_override = material("9f8652")
+	add_child(handle)
+	handle.position = Vector3(8.27,1.22,-5.0)
+	handle.rotation.x = PI/2.0
+	var ring := MeshInstance3D.new()
+	var ring_shape := TorusMesh.new()
+	ring_shape.inner_radius = 0.09
+	ring_shape.outer_radius = 0.098
+	ring.mesh = ring_shape
+	ring.material_override = material("6b5941")
+	add_child(ring)
+	ring.position = Vector3(8.16,1.115,-5.0)
+	var handover := block(self,Vector3(8.54,1.13,-4.98),Vector3(0.42,0.018,0.31),"b5ad91")
+	handover.rotation.y = -0.12
+	for i in range(4):
+		block(self,Vector3(8.53,1.142,-5.08+i*0.055),Vector3(0.27,0.004,0.008),"4d5147")
+	# A seat faces the moon; the pressure helmet remains on its service stand.
+	block(self,Vector3(7.5,0.72,-8.9),Vector3(0.68,0.12,0.64),"8c8872")
+	block(self,Vector3(7.5,1.08,-9.17),Vector3(0.68,0.66,0.12),"464c45")
+	for x in [7.25,7.75]:
+		for z in [-9.12,-8.68]:
+			block(self,Vector3(x,0.34,z),Vector3(0.07,0.58,0.07),"494d43")
+	var helmet := MeshInstance3D.new()
+	var helmet_shape := SphereMesh.new()
+	helmet_shape.radius = 0.23
+	helmet_shape.height = 0.46
+	helmet.mesh = helmet_shape
+	helmet.material_override = material("9a9a83")
+	add_child(helmet)
+	helmet.position = Vector3(11.2,1.33,-2.1)
+	block(self,Vector3(11.2,1.32,-1.87),Vector3(0.34,0.13,0.08),"272c28")
+	# Rejected claw parts are sorted beside the service station, not scattered through the aisle.
+	block(self,Vector3(-5.35,1.13,3.7),Vector3(1.05,0.08,0.65),"424940")
+	for i in range(3):
+		var reject := block(self,Vector3(-5.7+i*0.3,1.27,3.7),Vector3(0.14,0.1,0.36),"858575")
+		reject.rotation.y = float(i-1)*0.06
+	for pair in [
+		[Vector3(-10.8,0.18,-8.5),Vector3(-11.0,0.18,-5.7)],
+		[Vector3(-11.0,0.18,-5.7),Vector3(-11.0,0.18,-2.0)],
+		[Vector3(-11.0,0.18,-2.0),Vector3(-11.4,0.18,1.8)],
+		[Vector3(-10.8,0.16,-8.5),Vector3(-5.5,0.16,-8.5)],
+		[Vector3(-5.5,0.16,-8.5),Vector3(2.1,0.16,-8.5)]]:
+		_story_cable(pair[0],pair[1],0.035,"88794e")
+	for pair in [[Vector3(-6,0.075,5),Vector3(-3,0.075,5)],[Vector3(-3,0.075,5),Vector3(-3,0.075,-3)],[Vector3(-3,0.075,-3),Vector3(5,0.075,-3)],[Vector3(-3,0.075,-3),Vector3(-6,0.075,-6)]]:
+		_story_cable(pair[0],pair[1],0.014,"71745e")
 
 func start_maker_opening() -> void:
 	if opening_active:
@@ -587,6 +665,11 @@ func show_narration(text: String) -> void:
 	tween.tween_property(narration, "modulate:a", 0.0, 0.8)
 	tween.tween_callback(narration.hide)
 
+func show_observation(id: String, heading: String, lines: Array[String]) -> void:
+	var count := int(observation_counts.get(id,0))
+	observation_counts[id] = count + 1
+	show_narration(heading.to_upper() + "\n" + lines[mini(count,lines.size()-1)])
+
 func _unhandled_input(event: InputEvent) -> void:
 	if opening_active:
 		if event is InputEventKey and event.pressed and event.physical_keycode == KEY_Y:
@@ -728,7 +811,9 @@ func setup_progression(layer: CanvasLayer) -> void:
 		"Handwritten note":Vector2(2.1,-7.7), "Crew table":Vector2(8.3,-5.0),
 		"Exchanger":Vector2(-5.5,-9.2), "Turbine":Vector2(-11,-2),
 		"Press":Vector2(-11.4,1.8), "Engine":Vector2(-11,-5.7),
-		"Helmet stand":Vector2(11.2,-2.1)
+		"Helmet stand":Vector2(11.2,-2.1), "Window seat":Vector2(7.5,-8.9),
+		"Mara's cup":Vector2(7.9,-5.45), "Unfinished handover":Vector2(8.9,-5.0),
+		"Sorted rejects":Vector2(-5.35,3.7)
 	}
 	note_visual = block(self,Vector3(2.1,0.58,-7.7),Vector3(0.46,0.04,0.3),"d5c17a")
 	var note_label := Label3D.new()
@@ -833,16 +918,24 @@ func interact() -> void:
 				_save_progress()
 		"Crew table":
 			show_narration("Two mugs. One chair pulled back. The shift log stops halfway through a sentence.")
+		"Window seat":
+			show_observation("seat","Window seat",["The deck coating is worn away beneath the front legs. This chair was pulled up to the glass, again and again."])
+		"Mara's cup":
+			show_observation("cup","Mara's cup",["A pale ring marks the shelf beneath the cup. Whoever sat here watched the plumes for a long time.","Cold. The handle has been repaired rather than replaced."])
+		"Unfinished handover":
+			show_observation("handover","Unfinished handover",["Converter vibration steady. Claw still binding. Tell the next shift— The last line stops there.","There is no signature in the handover box."])
+		"Sorted rejects":
+			show_observation("tray","Sorted rejects",["Failed gripper jaws, sorted by fracture. These were kept for comparison, not thrown away."])
 		"Exchanger":
-			show_narration("Heat exchanger C-2. Its return line still ticks as the metal cools.")
+			show_observation("exchanger","Coolant exchanger",["Fresh bolts interrupt the old rust. The repair sleeve is newer than anything connected to it."])
 		"Turbine":
-			show_narration("A bearing knocks somewhere inside the turbine housing. The sound travels through the floor.")
+			show_observation("converter","Rotary converter",["The converter feeds the exchanger through the west-wall bus. Every cable here has a destination.","A service date has been scratched over three times. This unit outlived its planned replacement."])
 		"Press":
-			show_narration("The service press is locked at the bottom of its stroke. Someone left the work half-finished.")
+			show_observation("press","Workshop press",["A jaw-shaped mark remains in the press bed. Someone tried to straighten the claw before giving up.","The tooling is worn smooth where a hand would steady it. This bay was used every shift."])
 		"Engine":
-			show_narration("A sealed drive unit. The casing is cold, but a faint vibration remains in its mounts.")
+			show_observation("compressor","Auxiliary compressor",["A cloth tied around the coupling catches the last drops of oil. Someone kept running it instead of fixing the seal."])
 		"Helmet stand":
-			show_narration("A pressure helmet, visor turned toward the station window.")
+			show_observation("helmet","Crew helmet",["The seal is intact. The faceplate is polished on the inside, scratched on the outside."])
 		"Maintenance exit":
 			message = progression.use_exit()
 			if progression.door_open:

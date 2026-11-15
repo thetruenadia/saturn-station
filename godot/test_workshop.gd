@@ -30,6 +30,7 @@ func run_workshop() -> void:
 	assert(not workshop.visual.get_node("Body/CastChassis/RecoveredYellowServiceArm").visible)
 	assert(workshop.get_node("ExposedStationInfrastructure").get_child_count() > 30)
 	assert(workshop.targets.has("Observation window"))
+	assert(workshop.targets.has("Mara's cup") and workshop.targets.has("Sorted rejects"))
 	assert(workshop.note_visual.visible)
 	workshop.start_maker_opening()
 	assert(workshop.opening_active and workshop.camera.projection == Camera3D.PROJECTION_PERSPECTIVE)
@@ -67,6 +68,12 @@ func run_workshop() -> void:
 	workshop.nearby = "Crew table"
 	workshop.interact()
 	assert(workshop.narration.visible and workshop.narration.text.contains("Two mugs"))
+	workshop.nearby = "Mara's cup"
+	workshop.interact()
+	assert(workshop.narration.text.contains("watched the plumes"))
+	workshop.nearby = "Unfinished handover"
+	workshop.interact()
+	assert(workshop.narration.text.contains("Claw still binding"))
 	workshop.narration.hide()
 	workshop.visual.call("set_moving",true)
 	workshop.visual.call("_process",0.18)
