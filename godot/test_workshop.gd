@@ -88,6 +88,10 @@ func run_workshop() -> void:
 		DirAccess.remove_absolute(regression_path)
 	workshop.save_path = regression_path
 	workshop.persistence_enabled = true
+	var baseline_progress: Dictionary = workshop.progression.snapshot()
+	workshop.progression.case_open = true
+	workshop.progression.cell_taken = false
+	workshop._set_service_case_state(true,false)
 	workshop.player.position = Vector3(4.25,0,-3.5)
 	workshop.visual.rotation.y = -0.7
 	workshop.charge = 37.0
@@ -108,6 +112,10 @@ func run_workshop() -> void:
 	assert(is_equal_approx(workshop.charge,37.0) and is_equal_approx(workshop.visual.rotation.y,-0.7))
 	assert(is_equal_approx(workshop.yaw,1.7) and is_equal_approx(workshop.pitch,0.44) and is_equal_approx(workshop.zoom,9.5))
 	assert(not workshop.isometric)
+	assert(workshop.progression.case_open and not workshop.progression.cell_taken)
+	assert(workshop.portable_cell_visual.visible and workshop.service_case_lid.rotation.x < -1.0)
+	workshop.progression.restore(baseline_progress)
+	workshop._set_service_case_state(workshop.progression.case_open,workshop.progression.cell_taken)
 	workshop.persistence_enabled = false
 	workshop.save_path = saved_path
 	DirAccess.remove_absolute(regression_path)
@@ -294,11 +302,16 @@ func run_workshop() -> void:
 	workshop.equip_or_stow_manipulator()
 	assert(workshop.progression.arm_equipped and workshop.recovered_arm.visible)
 	workshop.close_menu()
+	assert(workshop.find_child("PortableCellCase",true,false) is Node3D)
+	assert(not workshop.portable_cell_visual.visible and is_zero_approx(workshop.service_case_lid.rotation.x))
 	approach_target("Service case")
 	workshop.interact()
+	assert(workshop.progression.case_open and workshop.portable_cell_visual.visible)
+	assert(workshop.service_case_lid.rotation.x < -1.0)
 	assert(workshop._interaction_hint("Service case") == "RECOVER POWER CELL")
 	workshop.interact()
 	assert(workshop.progression.cells == 1)
+	assert(workshop.progression.cell_taken and not workshop.portable_cell_visual.visible)
 	assert(workshop.notice.visible and workshop.notice.text.contains("POWER CELL"))
 	approach_target("Auxiliary power")
 	workshop.interact()
