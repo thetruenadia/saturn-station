@@ -47,41 +47,58 @@ export function createGeneratorHall({THREE,scene,interactables}) {
     mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
   }
   // Tall riveted shell and structural ribs suggest a vessel much larger than this gallery.
-  const shell=cylinder(root,15.2,17.4,48,metal,0,3,-25,48);
+  const shell=cylinder(root,15.2,17.4,48,metal,0,3,-15,48);
   shell.material=metal;
-  cylinder(root,17.8,17.2,1.1,rust,0,-21.3,-25,48);
-  cylinder(root,13.4,15.4,2.4,cream,0,27.8,-25,48);
-  cylinder(root,10.2,13.4,12,metal,0,34.8,-25,40);
-  cylinder(root,5.1,10.2,8,cream,0,44.8,-25,40);
-  cylinder(root,3.5,5.1,5,amber,0,51.3,-25,40);
+  cylinder(root,17.8,17.2,1.1,rust,0,-21.3,-15,48);
+  cylinder(root,13.4,15.4,2.4,cream,0,27.8,-15,48);
+  cylinder(root,10.2,13.4,12,metal,0,34.8,-15,40);
+  cylinder(root,5.1,10.2,8,cream,0,44.8,-15,40);
+  cylinder(root,3.5,5.1,5,amber,0,51.3,-15,40);
   for(let i=0;i<28;i++){
     const a=i*Math.PI*2/28,x=Math.sin(a),z=Math.cos(a);
-    beam([x*17.4,-20.5,-25+z*17.4],[x*15.3,25,-25+z*15.3],.24,i%4===0?rust:cream);
-    cylinder(root,.42,.42,1.1,teal,x*17.2,-20.2,-25+z*17.2,12);
+    beam([x*17.4,-20.5,-15+z*17.4],[x*15.3,25,-15+z*15.3],.24,i%4===0?rust:cream);
+    cylinder(root,.42,.42,1.1,teal,x*17.2,-20.2,-15+z*17.2,12);
   }
   // Open core well: nested luminous rings and a slow axial pulse, visible from every gallery.
-  const core=new THREE.Group();root.add(core);core.position.set(0,-15,-25);
+  const core=new THREE.Group();root.add(core);core.position.set(0,-15,-15);
   for(let i=0;i<5;i++){
     const ring=new THREE.Mesh(new THREE.TorusGeometry(7.6-i*.72,.18+i*.035,8,72),i%2?glow:amber);
     ring.rotation.x=Math.PI/2;ring.position.y=i*2.5;core.add(ring);
   }
-  const coreLight=new THREE.PointLight(0xf08136,180,72,1.7);coreLight.position.set(0,-13,-25);root.add(coreLight);
+  const coreLight=new THREE.PointLight(0xf08136,180,72,1.7);coreLight.position.set(0,-13,-15);root.add(coreLight);
   const inner=new THREE.Mesh(new THREE.CylinderGeometry(4.2,5.8,28,24,1,true),new THREE.MeshBasicMaterial({color:0xd66c2a,transparent:true,opacity:.11,side:THREE.DoubleSide}));
-  inner.position.set(0,-13,-25);root.add(inner);
+  inner.position.set(0,-13,-15);root.add(inner);
   // The immense hall, overhead catwalks, and cross-braced girders frame the dynamo.
-  for(const x of [-42,-30,30,42]){
-    for(const z of [-54,-39,-24,-9,6]){
-      box(root,.72,60,.8,x===-30||x===30?rust:metal,x,12,z);
-      box(root,3,.32,1.1,cream,x,28,z);
+  for(const x of [-48,-42,-30,30,42,48]){
+    for(const z of [-68,-54,-40,-26,-12,2,16]){
+      box(root,.72,88,.8,x===-30||x===30?rust:metal,x,8,z);
+      box(root,3,.32,1.1,cream,x,48,z);
+      if(x===-48||x===48)box(root,5,82,.28,dark,x,8,z);
+      if(x===-48||x===48)for(const y of [-28,-12,4,20,36])box(root,4,.28,.4,cream,x,y,z);
     }
+  }
+  // Roof trusses, cable trays and cross-braced end walls give the gallery a real envelope.
+  for(const z of [-68,-54,-40,-26,-12,2,16]){
+    beam([-48,52,z],[48,52,z],.42,metal);
+    beam([-46,51.5,z],[0,43,z],.16,rust);beam([0,43,z],[46,51.5,z],.16,rust);
+    box(root,96,.35,.7,teal,0,53,z);
+  }
+  for(const y of [-32,-16,0,16,32,48]){
+    beam([-48,y,-68],[48,y,-68],.28,cream);beam([-48,y,16],[48,y,16],.28,cream);
+  }
+  for(const x of [-47,-37,37,47]){
+    beam([x,48,-68],[x,48,16],.18,teal);
+    for(let z=-66;z<=16;z+=8)beam([x,46,z],[x,50,z],.095,rust);
   }
   for(const y of GENERATOR_LEVELS){
     for(const side of [-1,1]){
       const x=side*36;
       box(root,11,.42,88,metal,x,y,-26);
-      box(root,11,.12,88,rust,x,y+.25,-26);
-      for(const z of [-67,-59,-51,-43,-35,-27,-19,-11,-3,5,13]){
-        box(root,.16,.9,.17,cream,x+side*4.9,y+.55,z);
+      for(const dx of [-4,-2,0,2,4])box(root,.08,.08,87,rust,x+dx,y+.26,-26);
+      for(let z=-68;z<=16;z+=4)box(root,10.8,.12,.13,cream,x,y+.28,z);
+      for(const edge of [x-side*5,x+side*5]){
+        for(let z=-68;z<=16;z+=4)beam([edge,y+.3,z],[edge,y+1,z],.07,cream);
+        for(const h of [.62,.98])beam([edge,y+h,-68],[edge,y+h,16],.06,teal);
       }
       for(const z of [-67,-51,-35,-19,-3,13]){
         for(const h of [.48,.82])beam([x-side*5,y+h,z],[x+side*5,y+h,z],.055,teal);
@@ -126,7 +143,7 @@ export function createGeneratorHall({THREE,scene,interactables}) {
     const curve=new THREE.CatmullRomCurve3([
       new THREE.Vector3(x,43,z),new THREE.Vector3(x+(i%2?2:-2),31,z+2),
       new THREE.Vector3(x+(i%3-1)*3,19,z-1),new THREE.Vector3(x+(i%2?3:-3),5,z+1),
-      new THREE.Vector3(x+(i%4-2)*1.3,-2,-25+(i%5-2)*2)
+      new THREE.Vector3(x+(i%4-2)*1.3,-2,-15+(i%5-2)*2)
     ]);
     root.add(new THREE.Mesh(new THREE.TubeGeometry(curve,32,.065+(i%4)*.025,7,false),i%3?teal:rust));
   }
