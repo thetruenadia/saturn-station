@@ -324,12 +324,15 @@ func run_workshop() -> void:
 	workshop.interact()
 	assert(workshop.mode == "terminal" and workshop.interface.visible)
 	assert(not workshop.terminal_booted)
+	assert(workshop.terminal_screen_label.text.contains("PHOSPHOR CHECK"))
 	await create_timer(1.35).timeout
 	assert(workshop.terminal_booted)
+	assert(workshop.terminal_screen_label.text.contains("ENTER PASSWORD"))
 	var password := LineEdit.new()
 	password.text = "ETNA"
 	workshop.authenticate(password)
 	assert(workshop.progression.authenticated)
+	assert(workshop.terminal_screen_label.text.contains("ETNA ACCESS GRANTED"))
 	assert(workshop.terminal_section == "commands")
 	workshop.run_terminal_command("1")
 	assert(workshop.message.contains("DOOR LINK ISOLATED"))

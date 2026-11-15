@@ -34,7 +34,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Add a five-slot quick inventory strip with numbered keyboard selection.
 - [x] Add rotating 3D inventory inspection for the recovered manipulator, power cell, access card, note and fabrication parts; adapt the inventory grid to narrow windows.
 - [x] Model the portable power cell as a CubeSat-inspired frame, visible copper cell array, translucent amber side covers and control board.
-- [x] Replace the generic key-device blocks with a phosphor CRT terminal and a multi-control auxiliary power panel whose lamps and screen respond to grid state.
+- [x] Replace the generic key-device blocks with a phosphor CRT terminal and a multi-control auxiliary power panel whose lamps and screen respond to grid state and terminal boot/authentication.
 - [x] Port click-to-select object interactions and E-triggered auto-approach, with WASD interruption and state-aware target prompts.
 - [x] Add a projected proximity marker with the current action or a move-closer cue; hide it behind panels, pauses and cutscenes.
 - [x] Port the loose manipulator recovery and equipment-mount flow: its model begins in the maintenance claw, disappears on recovery, enters storage, and must be fitted before operating the case or switch.
