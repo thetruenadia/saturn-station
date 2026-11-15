@@ -55,6 +55,8 @@ func run_workshop() -> void:
 	assert(workshop.progression.note_taken and workshop.progression.inventory.get("note",0) == 1)
 	assert(not workshop.note_visual.visible)
 	assert(workshop.notice.visible and workshop.notice.text.contains("ETNA ACCESS NOTE"))
+	assert(workshop.sound_player.stream is AudioStreamWAV)
+	assert((workshop.sound_player.stream as AudioStreamWAV).data.size() > 0)
 	workshop.open_menu("inventory")
 	assert(workshop.menu.get_child_count() > 0)
 	workshop.open_menu("note")

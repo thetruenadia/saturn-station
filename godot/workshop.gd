@@ -38,6 +38,7 @@ var narration: Label
 var directive: Label
 var notice: Label
 var notice_tween: Tween
+var sound_player: AudioStreamPlayer
 var opening_active := false
 var opening_started := false
 var opening_elapsed := 0.0
@@ -78,6 +79,29 @@ func material(hex: String, emission := false) -> StandardMaterial3D:
 		m.emission = Color(hex)
 	return m
 
+func play_tone(frequency: float, duration: float, volume := 0.06) -> void:
+	if not sound_player or duration <= 0.0:
+		return
+	const sample_rate := 22050
+	var frames := maxi(1, int(sample_rate * duration))
+	var samples := PackedByteArray()
+	samples.resize(frames * 2)
+	for i in range(frames):
+		var t := float(i) / float(sample_rate)
+		var envelope := pow(1.0 - float(i) / float(frames), 1.8)
+		var sweep := frequency * (1.0 - 0.14 * float(i) / float(frames))
+		var sample := int(clampf(sin(TAU * sweep * t) * envelope * volume, -1.0, 1.0) * 32767.0)
+		samples[i*2] = sample & 0xff
+		samples[i*2+1] = (sample >> 8) & 0xff
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = samples
+	sound_player.stop()
+	sound_player.stream = stream
+	sound_player.play()
+
 func block(parent: Node3D, pos: Vector3, size: Vector3, hex: String, solid := false) -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()
 	var shape := BoxMesh.new()
@@ -109,6 +133,9 @@ func _ready() -> void:
 	atmosphere.ambient_light_energy = 0.65
 	env.environment = atmosphere
 	add_child(env)
+	sound_player = AudioStreamPlayer.new()
+	sound_player.name = "WorkshopSoundEffects"
+	add_child(sound_player)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-55, -35, 0)
 	sun.light_color = Color("f1d9b1")
@@ -648,6 +675,7 @@ func show_notice(text: String) -> void:
 	notice_tween.tween_interval(2.4)
 	notice_tween.tween_property(notice,"modulate:a",0.0,0.45)
 	notice_tween.tween_callback(notice.hide)
+	play_tone(620.0,0.075,0.045)
 
 func setup_progression(layer: CanvasLayer) -> void:
 	targets = {
@@ -813,7 +841,10 @@ func action(label: String, callback: Callable, enabled := true) -> void:
 	var button := Button.new()
 	button.text = label
 	button.disabled = not enabled
-	button.pressed.connect(callback)
+	button.pressed.connect(func() -> void:
+		play_tone(480.0,0.028,0.025)
+		callback.call()
+	)
 	menu.add_child(button)
 
 func _worker_portrait() -> Texture2D:
@@ -905,7 +936,12 @@ func authenticate(password: LineEdit) -> void:
 	refresh_menu()
 
 func _boot_terminal() -> void:
-	await get_tree().create_timer(1.25).timeout
+	play_tone(92.0,0.32,0.055)
+	await get_tree().create_timer(0.28).timeout
+	play_tone(174.0,0.1,0.045)
+	await get_tree().create_timer(0.36).timeout
+	play_tone(390.0,0.06,0.035)
+	await get_tree().create_timer(0.61).timeout
 	if mode == "terminal":
 		terminal_booted = true
 		message = "Terminal ready. Enter access password."
@@ -1044,6 +1080,7 @@ func refresh_menu() -> void:
 				line("Enter the handwritten access password.")
 				var password := LineEdit.new()
 				password.placeholder_text = "Password"
+				password.text_changed.connect(func(_value: String) -> void: play_tone(730.0,0.018,0.018))
 				menu.add_child(password)
 				action("Authenticate",authenticate.bind(password))
 			else:

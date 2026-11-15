@@ -17,14 +17,15 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 ## Remaining parity work
 
 - [x] Port the continuous Maker opening, its skip behavior and handoff to gameplay.
-- [ ] Port menu-only music, interaction sounds, terminal boot/key sounds and ambient audio.
-- [ ] Port window inspection and its cinematic Enceladus view.
+- [ ] Port menu-only music and ambient audio.
+- [x] Port window inspection and its cinematic Enceladus view.
 - [x] Add terminal boot flow, ETNA password, commands/files sections and a saved record-entry section.
 - [x] Add a cinematic observation-window interaction, recoverable ETNA note and short narration at major workshop props.
 - [x] Add a centered top-screen task directive plus pickup and power-restored notices.
 - [x] Render the worker access card with a faded portrait, name and ETNA password when inspected.
-- [ ] Add terminal boot/key sounds and expand the file archive to match the browser's full contents.
-- [ ] Match tutorial prompts, directives, notices, pickup feedback and item inspection to the browser game's current clarity work.
+- [x] Add native UI click and typing sounds, terminal boot tones, and pickup chimes.
+- [ ] Expand the file archive to match the browser's full contents.
+- [ ] Match movement and probe-install guidance, richer component inspection and remaining pickup feedback to the browser game's current clarity work.
 - [ ] Port the full interactive prop/narration coverage, including room storytelling and the remaining functional objects.
 - [ ] Replace the remaining simplified props and materials with higher-detail native assets while preserving the worn, cable-dense industrial aesthetic.
 - [ ] Visually playtest desktop and mobile-like window sizes and iterate on camera, collision, interaction distances and layout.
