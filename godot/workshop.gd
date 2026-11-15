@@ -35,6 +35,19 @@ var terminal_file := ""
 var observation_active := false
 var observation_prompt: Label
 var narration: Label
+var opening_active := false
+var opening_started := false
+var opening_elapsed := 0.0
+var opening_finished := false
+var opening_maker: Node3D
+var opening_torso: Node3D
+var opening_head: Node3D
+var opening_arms: Array[Node3D] = []
+var opening_legs: Array[Node3D] = []
+var opening_black: ColorRect
+var opening_caption: Label
+var opening_button: Button
+var opening_layer: CanvasLayer
 var persistence_enabled := true
 const SAVE_PATH := "user://saturn-station.save"
 var room := [
@@ -192,6 +205,16 @@ func _ready() -> void:
 	if persistence_enabled:
 		_load_progress()
 	update_camera()
+	if get_tree().has_meta("start_maker_opening") and bool(get_tree().get_meta("start_maker_opening")):
+		get_tree().remove_meta("start_maker_opening")
+		call_deferred("start_maker_opening")
+
+func _process(delta: float) -> void:
+	if not opening_active:
+		return
+	if opening_started and not opening_finished:
+		opening_elapsed = minf(opening_elapsed + delta, 30.0)
+		_update_maker_opening()
 
 func update_camera() -> void:
 	if observation_active:
@@ -209,6 +232,188 @@ func update_camera() -> void:
 		camera.position = player.position + Vector3(0,1.55,0)
 		var look_direction := Vector3(-sin(yaw)*cos(pitch),sin(pitch),-cos(yaw)*cos(pitch))
 		camera.look_at(camera.position + look_direction)
+
+func _opening_box(parent: Node3D, position: Vector3, size: Vector3, color: String) -> MeshInstance3D:
+	var mesh := MeshInstance3D.new()
+	var shape := BoxMesh.new()
+	shape.size = size
+	mesh.mesh = shape
+	mesh.material_override = material(color)
+	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	parent.add_child(mesh)
+	mesh.position = position
+	return mesh
+
+func start_maker_opening() -> void:
+	if opening_active:
+		return
+	opening_active = true
+	opening_started = false
+	opening_finished = false
+	opening_elapsed = 0.0
+	paused = true
+	player.velocity = Vector3.ZERO
+	visual.hide()
+	var original_projection := camera.projection
+	camera.projection = Camera3D.PROJECTION_PERSPECTIVE
+	camera.fov = 66.0
+	camera.position = player.position + Vector3(0, 0.92, 0)
+	camera.look_at(Vector3(2, 1.35, -3.5))
+	camera.rotate_z(-0.075)
+	opening_maker = Node3D.new()
+	opening_maker.name = "MakerOpeningCharacter"
+	add_child(opening_maker)
+	opening_maker.position = Vector3(-7.6, 0, 4.8)
+	opening_torso = Node3D.new()
+	opening_maker.add_child(opening_torso)
+	_opening_box(opening_torso, Vector3(0,1.2,0), Vector3(0.7,0.85,0.42), "c4b895")
+	_opening_box(opening_torso, Vector3(0,0.91,0), Vector3(0.73,0.1,0.46), "9a5838")
+	_opening_box(opening_torso, Vector3(0,1.68,0), Vector3(0.5,0.17,0.51), "9a5838")
+	opening_head = Node3D.new()
+	opening_head.position.y = 1.9
+	opening_torso.add_child(opening_head)
+	_opening_box(opening_head, Vector3(0,0,0.03), Vector3(0.38,0.4,0.35), "b89172")
+	_opening_box(opening_head, Vector3(0,0.22,0), Vector3(0.58,0.29,0.54), "c4b895")
+	_opening_box(opening_head, Vector3(0,0.12,0.02), Vector3(0.65,0.08,0.62), "9a5838")
+	_opening_box(opening_head, Vector3(0,0.12,0.22), Vector3(0.39,0.12,0.08), "302e29")
+	for side in [-1.0, 1.0]:
+		var arm := Node3D.new()
+		arm.position = Vector3(side*0.43,1.52,0)
+		opening_torso.add_child(arm)
+		_opening_box(arm, Vector3(0,-0.25,0), Vector3(0.24,0.57,0.26), "c4b895")
+		_opening_box(arm, Vector3(0,-0.6,0.03), Vector3(0.22,0.22,0.24), "302e29")
+		opening_arms.append(arm)
+		var leg := Node3D.new()
+		leg.position = Vector3(side*0.21,0.83,0)
+		opening_maker.add_child(leg)
+		_opening_box(leg, Vector3(0,-0.29,0), Vector3(0.27,0.66,0.29), "302e29")
+		_opening_box(leg, Vector3(0,-0.74,0.1), Vector3(0.32,0.2,0.52), "9a5838")
+		opening_legs.append(leg)
+	var layer := get_node_or_null("WorkshopHUD") as CanvasLayer
+	if layer:
+		hud.hide()
+		prompt.hide()
+	opening_layer = CanvasLayer.new()
+	opening_layer.layer = 8
+	add_child(opening_layer)
+	opening_black = ColorRect.new()
+	opening_black.color = Color(0,0,0,1)
+	opening_black.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	opening_layer.add_child(opening_black)
+	opening_caption = Label.new()
+	opening_caption.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	opening_caption.position = Vector2(-460,90)
+	opening_caption.size = Vector2(920,75)
+	opening_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	opening_caption.add_theme_font_size_override("font_size",22)
+	opening_caption.add_theme_color_override("font_color",Color("d6cfb8"))
+	opening_layer.add_child(opening_caption)
+	opening_button = Button.new()
+	opening_button.text = "BEGIN BOOT SEQUENCE"
+	opening_button.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	opening_button.position = Vector2(-145,-95)
+	opening_button.size = Vector2(290,52)
+	opening_button.pressed.connect(_begin_maker_timeline)
+	opening_layer.add_child(opening_button)
+	var skip := Button.new()
+	skip.text = "Y  ·  SKIP CUTSCENE"
+	skip.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	skip.position = Vector2(-220,-38)
+	skip.size = Vector2(200,32)
+	skip.pressed.connect(_finish_maker_opening)
+	opening_layer.add_child(skip)
+	opening_caption.text = "MAINTENANCE UNIT  //  MOTOR CONTROL OFFLINE"
+	if original_projection == Camera3D.PROJECTION_ORTHOGONAL:
+		camera.fov = 66.0
+
+func _begin_maker_timeline() -> void:
+	if opening_started:
+		_finish_maker_opening()
+		return
+	opening_started = true
+	opening_button.hide()
+	opening_elapsed = 0.0
+
+func _opening_fade(time: float) -> float:
+	var keys := [[0.0,1.0],[1.2,1.0],[1.65,0.0],[2.2,0.0],[2.4,1.0],[3.2,1.0],[3.7,0.0],[5.8,0.0],[6.0,1.0],[6.5,1.0],[6.85,0.0],[8.8,0.0],[9.0,1.0],[9.35,1.0],[9.7,0.0],[25.8,0.0],[26.8,0.85],[27.2,0.2],[28.5,1.0],[30.0,1.0]]
+	for i in range(1,keys.size()):
+		if time <= float(keys[i][0]):
+			var from: Array = keys[i-1]
+			var to: Array = keys[i]
+			var blend := clampf((time-float(from[0]))/(float(to[0])-float(from[0])),0.0,1.0)
+			return lerpf(float(from[1]),float(to[1]),blend)
+	return 1.0
+
+func _update_maker_opening() -> void:
+	var time := opening_elapsed
+	var route := [Vector3(-7.6,0,4.8),Vector3(-3.5,0,5.3),Vector3(2,0,1),Vector3(2,0,-6.8),Vector3(4,0,-7.2),Vector3(9,0,-7.4),Vector3(11.4,0,-9.3),Vector3(11.4,0,-14.5)]
+	var movement := clampf((time-19.0)/5.5,0.0,1.0)
+	var total := 0.0
+	var lengths: Array[float] = []
+	for i in range(route.size()-1):
+		var length: float = route[i].distance_to(route[i+1])
+		lengths.append(length)
+		total += length
+	var remaining := movement * total
+	var segment := 0
+	while segment < lengths.size()-1 and remaining > lengths[segment]:
+		remaining -= lengths[segment]
+		segment += 1
+	var segment_length: float = lengths[segment]
+	var along := clampf(remaining/segment_length,0.0,1.0)
+	opening_maker.position = route[segment].lerp(route[segment+1],along)
+	opening_maker.rotation.y = atan2(route[segment+1].x-route[segment].x,route[segment+1].z-route[segment].z)
+	var crouch := 1.0 - clampf((time-17.0)/2.0,0.0,1.0)
+	opening_maker.position.y = -0.48*crouch
+	opening_torso.rotation.x = 0.3*crouch
+	opening_head.rotation.x = 0.22 if time < 11.0 else (-0.12 if time < 13.0 else 0.0)
+	var running := time >= 19.0 and time < 24.5
+	for i in opening_arms.size():
+		var arm: Node3D = opening_arms[i]
+		arm.rotation.x = -1.1 + sin(time*7.0+float(i))*0.12 if time < 13.0 else (sin(time*12.0+float(i)*PI)*0.85 if running else 0.0)
+	for i in opening_legs.size():
+		var leg: Node3D = opening_legs[i]
+		leg.rotation.x = sin(time*12.0+float(i)*PI)*0.85 if running else -0.7*crouch
+	opening_maker.visible = time < 24.5
+	var door_fraction := 1.0-clampf((time-24.8)/1.4,0.0,1.0)
+	exit_door.position.y = lerpf(1.5,4.8,1.0-door_fraction)
+	opening_black.color.a = _opening_fade(time)
+	if time < 11.0:
+		opening_caption.text = "[MECHANICAL TINKERING]"
+	elif time < 13.0:
+		opening_caption.text = "OPTICAL SENSOR  //  ACTIVE"
+	elif time < 17.0:
+		opening_caption.text = "[DISTANT METALLIC IMPACTS]"
+	elif time < 19.0:
+		opening_caption.text = "MOTOR CONTROL  //  RESTORED"
+	elif time < 24.5:
+		opening_caption.text = "MU-1  //  DEPARTURE"
+	elif time < 26.2:
+		opening_caption.text = "[AUTOMATIC BULKHEAD CLOSING]"
+	else:
+		opening_caption.text = "OPTICAL SIGNAL LOST"
+	if time >= 30.0 and not opening_finished:
+		opening_finished = true
+		opening_caption.text = "MU-1  //  INITIALISING"
+		opening_button.text = "REBOOT  ·  ENTER WORKSHOP"
+		opening_button.show()
+
+func _finish_maker_opening() -> void:
+	if not opening_active:
+		return
+	opening_active = false
+	paused = false
+	exit_door.position.y = 1.5
+	if opening_layer:
+		opening_layer.queue_free()
+	if opening_maker:
+		opening_maker.queue_free()
+	visual.show()
+	var layer := get_node_or_null("WorkshopHUD") as CanvasLayer
+	if layer:
+		hud.show()
+		prompt.show()
+	update_camera()
 
 func _build_observation_port() -> void:
 	for x in [ -2.35, 2.35 ]:
@@ -299,6 +504,11 @@ func show_narration(text: String) -> void:
 	tween.tween_callback(narration.hide)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if opening_active:
+		if event is InputEventKey and event.pressed and event.physical_keycode == KEY_Y:
+			_finish_maker_opening()
+			get_viewport().set_input_as_handled()
+		return
 	if observation_active:
 		if event is InputEventMouseMotion and dragging:
 			camera.rotate_y(-event.relative.x * 0.002)
