@@ -6,6 +6,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 
 - [x] Main menu entry, new demo, saved-shift continuation, master-volume and default-view preferences, credits.
 - [x] Workshop movement, orbit/zoom/reset, isometric and first-person camera modes, pause, charge and portable cells.
+- [x] Match MU-1's inertial movement ramp/braking and cadence-based synthetic footstep sounds.
 - [x] Service-case power cell, auxiliary grid switch, lockers, worker card, recoverable manipulator item with separate inspect/equip/stow state, and physical probe fabrication/install progression.
 - [x] Native screen panels for inventory, authentication, and recipe staging.
 - [x] Native MU-1 meshes, recoverable arm, movement gait, servicing reach, and probe state.

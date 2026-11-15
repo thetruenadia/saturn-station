@@ -33,6 +33,19 @@ func run_workshop() -> void:
 		assert(is_zero_approx(light.light_energy))
 	for light in emergency_lights:
 		assert(light.light_energy > 0.0 and absf(light.position.x) > 13.0)
+	var slow_start: float = workshop._advance_gait(0.1,true)
+	var cruise_speed: float = workshop._advance_gait(0.5,true)
+	var braking_speed: float = workshop._advance_gait(0.2,false)
+	assert(slow_start > 0.0 and slow_start < 2.25)
+	assert(cruise_speed > slow_start and cruise_speed < 2.25)
+	assert(braking_speed > 0.0 and braking_speed < cruise_speed)
+	workshop.gait_velocity = 1.0
+	workshop._update_footstep_audio(0.6,true)
+	assert(is_zero_approx(workshop.step_elapsed) and workshop.sound_player.stream is AudioStreamWAV)
+	workshop._update_footstep_audio(0.1,false)
+	assert(is_zero_approx(workshop.step_elapsed))
+	workshop.gait_velocity = 0.0
+	workshop.gait_weight = 0.0
 	var desktop_inventory_layout: Dictionary = workshop._inventory_layout_for_width(1280.0)
 	assert(desktop_inventory_layout["panel_width"] == 780.0 and desktop_inventory_layout["columns"] == 5)
 	var mobile_inventory_layout: Dictionary = workshop._inventory_layout_for_width(320.0)

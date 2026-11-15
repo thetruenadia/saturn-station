@@ -56,6 +56,9 @@ var infrastructure: Node3D
 var yaw := PI / 4.0
 var pitch := 0.72
 var zoom := 15.0
+var gait_velocity := 0.0
+var gait_weight := 0.0
+var step_elapsed := 0.0
 var charge := 60.0
 var powered := false
 var paused := false
@@ -380,6 +383,24 @@ func _process(delta: float) -> void:
 	if opening_started and not opening_finished:
 		opening_elapsed = minf(opening_elapsed + delta, 30.0)
 		_update_maker_opening()
+
+func _advance_gait(delta: float, wants_move: bool) -> float:
+	var target_speed := 2.25 if wants_move else 0.0
+	var response := 6.2 if wants_move else 8.5
+	gait_velocity = lerpf(gait_velocity,target_speed,1.0-exp(-response*delta))
+	var target_weight := 1.0 if wants_move else 0.0
+	var weight_response := 3.0 if wants_move else 5.0
+	gait_weight = lerpf(gait_weight,target_weight,1.0-exp(-weight_response*delta))
+	return gait_velocity
+
+func _update_footstep_audio(delta: float, active: bool) -> void:
+	if active and gait_velocity > 0.35:
+		step_elapsed += delta
+		if step_elapsed > 0.56:
+			play_tone(90.0,0.08,0.035)
+			step_elapsed = 0.0
+	else:
+		step_elapsed = 0.0
 
 func update_camera() -> void:
 	if observation_active:
@@ -872,11 +893,14 @@ func _physics_process(delta: float) -> void:
 			else:
 				direction = Vector3(to_target.x,0,to_target.y).normalized()
 		charge = maxf(0.0,charge-delta*0.1)
-	player.velocity = direction*3.4
+	var wants_move := active and direction.length_squared() > 0.01
+	_advance_gait(delta,wants_move)
+	_update_footstep_audio(delta,active)
+	player.velocity = direction*gait_velocity
 	if direction.length_squared() > 0.01:
 		visual.rotation.y = lerp_angle(visual.rotation.y,atan2(direction.x,direction.z),minf(delta*10,1.0))
 	player.move_and_slide()
-	visual.call("set_moving", active and direction.length_squared() > 0.01)
+	visual.call("set_moving", gait_weight > 0.06)
 	player.position.x = clampf(player.position.x,-12.5,12.5)
 	player.position.z = clampf(player.position.z,-9.5,9.5)
 	nearby = nearest_target()
