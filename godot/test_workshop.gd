@@ -285,6 +285,12 @@ func run_workshop() -> void:
 	var amber_cover: MeshInstance3D = cell_stage.find_child("AmberCover_1",true,false)
 	assert(amber_cover.material_override.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA)
 	cell_preview.free()
+	for part_type in ["card","note","gear","motor","wire","chip","plate"]:
+		var component_preview = workshop._make_inventory_preview(part_type,520.0)
+		var component_stage = component_preview.find_child("RotatingItemModel",true,false)
+		var component_model = component_stage.find_child("ComponentModel_"+part_type,true,false)
+		assert(component_model is Node3D and component_model.get_child_count() >= 3)
+		component_preview.free()
 	var item_inspection = workshop.menu.find_child("InventoryInspection",true,false)
 	assert(item_inspection.get_child(0).text.contains("Heavy gripper"))
 	workshop.refresh_menu(Vector2(320,640))

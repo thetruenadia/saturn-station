@@ -34,6 +34,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Add a five-slot quick inventory strip with numbered keyboard selection.
 - [x] Add rotating 3D inventory inspection for the recovered manipulator, power cell, access card, note and fabrication parts; adapt the inventory grid to narrow windows.
 - [x] Model the portable power cell as a CubeSat-inspired frame, visible copper cell array, translucent amber side covers and control board.
+- [x] Build distinct rotating previews for the access card, ETNA note, gear, servo motor, wiring loom, control chip and armour plate.
 - [x] Show the service case opening, reveal the physical power cell, remove it on pickup, and restore that case state from saved progression.
 - [x] Replace the generic key-device blocks with a phosphor CRT terminal and a multi-control auxiliary power panel whose lamps and screen respond to grid state and terminal boot/authentication.
 - [x] Port click-to-select object interactions and E-triggered auto-approach, with WASD interruption and state-aware target prompts.
@@ -48,7 +49,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Require manually dragging recipe components into the fabrication tray before crafting.
 - [x] Expose the full native station file archive, including system status and staff directory, alongside the logs/spec/incident records.
 - [x] Replace probe place/confirm buttons with a drag-to-wrist-socket installation target and regression coverage.
-- [ ] Add higher-detail authored models for the remaining inventory items and finish remaining pickup feedback polish.
+- [ ] Finish remaining pickup feedback polish and add authored models for non-inventory room props.
 - [ ] Port the full interactive prop/narration coverage, including room storytelling and the remaining functional objects.
 - [ ] Replace the remaining simplified props and materials with higher-detail native assets while preserving the worn, cable-dense industrial aesthetic.
 - [ ] Visually playtest desktop and mobile-like window sizes and iterate on camera, collision, interaction distances and layout.
