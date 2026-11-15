@@ -1,0 +1,44 @@
+extends SceneTree
+func _initialize() -> void:
+	var s = preload("res://progression.gd").new()
+	assert(not s.fabricate(true))
+	assert(s.use_exit() == "Restore auxiliary power.")
+	s.powered = true
+	assert(s.login("wrong") == "Access denied.")
+	assert(not s.release_spec())
+	assert(s.take(0,"card"))
+	assert(not s.take(0,"card"))
+	assert(s.login("ETNA") == "Authenticated.")
+	assert(s.release_spec())
+	assert(s.collect_spec())
+	assert(not s.collect_spec())
+	for type in ["motor","plate","wire"]:
+		assert(s.take(1,type))
+	for type in ["gear","wire"]:
+		assert(s.take(2,type))
+	assert(s.salvage_claw())
+	assert(not s.salvage_claw())
+	var before: Dictionary = s.inventory.duplicate()
+	assert(s.stage("motor"))
+	assert(not s.stage("motor"))
+	assert(not s.stage("card"))
+	s.cancel_staging()
+	assert(s.inventory == before)
+	for type in s.RECIPE:
+		for i in range(s.RECIPE[type]):
+			assert(s.stage(type))
+	assert(not s.fabricate(false))
+	assert(s.fabricate(true))
+	assert(not s.fabricate(true))
+	assert(not s.probe_installed)
+	assert(not s.install(true))
+	assert(s.use_exit() == "Exit requires installed access probe.")
+	s.install_placed = true
+	assert(not s.install(false))
+	assert(s.install(true))
+	assert(not s.install(true))
+	s.use_exit()
+	s.use_exit()
+	assert(s.finished)
+	print("Workshop progression assertions passed")
+	quit()
