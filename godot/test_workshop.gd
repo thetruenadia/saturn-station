@@ -13,6 +13,7 @@ func run_workshop() -> void:
 	assert(workshop.player != null)
 	assert(workshop.camera != null and workshop.camera.current)
 	assert(workshop.controls_hint.text.contains("WASD MOVE"))
+	assert(workshop.hotbar_slots.size() == 5)
 	var view_key := InputEventKey.new()
 	view_key.pressed = true
 	view_key.physical_keycode = KEY_V
@@ -58,6 +59,10 @@ func run_workshop() -> void:
 	assert(workshop.progression.note_taken and workshop.progression.inventory.get("note",0) == 1)
 	assert(not workshop.note_visual.visible)
 	assert(workshop.notice.visible and workshop.notice.text.contains("ETNA ACCESS NOTE"))
+	workshop._refresh_hotbar()
+	assert(workshop.hotbar_labels[0].text.contains("Note ×1"))
+	workshop.select_hotbar_slot(0)
+	assert(workshop.hotbar_selected == 0)
 	assert(workshop.sound_player.stream is AudioStreamWAV)
 	assert((workshop.sound_player.stream as AudioStreamWAV).data.size() > 0)
 	workshop.open_menu("inventory")

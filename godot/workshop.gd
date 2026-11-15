@@ -26,6 +26,10 @@ var camera: Camera3D
 var hud: Label
 var prompt: Label
 var controls_hint: Label
+var hotbar: HBoxContainer
+var hotbar_slots: Array[PanelContainer] = []
+var hotbar_labels: Array[Label] = []
+var hotbar_selected := -1
 var power_lamp: MeshInstance3D
 var amber_light: OmniLight3D
 var yaw := PI / 4.0
@@ -238,12 +242,13 @@ func _ready() -> void:
 	prompt.add_theme_font_size_override("font_size",17)
 	controls_hint = Label.new()
 	layer.add_child(controls_hint)
-	controls_hint.text = "WASD MOVE  ·  DRAG LOOK  ·  WHEEL ZOOM\nE INTERACT  ·  V VIEW  ·  I INVENTORY  ·  Q POWER CELL"
+	controls_hint.text = "WASD MOVE  ·  DRAG LOOK  ·  WHEEL ZOOM\nE INTERACT  ·  1–5 SELECT ITEM  ·  Q POWER CELL"
 	controls_hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	controls_hint.position = Vector2(24,-72)
 	controls_hint.size = Vector2(540,58)
 	controls_hint.add_theme_font_size_override("font_size",15)
 	controls_hint.add_theme_color_override("font_color",Color("c4c6b6"))
+	_build_hotbar(layer)
 	directive = Label.new()
 	layer.add_child(directive)
 	directive.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -412,6 +417,7 @@ func start_maker_opening() -> void:
 	paused = true
 	player.velocity = Vector3.ZERO
 	visual.hide()
+	hotbar.hide()
 	var original_projection := camera.projection
 	camera.projection = Camera3D.PROJECTION_PERSPECTIVE
 	camera.fov = 66.0
@@ -575,6 +581,7 @@ func _finish_maker_opening() -> void:
 		prompt.show()
 		directive.show()
 		controls_hint.show()
+	hotbar.show()
 	update_camera()
 
 func _build_observation_port() -> void:
@@ -643,6 +650,7 @@ func begin_observation() -> void:
 	observation_active = true
 	paused = true
 	dragging = false
+	hotbar.hide()
 	camera.projection = Camera3D.PROJECTION_PERSPECTIVE
 	camera.fov = 48.0
 	camera.position = Vector3(2.1, 2.75, -8.8)
@@ -654,6 +662,7 @@ func close_observation() -> void:
 	observation_active = false
 	paused = false
 	observation_prompt.hide()
+	hotbar.show()
 	update_camera()
 
 func show_narration(text: String) -> void:
@@ -721,12 +730,22 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_1:
 				if mode == "terminal" and progression.authenticated:
 					run_terminal_command("1")
+				else:
+					select_hotbar_slot(0)
 			KEY_2:
 				if mode == "terminal" and progression.authenticated:
 					run_terminal_command("2")
+				else:
+					select_hotbar_slot(1)
 			KEY_3:
 				if mode == "terminal" and progression.authenticated:
 					run_terminal_command("3")
+				else:
+					select_hotbar_slot(2)
+			KEY_4:
+				select_hotbar_slot(3)
+			KEY_5:
+				select_hotbar_slot(4)
 			KEY_Q:
 				if not paused and mode == "" and charge > 0 and not progression.finished and progression.cells > 0:
 					progression.cells -= 1
@@ -772,6 +791,8 @@ func _physics_process(delta: float) -> void:
 	directive.text = _current_directive()
 	directive.visible = mode == "" and not paused and not opening_active
 	controls_hint.visible = not opening_active
+	_refresh_hotbar()
+	hotbar.visible = not opening_active and not observation_active
 
 func _current_directive() -> String:
 	if not powered:
@@ -801,6 +822,61 @@ func show_notice(text: String) -> void:
 	notice_tween.tween_property(notice,"modulate:a",0.0,0.45)
 	notice_tween.tween_callback(notice.hide)
 	play_tone(620.0,0.075,0.045)
+
+func _build_hotbar(layer: CanvasLayer) -> void:
+	hotbar = HBoxContainer.new()
+	hotbar.name = "FiveSlotHotbar"
+	hotbar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	hotbar.position = Vector2(-250,-116)
+	hotbar.size = Vector2(500,64)
+	hotbar.add_theme_constant_override("separation",7)
+	layer.add_child(hotbar)
+	for i in range(5):
+		var slot := PanelContainer.new()
+		slot.custom_minimum_size = Vector2(94,58)
+		hotbar.add_child(slot)
+		var label := Label.new()
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.add_theme_font_size_override("font_size",13)
+		slot.add_child(label)
+		hotbar_slots.append(slot)
+		hotbar_labels.append(label)
+	_refresh_hotbar()
+
+func _hotbar_items() -> Array[String]:
+	var items: Array[String] = []
+	for type in ["note","card","camera","motor","gear","chip","plate","wire","tin"]:
+		if progression.inventory.get(type,0) > 0:
+			items.append(type.capitalize() + " ×" + str(progression.inventory[type]))
+	if progression.probe_crafted:
+		items.append("Access probe")
+	if progression.cells > 0:
+		items.append("Power cell ×" + str(progression.cells))
+	return items
+
+func select_hotbar_slot(index: int) -> void:
+	if index < 0 or index >= 5:
+		return
+	hotbar_selected = index
+	var items := _hotbar_items()
+	if index < items.size():
+		show_notice("SELECTED  ·  " + items[index].to_upper())
+	_refresh_hotbar()
+
+func _refresh_hotbar() -> void:
+	if hotbar_labels.size() != 5:
+		return
+	var items := _hotbar_items()
+	for i in range(5):
+		var label := hotbar_labels[i]
+		label.text = "%02d\n%s" % [i+1,items[i] if i < items.size() else "—"]
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("252b25",0.93)
+		style.border_color = Color("d6bb75") if hotbar_selected == i else Color("737969")
+		style.set_border_width_all(2 if hotbar_selected == i else 1)
+		style.set_corner_radius_all(3)
+		hotbar_slots[i].add_theme_stylebox_override("panel",style)
 
 func setup_progression(layer: CanvasLayer) -> void:
 	targets = {
