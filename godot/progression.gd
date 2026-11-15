@@ -11,12 +11,15 @@ var authenticated := false
 var spec_released := false
 var spec_unlocked := false
 var claw_salvaged := false
+var manipulator_recovered := false
+var arm_equipped := false
 var probe_crafted := false
 var probe_installed := false
 var install_placed := false
 var door_open := false
 var finished := false
 var record_entry := ""
+var note_taken := false
 
 func add(type: String, count := 1) -> void:
 	inventory[type] = inventory.get(type,0)+count
@@ -38,11 +41,27 @@ func salvage_claw() -> bool:
 	if claw_salvaged or item_count() > 16:
 		return false
 	claw_salvaged = true
+	manipulator_recovered = true
+	add("manipulator")
 	for type in ["gear","chip","wire"]:
 		add(type)
 	return true
 
+func equip_manipulator() -> bool:
+	if not manipulator_recovered:
+		return false
+	arm_equipped = true
+	return true
+
+func stow_manipulator() -> bool:
+	if not manipulator_recovered or not arm_equipped:
+		return false
+	arm_equipped = false
+	return true
+
 func use_case() -> String:
+	if not arm_equipped:
+		return "A fitted manipulator is required to release the service case."
 	if not case_open:
 		case_open = true
 		return "Service case released. Interact again to recover cell."
@@ -102,7 +121,7 @@ func fabricate(at_station: bool) -> bool:
 	return true
 
 func install(at_station: bool) -> bool:
-	if not probe_crafted or probe_installed or not install_placed or not powered or not at_station:
+	if not probe_crafted or probe_installed or not install_placed or not arm_equipped or not powered or not at_station:
 		return false
 	probe_installed = true
 	install_placed = false
@@ -125,9 +144,11 @@ func snapshot() -> Dictionary:
 		"staged": staged.duplicate(true), "cells": cells, "case_open": case_open,
 		"cell_taken": cell_taken, "powered": powered, "authenticated": authenticated,
 		"spec_released": spec_released, "spec_unlocked": spec_unlocked,
-		"claw_salvaged": claw_salvaged, "probe_crafted": probe_crafted,
+		"claw_salvaged": claw_salvaged, "manipulator_recovered": manipulator_recovered,
+		"arm_equipped": arm_equipped, "probe_crafted": probe_crafted,
 		"probe_installed": probe_installed, "install_placed": install_placed,
-		"door_open": door_open, "finished": finished, "record_entry": record_entry
+		"door_open": door_open, "finished": finished, "record_entry": record_entry,
+		"note_taken": note_taken
 	}
 
 func restore(data: Dictionary) -> void:
@@ -142,9 +163,12 @@ func restore(data: Dictionary) -> void:
 	spec_released = bool(data.get("spec_released", false))
 	spec_unlocked = bool(data.get("spec_unlocked", false))
 	claw_salvaged = bool(data.get("claw_salvaged", false))
+	manipulator_recovered = bool(data.get("manipulator_recovered", claw_salvaged))
+	arm_equipped = bool(data.get("arm_equipped", claw_salvaged))
 	probe_crafted = bool(data.get("probe_crafted", false))
 	probe_installed = bool(data.get("probe_installed", false))
 	install_placed = bool(data.get("install_placed", false))
 	door_open = bool(data.get("door_open", false))
 	finished = bool(data.get("finished", false))
 	record_entry = str(data.get("record_entry", ""))
+	note_taken = bool(data.get("note_taken", false))

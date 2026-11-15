@@ -20,6 +20,14 @@ class FabricationTray extends PanelContainer:
 		if _can_drop_data(_at_position,data):
 			host.load_part(str(data.get("part_type","")))
 
+class ProbeSocketTarget extends PanelContainer:
+	var host
+	func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
+		return host != null and data is Dictionary and str(data.get("part_type","")) == "access_probe" and host.progression.probe_crafted and not host.progression.probe_installed and host.powered and host.at_bench()
+	func _drop_data(_at_position: Vector2, data: Variant) -> void:
+		if _can_drop_data(_at_position,data):
+			host.install_probe()
+
 var player: CharacterBody3D
 var visual: Node3D
 var camera: Camera3D
@@ -50,6 +58,8 @@ var targets: Dictionary = {}
 var observation_counts: Dictionary = {}
 var shard: MeshInstance3D
 var claw: MeshInstance3D
+var recovered_arm: Node3D
+var inventory_inspection := ""
 var note_visual: MeshInstance3D
 var exit_door: MeshInstance3D
 var probe_visual: Node3D
@@ -66,6 +76,7 @@ var directive: Label
 var notice: Label
 var notice_tween: Tween
 var sound_player: AudioStreamPlayer
+var ambient_player: AudioStreamPlayer
 var opening_active := false
 var opening_started := false
 var opening_elapsed := 0.0
@@ -129,6 +140,27 @@ func play_tone(frequency: float, duration: float, volume := 0.06) -> void:
 	sound_player.stream = stream
 	sound_player.play()
 
+func make_room_ambience() -> AudioStreamWAV:
+	const sample_rate := 22050
+	const frames := sample_rate * 2
+	var samples := PackedByteArray()
+	samples.resize(frames * 2)
+	for i in range(frames):
+		var t := float(i) / float(sample_rate)
+		var breath := 0.68 + 0.32 * (0.5 - 0.5 * cos(PI * t))
+		var drone := sin(TAU * 50.0 * t) * 0.62 + sin(TAU * 73.0 * t) * 0.38
+		var sample := int(clampf(drone * breath * 0.035, -1.0, 1.0) * 32767.0)
+		samples[i*2] = sample & 0xff
+		samples[i*2+1] = (sample >> 8) & 0xff
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = samples
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_end = frames
+	return stream
+
 func block(parent: Node3D, pos: Vector3, size: Vector3, hex: String, solid := false) -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()
 	var shape := BoxMesh.new()
@@ -163,6 +195,12 @@ func _ready() -> void:
 	sound_player = AudioStreamPlayer.new()
 	sound_player.name = "WorkshopSoundEffects"
 	add_child(sound_player)
+	ambient_player = AudioStreamPlayer.new()
+	ambient_player.name = "WorkshopRoomAmbience"
+	ambient_player.stream = make_room_ambience()
+	ambient_player.volume_db = -10.0
+	add_child(ambient_player)
+	ambient_player.play()
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-55, -35, 0)
 	sun.light_color = Color("f1d9b1")
@@ -795,18 +833,22 @@ func _physics_process(delta: float) -> void:
 	hotbar.visible = not opening_active and not observation_active
 
 func _current_directive() -> String:
+	if not progression.manipulator_recovered:
+		return "DIRECTIVE 01  /  RECOVER THE LOCK-SERVICE MANIPULATOR"
+	if not progression.arm_equipped:
+		return "DIRECTIVE 02  /  INSPECT AND FIT THE RECOVERED MANIPULATOR"
 	if not powered:
-		return "DIRECTIVE 01  /  RESTORE AUXILIARY POWER"
+		return "DIRECTIVE 03  /  RESTORE AUXILIARY POWER"
 	if not progression.authenticated:
-		return "DIRECTIVE 02  /  FIND THE ACCESS NOTE · POWER THE TERMINAL"
+		return "DIRECTIVE 04  /  FIND THE ACCESS NOTE · POWER THE TERMINAL"
 	if not progression.spec_unlocked and not progression.spec_released:
-		return "DIRECTIVE 03  /  TERMINAL · RUN SPEC"
+		return "DIRECTIVE 05  /  TERMINAL · RUN SPEC"
 	if progression.spec_released:
-		return "DIRECTIVE 04  /  RECOVER THE RELEASED SPECIFICATION"
+		return "DIRECTIVE 06  /  RECOVER THE RELEASED SPECIFICATION"
 	if not progression.probe_crafted:
-		return "DIRECTIVE 05  /  STAGE COMPONENTS AT THE MAINTENANCE BENCH"
+		return "DIRECTIVE 07  /  STAGE COMPONENTS AT THE MAINTENANCE BENCH"
 	if not progression.probe_installed:
-		return "DIRECTIVE 06  /  PLACE THE ACCESS PROBE IN MU-1'S WRIST SLOT"
+		return "DIRECTIVE 08  /  FIT THE ACCESS PROBE TO MU-1'S WRIST SOCKET"
 	if not progression.door_open:
 		return "EXIT  /  USE THE PROBE AT THE PRESSURE DOOR"
 	return "EXIT  /  PASS THROUGH THE OPEN PRESSURE DOOR"
@@ -846,7 +888,7 @@ func _build_hotbar(layer: CanvasLayer) -> void:
 
 func _hotbar_items() -> Array[String]:
 	var items: Array[String] = []
-	for type in ["note","card","camera","motor","gear","chip","plate","wire","tin"]:
+	for type in ["note","card","camera","manipulator","motor","gear","chip","plate","wire","tin"]:
 		if progression.inventory.get(type,0) > 0:
 			items.append(type.capitalize() + " ×" + str(progression.inventory[type]))
 	if progression.probe_crafted:
@@ -882,7 +924,7 @@ func setup_progression(layer: CanvasLayer) -> void:
 	targets = {
 		"Service case":Vector2(-5,2), "Auxiliary power":Vector2(-10.8,-8.5),
 		"ETNA terminal":Vector2(5,-5.5), "Maintenance station":Vector2(-9,2.2),
-		"Broken claw":Vector2(-7.2,3), "Specification shard":Vector2(5.4,-3.95),
+		"Lock-service manipulator":Vector2(-7.2,3), "Specification shard":Vector2(5.4,-3.95),
 		"Maintenance exit":Vector2(11.4,-10.6), "Observation window":Vector2(2.1,-9.0),
 		"Handwritten note":Vector2(2.1,-7.7), "Crew table":Vector2(8.3,-5.0),
 		"Exchanger":Vector2(-5.5,-9.2), "Turbine":Vector2(-11,-2),
@@ -901,13 +943,19 @@ func setup_progression(layer: CanvasLayer) -> void:
 	if progression.note_taken:
 		note_visual.hide()
 	claw = block(self,Vector3(-7.2,0.25,3),Vector3(0.65,0.3,0.42),"68765b")
+	block(claw,Vector3(0,0.22,0),Vector3(0.2,0.22,0.22),"b49a57")
+	block(claw,Vector3(-0.02,0.39,0.02),Vector3(0.17,0.36,0.18),"697663")
+	block(claw,Vector3(0.05,0.58,0.06),Vector3(0.14,0.34,0.14),"b49a57")
+	block(claw,Vector3(0.05,0.77,0.12),Vector3(0.23,0.11,0.12),"777c70")
 	for side in [-1,1]:
-		var finger := block(claw,Vector3(side*0.21,0,0.34),Vector3(0.1,0.16,0.46),"777c70")
+		var finger := block(claw,Vector3(0.05+side*0.13,0.76,0.22),Vector3(0.07,0.2,0.08),"777c70")
 		finger.rotation.y = side*0.25
 	shard = block(self,Vector3(5.4,0.65,-3.95),Vector3(0.35,0.48,0.12),"69bc9c")
 	shard.material_override = material("69bc9c",true)
 	shard.hide()
-	probe_visual = visual.get_node("Body/CastChassis/RecoveredYellowServiceArm/WristAccessProbe")
+	recovered_arm = visual.get_node("Body/CastChassis/RecoveredYellowServiceArm")
+	recovered_arm.hide()
+	probe_visual = recovered_arm.get_node("WristAccessProbe")
 	for i in range(4):
 		var x := 6.8+i*0.98
 		block(self,Vector3(x,1.12,-2),Vector3(0.96,2.24,0.7),"b2ad97",true)
@@ -933,7 +981,7 @@ func nearest_target() -> String:
 	var best := 2.4
 	var result := ""
 	for key in targets:
-		if key == "Broken claw" and progression.claw_salvaged:
+		if key == "Lock-service manipulator" and progression.claw_salvaged:
 			continue
 		if key == "Handwritten note" and progression.note_taken:
 			continue
@@ -948,12 +996,18 @@ func nearest_target() -> String:
 func interact() -> void:
 	match nearby:
 		"Service case":
+			if not progression.arm_equipped:
+				message = "The mechanical latch needs a fitted manipulator."
+				return
 			var previous_cells: int = progression.cells
 			message = progression.use_case()
 			if progression.cells > previous_cells:
 				show_notice("ITEM RECOVERED  ·  PORTABLE POWER CELL")
 			_save_progress()
 		"Auxiliary power":
+			if not progression.arm_equipped:
+				message = "The switch is too stiff to move by hand. Fit the recovered manipulator first."
+				return
 			powered = true
 			progression.powered = true
 			power_lamp.material_override = material("72ff92",true)
@@ -968,12 +1022,12 @@ func interact() -> void:
 				message = "Terminal offline."
 		"Maintenance station":
 			open_menu("bench")
-		"Broken claw":
+		"Lock-service manipulator":
 			if progression.salvage_claw():
 				claw.hide()
-				visual.call("set_recovered_arm", true)
-				message = "Claw dismantled: gears, chip, wire."
-				show_notice("SALVAGED  ·  MOTOR / CHIP / WIRE")
+				message = "The loose manipulator is free. Gears, a chip and wire came away with it."
+				show_notice("MANIPULATOR RECOVERED  ·  I TO INSPECT AND EQUIP")
+				_refresh_hotbar()
 				_save_progress()
 		"Specification shard":
 			if progression.collect_spec():
@@ -1222,14 +1276,11 @@ func fabricate_probe() -> void:
 	_save_progress()
 	refresh_menu()
 
-func place_probe() -> void:
-	progression.install_placed = true
-	_save_progress()
-	refresh_menu()
-
 func install_probe() -> void:
+	progression.install_placed = true
 	if progression.install(at_bench()):
 		visual.call("set_probe_installed", true)
+		message = "Access probe seated in MU-1's wrist socket."
 	_save_progress()
 	refresh_menu()
 
@@ -1256,7 +1307,10 @@ func _load_progress() -> void:
 		amber_light.light_color = Color("d4b56d")
 	if progression.claw_salvaged:
 		claw.hide()
-		visual.call("set_recovered_arm", true)
+	if progression.arm_equipped:
+		recovered_arm.show()
+	else:
+		recovered_arm.hide()
 	if progression.spec_released:
 		shard.show()
 	if progression.probe_installed:
@@ -1268,6 +1322,8 @@ func prepare_menu_backdrop() -> void:
 	paused = true
 	set_process(false)
 	set_physics_process(false)
+	if ambient_player:
+		ambient_player.stop()
 	var layer := get_node_or_null("WorkshopHUD") as CanvasLayer
 	if layer:
 		layer.hide()
@@ -1283,9 +1339,42 @@ func refresh_menu() -> void:
 			line("One of several machines that once kept a city alive.")
 			action("Enter Generator 04", enter_generator_hall)
 		"inventory":
-			for item in progression.inventory:
-				line(item.capitalize() + " × " + str(progression.inventory[item]))
-			line("Power cells: " + str(progression.cells))
+			line("EQUIPMENT STORAGE  ·  %d / 20 SLOTS" % progression.item_count())
+			var grid := GridContainer.new()
+			grid.name = "InventoryGrid"
+			grid.columns = 5
+			grid.add_theme_constant_override("h_separation",5)
+			grid.add_theme_constant_override("v_separation",5)
+			menu.add_child(grid)
+			var items := _inventory_items()
+			for i in range(20):
+				var slot := Button.new()
+				slot.name = "InventorySlot%02d" % i
+				slot.custom_minimum_size = Vector2(68,48)
+				if i < items.size():
+					var item_type: String = items[i]
+					slot.text = "%02d\n%s" % [i+1,item_type.capitalize().substr(0,8)]
+					slot.pressed.connect(select_inventory_item.bind(item_type))
+					slot.tooltip_text = _inventory_item_description(item_type)
+				else:
+					slot.text = "%02d\n—" % (i+1)
+					slot.disabled = true
+				grid.add_child(slot)
+			var selected := PanelContainer.new()
+			selected.name = "InventoryInspection"
+			selected.custom_minimum_size = Vector2(0,74)
+			menu.add_child(selected)
+			var selected_text := Label.new()
+			selected_text.text = "SELECT AN ITEM TO INSPECT" if inventory_inspection == "" else inventory_inspection.to_upper() + "\n" + _inventory_item_description(inventory_inspection)
+			selected_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			selected.add_child(selected_text)
+			if progression.manipulator_recovered:
+				line("WRIST MOUNT  ·  " + ("MANIPULATOR FITTED" if progression.arm_equipped else "EMPTY"))
+				if progression.arm_equipped:
+					action("STOW MANIPULATOR", equip_or_stow_manipulator)
+				else:
+					action("EQUIP RECOVERED MANIPULATOR", equip_or_stow_manipulator)
+			line("Portable power cells: " + str(progression.cells) + "  ·  Press Q to use one")
 			if progression.inventory.get("note",0) > 0:
 				action("Inspect access note",open_menu.bind("note"))
 			if progression.inventory.get("card",0) > 0:
@@ -1371,10 +1460,23 @@ func refresh_menu() -> void:
 				action("Fabricate access probe",fabricate_probe,progression.can_fabricate(at_bench()))
 				if progression.probe_crafted and not progression.probe_installed:
 					line("INSTALLATION GUIDE")
-					line("1 · Seat the access probe in MU-1's open wrist socket.")
-					line("2 · Confirm the fit only after the probe is seated.")
-					action("Place probe in wrist slot",place_probe,powered and at_bench())
-					action("Confirm installation",install_probe,progression.install_placed and powered and at_bench())
+					line("Drag the finished probe into MU-1's open wrist socket.")
+					var probe_button := ComponentDragButton.new()
+					probe_button.part_type = "access_probe"
+					probe_button.text = "GRAB  FINISHED ACCESS PROBE"
+					probe_button.tooltip_text = "Drag this probe onto MU-1's open wrist socket."
+					menu.add_child(probe_button)
+					var socket := ProbeSocketTarget.new()
+					socket.name = "MU1ProbeSocket"
+					socket.host = self
+					socket.custom_minimum_size = Vector2(0,86)
+					menu.add_child(socket)
+					var socket_label := Label.new()
+					socket_label.text = "MU-1 WRIST SOCKET\nDROP PROBE HERE"
+					socket_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+					socket_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+					socket_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+					socket.add_child(socket_label)
 				if progression.probe_installed:
 					line("Probe installed. Use the local exit socket.")
 		_:
@@ -1404,6 +1506,50 @@ func _terminal_file_text(file_name: String) -> String:
 		"INCIDENT LOG":
 			return progression.record_entry if progression.record_entry != "" else "No local record entries saved."
 	return "File could not be read."
+
+func _inventory_items() -> Array[String]:
+	var result: Array[String] = []
+	for item_type in progression.inventory:
+		for _i in range(int(progression.inventory[item_type])):
+			result.append(str(item_type))
+	return result
+
+func _inventory_item_description(item_type: String) -> String:
+	match item_type:
+		"manipulator":
+			return "Lock-service tool arm. Heavy gripper can release the service case and throw the stiff auxiliary switch."
+		"cell":
+			return "Portable power cell. Press Q to restore 55% of MU-1's internal charge."
+		"card":
+			return "Mara Venn's faded B-7 service card. The reverse carries the terminal password."
+		"note":
+			return "A damp note recovered from the window frame. The handwritten access code is ETNA."
+		"motor":
+			return "Small servo motor recovered from the maintenance lockers. Required for the access probe."
+		"gear":
+			return "Reduction gear salvaged from the seized maintenance gripper. Required for the access probe."
+		"chip":
+			return "Control chip recovered from the manipulator assembly. Required for the access probe."
+		"plate":
+			return "Armour plate recovered from the maintenance stores. Required for the access probe."
+		"wire":
+			return "Flexible wiring loom salvaged from the gripper or stores. Required for the access probe."
+		_:
+			return "Recovered station equipment."
+
+func select_inventory_item(item_type: String) -> void:
+	inventory_inspection = item_type
+	play_tone(610.0,0.025,0.02)
+	refresh_menu()
+
+func equip_or_stow_manipulator() -> void:
+	var changed := progression.stow_manipulator() if progression.arm_equipped else progression.equip_manipulator()
+	if changed:
+		recovered_arm.visible = progression.arm_equipped
+		message = "Manipulator %s." % ("stowed" if not progression.arm_equipped else "fitted to MU-1's wrist mount")
+		show_notice("MANIPULATOR " + ("STOWED" if not progression.arm_equipped else "EQUIPPED"))
+		_save_progress()
+	refresh_menu()
 
 func enter_generator_hall() -> void:
 	get_tree().change_scene_to_file("res://generator_hall.tscn")

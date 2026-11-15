@@ -14,6 +14,8 @@ func run_workshop() -> void:
 	assert(workshop.camera != null and workshop.camera.current)
 	assert(workshop.controls_hint.text.contains("WASD MOVE"))
 	assert(workshop.hotbar_slots.size() == 5)
+	assert(workshop.ambient_player.playing)
+	assert((workshop.ambient_player.stream as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD)
 	var view_key := InputEventKey.new()
 	view_key.pressed = true
 	view_key.physical_keycode = KEY_V
@@ -25,7 +27,7 @@ func run_workshop() -> void:
 	workshop.update_camera()
 	assert(workshop.camera.projection == Camera3D.PROJECTION_ORTHOGONAL)
 	assert(workshop.claw.visible)
-	assert(workshop._current_directive().contains("RESTORE AUXILIARY POWER"))
+	assert(workshop._current_directive().contains("RECOVER THE LOCK-SERVICE MANIPULATOR"))
 	assert(not workshop.probe_visual.visible)
 	assert(workshop.visual.get_node("Body/CastChassis/LowCastHull") != null)
 	assert(not workshop.visual.get_node("Body/CastChassis/RecoveredYellowServiceArm").visible)
@@ -87,6 +89,30 @@ func run_workshop() -> void:
 
 	workshop.nearby = "Service case"
 	workshop.interact()
+	assert(not workshop.progression.case_open and workshop.message.contains("fitted manipulator"))
+	workshop.nearby = "Auxiliary power"
+	workshop.interact()
+	assert(not workshop.powered and workshop.message.contains("stiff to move"))
+	workshop.nearby = "Lock-service manipulator"
+	workshop.interact()
+	assert(workshop.progression.manipulator_recovered and not workshop.progression.arm_equipped)
+	assert(not workshop.claw.visible and not workshop.recovered_arm.visible)
+	assert(workshop.progression.inventory.get("manipulator",0) == 1)
+	workshop.open_menu("inventory")
+	assert(workshop.menu.find_child("InventoryGrid",true,false) is GridContainer)
+	workshop.select_inventory_item("manipulator")
+	var item_inspection = workshop.menu.find_child("InventoryInspection",true,false)
+	assert(item_inspection.get_child(0).text.contains("Heavy gripper"))
+	workshop.equip_or_stow_manipulator()
+	assert(workshop.progression.arm_equipped and workshop.recovered_arm.visible)
+	assert(workshop._hotbar_items().has("Manipulator ×1"))
+	workshop.equip_or_stow_manipulator()
+	assert(not workshop.progression.arm_equipped and not workshop.recovered_arm.visible)
+	workshop.equip_or_stow_manipulator()
+	assert(workshop.progression.arm_equipped and workshop.recovered_arm.visible)
+	workshop.close_menu()
+	workshop.nearby = "Service case"
+	workshop.interact()
 	workshop.interact()
 	assert(workshop.progression.cells == 1)
 	assert(workshop.notice.visible and workshop.notice.text.contains("POWER CELL"))
@@ -102,8 +128,6 @@ func run_workshop() -> void:
 	workshop.open_menu("card")
 	assert(workshop.menu.find_child("WorkerPortrait",true,false) is TextureRect)
 	workshop.close_menu()
-	workshop.nearby = "Broken claw"
-	workshop.interact()
 	assert(workshop.progression.claw_salvaged and not workshop.claw.visible)
 	assert(workshop.visual.get_node("Body/CastChassis/RecoveredYellowServiceArm").visible)
 	workshop.nearby = "ETNA terminal"
@@ -154,8 +178,14 @@ func run_workshop() -> void:
 	assert(workshop.progression.can_fabricate(true))
 	workshop.fabricate_probe()
 	assert(workshop.progression.probe_crafted and not workshop.progression.probe_installed)
-	workshop.place_probe()
-	workshop.install_probe()
+	var probe_socket = workshop.menu.find_child("MU1ProbeSocket",true,false)
+	assert(probe_socket is PanelContainer)
+	assert(probe_socket._can_drop_data(Vector2.ZERO,{"part_type":"access_probe"}))
+	for child in workshop.menu.get_children():
+		if child is Button:
+			assert(not child.text.to_lower().contains("place probe"))
+			assert(not child.text.to_lower().contains("confirm installation"))
+	probe_socket._drop_data(Vector2.ZERO,{"part_type":"access_probe"})
 	assert(workshop.progression.probe_installed and workshop.probe_visual.visible)
 	workshop.close_menu()
 	workshop.nearby = "Maintenance exit"
