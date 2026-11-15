@@ -635,6 +635,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_E:
 				if not paused and mode == "" and charge > 0 and not progression.finished:
 					interact()
+			KEY_1:
+				if mode == "terminal" and progression.authenticated:
+					run_terminal_command("1")
+			KEY_2:
+				if mode == "terminal" and progression.authenticated:
+					run_terminal_command("2")
+			KEY_3:
+				if mode == "terminal" and progression.authenticated:
+					run_terminal_command("3")
 			KEY_Q:
 				if not paused and mode == "" and charge > 0 and not progression.finished and progression.cells > 0:
 					progression.cells -= 1
@@ -987,6 +996,24 @@ func select_terminal_section(section: String) -> void:
 
 func run_terminal_command(command: String) -> void:
 	match command:
+		"1":
+			message = "ERROR: AUXILIARY GRID OFFLINE" if not powered else "AUTOMATIC DOOR LINK ISOLATED · USE LOCAL EXIT SOCKET WITH ACCESS PROBE"
+		"2":
+			progression.door_open = false
+			exit_door.position.y = 1.5
+			message = "COMMAND 02 / DOOR SEALED"
+			_save_progress()
+		"3":
+			powered = false
+			progression.powered = false
+			progression.authenticated = false
+			terminal_booted = false
+			power_lamp.material_override = material("70412a")
+			amber_light.light_color = Color("c87937")
+			message = "AUXILIARY POWER OFF"
+			_save_progress()
+			show_notice("POWER OFF  ·  AUXILIARY GRID DISABLED")
+			close_menu()
 		"HELP":
 			message = "AVAILABLE: STATUS · POWER · SPEC · LOG · HELP"
 		"STATUS":
@@ -1123,6 +1150,9 @@ func refresh_menu() -> void:
 				match terminal_section:
 					"commands":
 						line("COMMAND DIRECTORY")
+						action("1 · CHECK DOOR LINK", run_terminal_command.bind("1"))
+						action("2 · CLOSE EXIT DOOR", run_terminal_command.bind("2"))
+						action("3 · TURN OFF AUXILIARY POWER", run_terminal_command.bind("3"))
 						action("HELP", run_terminal_command.bind("HELP"))
 						action("STATUS", run_terminal_command.bind("STATUS"))
 						action("POWER", run_terminal_command.bind("POWER"))
@@ -1131,8 +1161,9 @@ func refresh_menu() -> void:
 					"files":
 						if terminal_file == "":
 							line("STATION FILES")
-							for file_name in ["SYSTEM STATUS", "GENERATOR 04 MAINTENANCE", "STAFF DIRECTORY", "INCIDENT LOG"]:
+							for file_name in ["B7-STATION-STATUS.LOG", "STAFF-ACCESS-CARD.TXT", "ACCESS-PROBE.SPEC", "GENERATOR 04 MAINTENANCE", "INCIDENT LOG"]:
 								action(file_name, show_terminal_file.bind(file_name))
+							action("EXPORT ACCESS-PROBE.SPEC → PHYSICAL SHARD", run_terminal_command.bind("SPEC"), not progression.spec_released and not progression.spec_unlocked)
 						else:
 							line("/STATION/" + terminal_file.replace(" ", "_") + ".TXT")
 							line(_terminal_file_text(terminal_file))
@@ -1187,6 +1218,14 @@ func refresh_menu() -> void:
 
 func _terminal_file_text(file_name: String) -> String:
 	match file_name:
+		"B7-STATION-STATUS.LOG":
+			return "SATURN STATION / B-7 SERVICE LOG\n\nAuxiliary grid: %s\nDoor: %s\nMU-1 local service link: active\nDoor network isolated. Use a keyed Access Probe at the physical exit socket." % ["online" if powered else "offline", "open" if progression.door_open else "sealed"]
+		"STAFF-ACCESS-CARD.TXT":
+			if progression.inventory.get("card",0) > 0:
+				return "WORKER ACCESS CARD / PERSONAL ACCESS RECORD\n\nMara Venn · B-7 service crew\nHandwritten code on reverse: ETNA."
+			return "ACCESS RECORD UNAVAILABLE\nRecover the worker access card."
+		"ACCESS-PROBE.SPEC":
+			return "ACCESS PROBE / FABRICATION SPECIFICATION\n\nThird contact finger for the existing manipulator.\n1 servo motor · 2 reduction gears · 1 control chip · 1 armour plate · 2 wiring looms.\n\nCollect the physical shard, then fabricate at the powered maintenance station."
 		"SYSTEM STATUS":
 			return "Auxiliary grid: %s\nProbe socket: %s\nStaff access: authenticated" % ["online" if powered else "offline", "occupied" if progression.probe_installed else "empty"]
 		"GENERATOR 04 MAINTENANCE":

@@ -105,9 +105,17 @@ func run_workshop() -> void:
 	workshop.authenticate(password)
 	assert(workshop.progression.authenticated)
 	assert(workshop.terminal_section == "commands")
+	workshop.run_terminal_command("1")
+	assert(workshop.message.contains("DOOR LINK ISOLATED"))
+	workshop.progression.door_open = true
+	workshop.exit_door.position.y = 4.8
+	workshop.run_terminal_command("2")
+	assert(not workshop.progression.door_open and is_equal_approx(workshop.exit_door.position.y,1.5))
 	workshop.run_terminal_command("HELP")
 	assert(workshop.message.contains("STATUS") and workshop.message.contains("SPEC"))
 	workshop.select_terminal_section("files")
+	assert(workshop._terminal_file_text("ACCESS-PROBE.SPEC").contains("1 servo motor"))
+	assert(workshop._terminal_file_text("STAFF-ACCESS-CARD.TXT").contains("ETNA"))
 	workshop.show_terminal_file("GENERATOR 04 MAINTENANCE")
 	assert(workshop._terminal_file_text("GENERATOR 04 MAINTENANCE").contains("isolated"))
 	workshop.select_terminal_section("record")
@@ -143,6 +151,13 @@ func run_workshop() -> void:
 	assert(workshop.progression.door_open)
 	workshop.interact()
 	assert(workshop.progression.finished and workshop.mode == "generator_hall")
+	workshop.powered = true
+	workshop.progression.powered = true
+	workshop.open_menu("terminal")
+	workshop.terminal_booted = true
+	workshop.progression.authenticated = true
+	workshop.run_terminal_command("3")
+	assert(not workshop.powered and not workshop.progression.powered and workshop.mode == "")
 	print("Workshop scene progression through the Generator 04 doorway passed")
 	workshop.queue_free()
 	await process_frame

@@ -21,6 +21,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [ ] Add ambient room audio.
 - [x] Port window inspection and its cinematic Enceladus view.
 - [x] Add terminal boot flow, ETNA password, commands/files sections and a saved record-entry section.
+- [x] Port terminal commands 1/2/3: report the isolated link, close the exit, and shut down auxiliary power.
 - [x] Add a cinematic observation-window interaction, recoverable ETNA note and short narration at major workshop props.
 - [x] Add a centered top-screen task directive plus pickup and power-restored notices.
 - [x] Keep a persistent, concise movement and camera control legend on the gameplay screen.
