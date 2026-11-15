@@ -114,11 +114,13 @@ func _add_back_button(parent: VBoxContainer, panel: Control) -> void:
 	parent.add_child(back)
 
 func _start_new() -> void:
+	get_tree().set_meta("start_maker_opening", true)
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	get_tree().change_scene_to_file("res://workshop.tscn")
 
 func _continue_game() -> void:
+	get_tree().set_meta("start_maker_opening", false)
 	var save := ConfigFile.new()
 	if save.load(SAVE_PATH) == OK:
 		var snapshot: Variant = save.get_value("progress", "snapshot", {})
