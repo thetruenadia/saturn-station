@@ -23,6 +23,7 @@ func run_workshop() -> void:
 	workshop.update_camera()
 	assert(workshop.camera.projection == Camera3D.PROJECTION_ORTHOGONAL)
 	assert(workshop.claw.visible)
+	assert(workshop._current_directive().contains("RESTORE AUXILIARY POWER"))
 	assert(not workshop.probe_visual.visible)
 	assert(workshop.visual.get_node("Body/CastChassis/LowCastHull") != null)
 	assert(not workshop.visual.get_node("Body/CastChassis/RecoveredYellowServiceArm").visible)
@@ -53,6 +54,7 @@ func run_workshop() -> void:
 	workshop.interact()
 	assert(workshop.progression.note_taken and workshop.progression.inventory.get("note",0) == 1)
 	assert(not workshop.note_visual.visible)
+	assert(workshop.notice.visible and workshop.notice.text.contains("ETNA ACCESS NOTE"))
 	workshop.open_menu("inventory")
 	assert(workshop.menu.get_child_count() > 0)
 	workshop.open_menu("note")
@@ -71,9 +73,11 @@ func run_workshop() -> void:
 	workshop.interact()
 	workshop.interact()
 	assert(workshop.progression.cells == 1)
+	assert(workshop.notice.visible and workshop.notice.text.contains("POWER CELL"))
 	workshop.nearby = "Auxiliary power"
 	workshop.interact()
 	assert(workshop.powered and workshop.progression.powered)
+	assert(workshop._current_directive().contains("ACCESS NOTE"))
 
 	# Recover the guaranteed recipe drops and the access card through the same
 	# locker callbacks the in-game buttons use.
