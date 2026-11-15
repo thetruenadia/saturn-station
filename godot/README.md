@@ -1,10 +1,11 @@
-# Saturn Station — Godot migration milestone 1
+# Native Godot port
 
-Import godot/project.godot in Godot 4 and press F6 (workshop scene) or F5 (project).
-Compatibility renderer chosen for broad Mac support. This native greybox preserves the 0.2 room footprint, machinery locations, MU-1 spawn and palette, orthographic camera, WASD, mouse orbit, zoom, charge drain and a basic generator interaction. It does not reproduce the existing detailed Three.js geometry.
+Import project.godot with Godot 4.3+ and run F5.
 
-Test: move around the room, check obstacles and boundary, rotate/zoom/reset camera, approach the generator in the northwest and press E, verify grid changes, verify I and Esc suspend movement and charge. Restart the scene to reset.
+WASD camera-relative movement, drag orbit, scroll zoom, R reset, E nearby interaction, I inventory, C nearby maintenance station, Q fuel cell, Esc close/pause.
 
-Not yet migrated: full robot geometry/animation, detailed room art, Maker opening, menu/audio, inventory contents, crafting, modular installation, terminal/ETNA, exit puzzle, observation view, saves, first-person view. No plug-in charging added. Browser prototype remains unchanged. This milestone has not been run in Godot; report parser or runtime errors before proceeding.
+This incremental port implements the workshop progression from browser 0.2: power, case and cell, locker recovery, claw salvage, ETNA login, physical spec shard, manual component staging, fabrication, separate wrist placement and installation, exit. Geometry and UI are still greybox. Locker contents use fixed guaranteed drops, collection is button-based rather than individual 3D loot, card inspection is text-only, and fabrication confirmation is a click rather than hold. Missing full robot geometry, opening, menu, audio, saves, observation, first person, and detailed art.
 
-Source references: ../README.md, ../room-layout.js, ../prototype-3d.js and ../ROOM-DESIGN.md.
+Run rule tests: godot --headless --path godot --script res://test_progression.gd
+
+No local Godot runtime verification performed. Browser game remains unchanged.
