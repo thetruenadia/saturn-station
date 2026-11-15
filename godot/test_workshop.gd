@@ -22,6 +22,11 @@ func run_workshop() -> void:
 	assert(workshop.pause_overlay != null and not workshop.pause_overlay.visible)
 	assert(workshop.controls_hint.text.contains("WASD MOVE"))
 	assert(workshop.hotbar_slots.size() == 5)
+	assert(workshop.find_child("WavetermHousing",true,false) is MeshInstance3D)
+	assert(workshop.find_child("PhosphorScreen",true,false) is MeshInstance3D)
+	assert(workshop.find_child("BreakerToggle_00",true,false) is MeshInstance3D)
+	assert(workshop.power_console_indicators.size() == 3)
+	assert(workshop.terminal_screen_label.text.contains("AWAITING AUXILIARY POWER"))
 	assert(workshop.ambient_player.playing)
 	assert((workshop.ambient_player.stream as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD)
 	var atmosphere = workshop.infrastructure
@@ -298,6 +303,8 @@ func run_workshop() -> void:
 	approach_target("Auxiliary power")
 	workshop.interact()
 	assert(workshop.powered and workshop.progression.powered)
+	assert(workshop.terminal_screen_label.text.contains("ETNA TERMINAL READY"))
+	assert(workshop.power_console_indicators[0].material_override.emission_enabled)
 	assert(atmosphere.get("powered") and is_zero_approx(work_lights[0].light_energy))
 	await create_timer(1.9).timeout
 	for light in work_lights:
@@ -392,6 +399,7 @@ func run_workshop() -> void:
 	workshop.progression.authenticated = true
 	workshop.run_terminal_command("3")
 	assert(not workshop.powered and not workshop.progression.powered and workshop.mode == "")
+	assert(workshop.terminal_screen_label.text.contains("AWAITING AUXILIARY POWER"))
 	assert(not atmosphere.get("powered"))
 	for light in work_lights:
 		assert(is_zero_approx(light.light_energy))
