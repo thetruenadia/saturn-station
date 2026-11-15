@@ -7,6 +7,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Main menu entry, new demo, saved-shift continuation, master-volume and default-view preferences, credits.
 - [x] Workshop movement, orbit/zoom/reset, isometric and first-person camera modes, pause, charge and portable cells.
 - [x] Match MU-1's inertial movement ramp/braking and cadence-based synthetic footstep sounds.
+- [x] Match the browser's two-link foot placement, stance/swing timing and planted-foot lift gait.
 - [x] Service-case power cell, auxiliary grid switch, lockers, worker card, recoverable manipulator item with separate inspect/equip/stow state, and physical probe fabrication/install progression.
 - [x] Native screen panels for inventory, authentication, and recipe staging.
 - [x] Native MU-1 meshes, recoverable arm, movement gait, servicing reach, and probe state.
@@ -40,7 +41,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Render the worker access card with a faded portrait, name and ETNA password when inspected.
 - [x] Add native UI click and typing sounds, terminal boot tones, and pickup chimes.
 - [x] Require manually dragging recipe components into the fabrication tray before crafting.
-- [ ] Expand the file archive to match the browser's full contents.
+- [x] Expose the full native station file archive, including system status and staff directory, alongside the logs/spec/incident records.
 - [x] Replace probe place/confirm buttons with a drag-to-wrist-socket installation target and regression coverage.
 - [ ] Match remaining movement guidance and pickup feedback to the browser game's current clarity work; add higher-detail authored inventory models.
 - [ ] Port the full interactive prop/narration coverage, including room storytelling and the remaining functional objects.

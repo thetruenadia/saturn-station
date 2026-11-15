@@ -218,10 +218,18 @@ func run_workshop() -> void:
 	workshop.interact()
 	assert(workshop.narration.text.contains("Claw still binding"))
 	workshop.narration.hide()
+	var robot_ankles: Array = workshop.visual.get("ankles")
+	assert(robot_ankles.size() == 2)
+	var ankle_before: Vector3 = robot_ankles[0].global_position
 	workshop.visual.call("set_moving",true)
 	workshop.visual.call("_process",0.18)
 	assert(float(workshop.visual.get("stride")) > 0.0)
+	var ankle_after: Vector3 = robot_ankles[0].global_position
+	assert(ankle_after.distance_to(ankle_before) > 0.001)
+	assert(is_finite(robot_ankles[0].rotation.x) and is_finite(robot_ankles[1].rotation.x))
 	workshop.visual.call("set_moving",false)
+	workshop.visual.call("_process",0.35)
+	assert(float(workshop.visual.get("stride")) < 1.0)
 
 	approach_target("Service case")
 	workshop.interact()
@@ -303,8 +311,17 @@ func run_workshop() -> void:
 	workshop.run_terminal_command("HELP")
 	assert(workshop.message.contains("STATUS") and workshop.message.contains("SPEC"))
 	workshop.select_terminal_section("files")
+	workshop.refresh_menu()
+	var archive_labels: Array[String] = []
+	for child in workshop.menu.get_children():
+		if child is Button:
+			archive_labels.append(child.text)
+	for archive_file in ["B7-STATION-STATUS.LOG", "SYSTEM STATUS", "STAFF-ACCESS-CARD.TXT", "STAFF DIRECTORY", "ACCESS-PROBE.SPEC", "GENERATOR 04 MAINTENANCE", "INCIDENT LOG"]:
+		assert(archive_labels.has(archive_file))
 	assert(workshop._terminal_file_text("ACCESS-PROBE.SPEC").contains("1 servo motor"))
 	assert(workshop._terminal_file_text("STAFF-ACCESS-CARD.TXT").contains("ETNA"))
+	assert(workshop._terminal_file_text("SYSTEM STATUS").contains("online"))
+	assert(workshop._terminal_file_text("STAFF DIRECTORY").contains("MARA VENN"))
 	workshop.show_terminal_file("GENERATOR 04 MAINTENANCE")
 	assert(workshop._terminal_file_text("GENERATOR 04 MAINTENANCE").contains("isolated"))
 	workshop.select_terminal_section("record")

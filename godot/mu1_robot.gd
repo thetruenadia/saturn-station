@@ -20,6 +20,8 @@ var recovered_arm: Node3D
 var access_probe: Node3D
 var hips: Array[Node3D] = []
 var knees: Array[Node3D] = []
+var ankles: Array[Node3D] = []
+var leg_states: Array[Dictionary] = []
 var phase := 0.0
 var stride := 0.0
 var stride_target := 0.0
@@ -303,6 +305,8 @@ func _build_legs() -> void:
 		box(ankle,"RearHeel",Vector3(0,-0.16,-0.17),Vector3(0.22,0.08,0.23),SAGE_DARK)
 		hips.append(hip)
 		knees.append(knee)
+		ankles.append(ankle)
+		leg_states.append({"hip":hip,"knee":knee,"ankle":ankle,"side":side,"thigh_b":knee_pos,"shin_b":shin_end})
 
 func _build_wear() -> void:
 	for i in range(15):
@@ -324,14 +328,59 @@ func set_servicing(value: bool) -> void:
 func set_moving(value: bool) -> void:
 	stride_target = 1.0 if value else 0.0
 
+func _solve_leg_ik(leg: Dictionary, target: Vector3, delta: float) -> void:
+	var hip: Node3D = leg["hip"]
+	var knee: Node3D = leg["knee"]
+	var ankle: Node3D = leg["ankle"]
+	var thigh_b: Vector3 = leg["thigh_b"]
+	var shin_b: Vector3 = leg["shin_b"]
+	var upper_length := Vector2(thigh_b.y,thigh_b.z).length()
+	var lower_length := Vector2(shin_b.y,shin_b.z).length()
+	var dy := target.y-hip.position.y
+	var dz := target.z-hip.position.z
+	var actual := Vector2(dy,dz).length()
+	var reach := clampf(actual,0.18,upper_length+lower_length-0.035)
+	var unit_y := dy/maxf(0.0001,actual)
+	var unit_z := dz/maxf(0.0001,actual)
+	var along := (upper_length*upper_length-lower_length*lower_length+reach*reach)/(2.0*reach)
+	var perpendicular := sqrt(maxf(0.0,upper_length*upper_length-along*along))
+	# Keep the reverse knee behind the shin line, matching the browser solver's branch.
+	var knee_y := along*unit_y-perpendicular*unit_z
+	var knee_z := along*unit_z+perpendicular*unit_y
+	var shin_y := reach*unit_y-knee_y
+	var shin_z := reach*unit_z-knee_z
+	var rest_upper := atan2(thigh_b.z,thigh_b.y)
+	var rest_lower := atan2(shin_b.z,shin_b.y)
+	var upper_angle := atan2(knee_z,knee_y)-rest_upper
+	var lower_angle := atan2(shin_z,shin_y)-rest_lower-upper_angle
+	var blend := minf(1.0,delta*14.0)
+	hip.rotation.x = lerp_angle(hip.rotation.x,upper_angle,blend)
+	knee.rotation.x = lerp_angle(knee.rotation.x,lower_angle,blend)
+	ankle.rotation.x = lerp_angle(ankle.rotation.x,-hip.rotation.x-knee.rotation.x,blend)
+	hip.rotation.z = lerpf(hip.rotation.z,0.0,blend)
+	knee.rotation.z = lerpf(knee.rotation.z,0.0,blend)
+
 func _process(delta: float) -> void:
 	stride = lerpf(stride,stride_target,minf(delta*7.0,1.0))
 	phase += delta * 4.8 * lerpf(0.15, 1.0, stride)
 	var blend := clampf(stride,0.0,1.0)
-	for i in range(hips.size()):
-		var side_phase := phase + (PI if i == 1 else 0.0)
-		hips[i].rotation.x = sin(side_phase) * 0.12 * blend
-		knees[i].rotation.x = -maxf(0.0,sin(side_phase+0.55)) * 0.25 * blend
+	for leg in leg_states:
+		var side_phase := fposmod(phase/TAU+(0.5 if int(leg["side"]) > 0 else 0.0),1.0)
+		var forward: float
+		var lift := 0.0
+		if side_phase < 0.62:
+			var stance_phase := side_phase/0.62
+			forward = 0.24*(1.0-2.0*stance_phase)
+		else:
+			var swing_phase := (side_phase-0.62)/0.38
+			var eased := swing_phase*swing_phase*(3.0-2.0*swing_phase)
+			forward = -0.24+0.48*eased
+			lift = 0.105*sin(PI*swing_phase)
+		var hip: Node3D = leg["hip"]
+		var thigh_b: Vector3 = leg["thigh_b"]
+		var shin_b: Vector3 = leg["shin_b"]
+		var foot_target := Vector3(hip.position.x+thigh_b.x+shin_b.x,0.155+lift*blend,0.09+forward*blend)
+		_solve_leg_ik(leg,foot_target,delta)
 	var transfer := sin(phase)
 	body.position.y = lerpf(body.position.y,-0.025+0.013*absf(transfer),minf(delta*8.0,1.0)) * blend
 	body.rotation.z = lerpf(body.rotation.z,0.018*transfer*blend,minf(delta*7.0,1.0))

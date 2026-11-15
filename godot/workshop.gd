@@ -1891,7 +1891,7 @@ func refresh_menu(viewport_size_override: Vector2 = Vector2.ZERO) -> void:
 					"files":
 						if terminal_file == "":
 							line("STATION FILES")
-							for file_name in ["B7-STATION-STATUS.LOG", "STAFF-ACCESS-CARD.TXT", "ACCESS-PROBE.SPEC", "GENERATOR 04 MAINTENANCE", "INCIDENT LOG"]:
+							for file_name in ["B7-STATION-STATUS.LOG", "SYSTEM STATUS", "STAFF-ACCESS-CARD.TXT", "STAFF DIRECTORY", "ACCESS-PROBE.SPEC", "GENERATOR 04 MAINTENANCE", "INCIDENT LOG"]:
 								action(file_name, show_terminal_file.bind(file_name))
 							action("EXPORT ACCESS-PROBE.SPEC → PHYSICAL SHARD", run_terminal_command.bind("SPEC"), not progression.spec_released and not progression.spec_unlocked)
 						else:
