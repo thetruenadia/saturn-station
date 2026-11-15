@@ -33,6 +33,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Add a five-slot quick inventory strip with numbered keyboard selection.
 - [x] Add rotating 3D inventory inspection for the recovered manipulator, power cell, access card, note and fabrication parts; adapt the inventory grid to narrow windows.
 - [x] Port click-to-select object interactions and E-triggered auto-approach, with WASD interruption and state-aware target prompts.
+- [x] Add a projected proximity marker with the current action or a move-closer cue; hide it behind panels, pauses and cutscenes.
 - [x] Port the loose manipulator recovery and equipment-mount flow: its model begins in the maintenance claw, disappears on recovery, enters storage, and must be fitted before operating the case or switch.
 - [x] Animate the recovered manipulator from the maintenance claw to MU-1 before storing it, with servo and recovery sounds.
 - [x] Add a 20-slot item grid with item descriptions and manipulator equip/stow controls.
@@ -43,7 +44,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Require manually dragging recipe components into the fabrication tray before crafting.
 - [x] Expose the full native station file archive, including system status and staff directory, alongside the logs/spec/incident records.
 - [x] Replace probe place/confirm buttons with a drag-to-wrist-socket installation target and regression coverage.
-- [ ] Match remaining movement guidance and pickup feedback to the browser game's current clarity work; add higher-detail authored inventory models.
+- [ ] Add higher-detail authored inventory models and finish remaining pickup feedback polish.
 - [ ] Port the full interactive prop/narration coverage, including room storytelling and the remaining functional objects.
 - [ ] Replace the remaining simplified props and materials with higher-detail native assets while preserving the worn, cable-dense industrial aesthetic.
 - [ ] Visually playtest desktop and mobile-like window sizes and iterate on camera, collision, interaction distances and layout.

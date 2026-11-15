@@ -95,6 +95,8 @@ var observation_prompt: Label
 var narration: Label
 var directive: Label
 var notice: Label
+var interaction_marker: PanelContainer
+var interaction_marker_text: Label
 var notice_tween: Tween
 var sound_player: AudioStreamPlayer
 var ambient_player: AudioStreamPlayer
@@ -338,6 +340,29 @@ func _ready() -> void:
 	directive.add_theme_color_override("font_shadow_color", Color(0,0,0,0.8))
 	directive.add_theme_constant_override("shadow_offset_x", 2)
 	directive.add_theme_constant_override("shadow_offset_y", 2)
+	interaction_marker = PanelContainer.new()
+	interaction_marker.name = "WorldInteractionMarker"
+	interaction_marker.custom_minimum_size = Vector2(250,38)
+	interaction_marker.size = Vector2(250,38)
+	interaction_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var marker_style := StyleBoxFlat.new()
+	marker_style.bg_color = Color(0.055,0.075,0.064,0.92)
+	marker_style.border_color = Color("c3a86b",0.82)
+	marker_style.set_border_width_all(1)
+	marker_style.set_corner_radius_all(3)
+	marker_style.content_margin_left = 10
+	marker_style.content_margin_right = 10
+	marker_style.content_margin_top = 5
+	marker_style.content_margin_bottom = 5
+	interaction_marker.add_theme_stylebox_override("panel",marker_style)
+	layer.add_child(interaction_marker)
+	interaction_marker_text = Label.new()
+	interaction_marker_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	interaction_marker_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	interaction_marker_text.add_theme_font_size_override("font_size",14)
+	interaction_marker_text.add_theme_color_override("font_color",Color("eee2bb"))
+	interaction_marker.add_child(interaction_marker_text)
+	interaction_marker.hide()
 	notice = Label.new()
 	layer.add_child(notice)
 	notice.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
@@ -509,6 +534,7 @@ func _build_room_story_props() -> void:
 func start_maker_opening() -> void:
 	if opening_active:
 		return
+	interaction_marker.hide()
 	opening_active = true
 	opening_started = false
 	opening_finished = false
@@ -905,6 +931,7 @@ func _physics_process(delta: float) -> void:
 	player.position.z = clampf(player.position.z,-9.5,9.5)
 	nearby = nearest_target()
 	update_camera()
+	_update_interaction_marker()
 	hud.text = "SATURN STATION  /  GODOT FOUNDATION\nMU-1   |   CHARGE %03d%%   |   GRID %s" % [int(ceil(charge)), "ONLINE" if powered else "OFFLINE"]
 	prompt.text = "WASD move  /  Drag orbit  /  Wheel zoom  /  V isometric  /  R reset  /  I inventory  /  Esc pause"
 	if paused:
@@ -927,6 +954,31 @@ func _physics_process(delta: float) -> void:
 	controls_hint.visible = not opening_active
 	_refresh_hotbar()
 	hotbar.visible = not opening_active and not observation_active
+
+func _update_interaction_marker() -> void:
+	if interaction_marker == null or camera == null:
+		return
+	var target_name := selected_target if selected_target != "" and _target_available(selected_target) else nearby
+	if target_name == "" or not targets.has(target_name) or mode != "" or paused or opening_active or observation_active or death_active or progression.finished:
+		interaction_marker.hide()
+		return
+	var ground: Vector2 = targets[target_name]
+	var distance := Vector2(player.position.x,player.position.z).distance_to(ground)
+	if distance > 3.3:
+		interaction_marker.hide()
+		return
+	var world_point := Vector3(ground.x,1.85,ground.y)
+	if camera.is_position_behind(world_point):
+		interaction_marker.hide()
+		return
+	var screen_point := camera.unproject_position(world_point)
+	var viewport_size := get_viewport().get_visible_rect().size
+	if screen_point.x < 0 or screen_point.y < 0 or screen_point.x > viewport_size.x or screen_point.y > viewport_size.y:
+		interaction_marker.hide()
+		return
+	interaction_marker_text.text = "▼  E  ·  " + _interaction_hint(target_name) if distance <= 2.4 else "▼  MOVE CLOSER  ·  " + target_name.to_upper()
+	interaction_marker.position = screen_point - interaction_marker.size * 0.5 + Vector2(0,-32)
+	interaction_marker.show()
 
 func _current_directive() -> String:
 	if not progression.manipulator_recovered:
@@ -1482,6 +1534,7 @@ func _animate_manipulator_pickup() -> void:
 	_refresh_hotbar()
 
 func open_menu(next: String) -> void:
+	interaction_marker.hide()
 	mode = next
 	dragging = false
 	move_target = Vector2.ZERO
