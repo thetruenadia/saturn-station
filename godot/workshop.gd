@@ -28,6 +28,18 @@ class ProbeSocketTarget extends PanelContainer:
 		if _can_drop_data(_at_position,data):
 			host.install_probe()
 
+class ItemPreview extends SubViewportContainer:
+	var stage: Node3D
+	var rotating := false
+	func _gui_input(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+			rotating = event.pressed
+			accept_event()
+		elif event is InputEventMouseMotion and rotating and stage:
+			stage.rotate_y(-event.relative.x*0.012)
+			stage.rotation.x = clampf(stage.rotation.x-event.relative.y*0.009,-0.9,0.9)
+			accept_event()
+
 var player: CharacterBody3D
 var visual: Node3D
 var camera: Camera3D
@@ -1658,6 +1670,11 @@ func refresh_menu() -> void:
 	for child in menu.get_children():
 		menu.remove_child(child)
 		child.queue_free()
+	var panel_width := 420.0
+	if mode == "inventory":
+		panel_width = minf(780.0,maxf(340.0,get_viewport().get_visible_rect().size.x-40.0))
+	interface.offset_left = -panel_width
+	interface.offset_right = -20
 	line("SATURN STATION / " + mode.to_upper())
 	match mode:
 		"generator_hall":
@@ -1668,7 +1685,7 @@ func refresh_menu() -> void:
 			line("EQUIPMENT STORAGE  ·  %d / 20 SLOTS" % progression.item_count())
 			var grid := GridContainer.new()
 			grid.name = "InventoryGrid"
-			grid.columns = 5
+			grid.columns = 5 if panel_width >= 560.0 else 4
 			grid.add_theme_constant_override("h_separation",5)
 			grid.add_theme_constant_override("v_separation",5)
 			menu.add_child(grid)
@@ -1686,10 +1703,17 @@ func refresh_menu() -> void:
 					slot.text = "%02d\n—" % (i+1)
 					slot.disabled = true
 				grid.add_child(slot)
+			var inspection_row := HBoxContainer.new()
+			inspection_row.name = "InventoryInspectionRow"
+			inspection_row.add_theme_constant_override("separation",12)
+			menu.add_child(inspection_row)
+			var item_preview := _make_inventory_preview(inventory_inspection,panel_width)
+			inspection_row.add_child(item_preview)
 			var selected := PanelContainer.new()
 			selected.name = "InventoryInspection"
-			selected.custom_minimum_size = Vector2(0,74)
-			menu.add_child(selected)
+			selected.custom_minimum_size = Vector2(0,160)
+			selected.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			inspection_row.add_child(selected)
 			var selected_text := Label.new()
 			selected_text.text = "SELECT AN ITEM TO INSPECT" if inventory_inspection == "" else inventory_inspection.to_upper() + "\n" + _inventory_item_description(inventory_inspection)
 			selected_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1832,6 +1856,100 @@ func _terminal_file_text(file_name: String) -> String:
 		"INCIDENT LOG":
 			return progression.record_entry if progression.record_entry != "" else "No local record entries saved."
 	return "File could not be read."
+
+func _make_inventory_preview(item_type: String, available_width: float) -> ItemPreview:
+	var preview := ItemPreview.new()
+	preview.name = "ItemModelPreview"
+	preview.custom_minimum_size = Vector2(minf(230.0,maxf(120.0,available_width*0.42)),160.0)
+	preview.mouse_filter = Control.MOUSE_FILTER_STOP
+	preview.stretch = true
+	var viewport := SubViewport.new()
+	viewport.name = "ItemPreviewViewport"
+	viewport.size = Vector2i(320,220)
+	viewport.own_world_3d = true
+	viewport.transparent_bg = true
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	preview.add_child(viewport)
+	var stage := Node3D.new()
+	stage.name = "RotatingItemModel"
+	viewport.add_child(stage)
+	preview.stage = stage
+	var world := WorldEnvironment.new()
+	var environment := Environment.new()
+	environment.background_mode = Environment.BG_COLOR
+	environment.background_color = Color("20251f")
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.ambient_light_color = Color("c7c0a3")
+	environment.ambient_light_energy = 0.8
+	world.environment = environment
+	stage.add_child(world)
+	var camera_node := Camera3D.new()
+	camera_node.position = Vector3(2.4,1.65,3.4)
+	camera_node.basis = Basis.looking_at(-camera_node.position,Vector3.UP)
+	camera_node.current = true
+	stage.add_child(camera_node)
+	var key_light := OmniLight3D.new()
+	key_light.position = Vector3(1.2,2.2,2.0)
+	key_light.light_color = Color("f4d8a0")
+	key_light.light_energy = 3.2
+	key_light.omni_range = 8.0
+	stage.add_child(key_light)
+	if item_type == "manipulator" and recovered_arm:
+		var manipulator := recovered_arm.duplicate() as Node3D
+		stage.add_child(manipulator)
+		manipulator.show()
+		manipulator.position = Vector3(0,0.78,0)
+		manipulator.scale = Vector3(1.1,1.1,1.1)
+	else:
+		var model := MeshInstance3D.new()
+		var model_material := StandardMaterial3D.new()
+		model_material.albedo_color = Color("b7a477")
+		model_material.metallic = 0.28
+		model_material.roughness = 0.62
+		match item_type:
+			"cell":
+				var mesh := CylinderMesh.new()
+				mesh.top_radius = 0.3
+				mesh.bottom_radius = 0.34
+				mesh.height = 0.92
+				model.mesh = mesh
+				model_material.albedo_color = Color("73816d")
+			"card":
+				var mesh := BoxMesh.new()
+				mesh.size = Vector3(0.82,1.12,0.055)
+				model.mesh = mesh
+				model_material.albedo_color = Color("b5ad91")
+			"note":
+				var mesh := BoxMesh.new()
+				mesh.size = Vector3(0.85,0.58,0.025)
+				model.mesh = mesh
+				model_material.albedo_color = Color("d5c17a")
+			"gear":
+				var mesh := TorusMesh.new()
+				mesh.inner_radius = 0.22
+				mesh.outer_radius = 0.43
+				model.mesh = mesh
+				model_material.albedo_color = Color("868675")
+			"motor":
+				var mesh := CylinderMesh.new()
+				mesh.top_radius = 0.24
+				mesh.bottom_radius = 0.24
+				mesh.height = 0.86
+				model.mesh = mesh
+				model_material.albedo_color = Color("697663")
+			"wire":
+				var mesh := TorusMesh.new()
+				mesh.inner_radius = 0.19
+				mesh.outer_radius = 0.27
+				model.mesh = mesh
+				model_material.albedo_color = Color("b5884e")
+			_:
+				var mesh := BoxMesh.new()
+				mesh.size = Vector3(0.72,0.5,0.42)
+				model.mesh = mesh
+		model.material_override = model_material
+		stage.add_child(model)
+	return preview
 
 func _inventory_items() -> Array[String]:
 	var result: Array[String] = []

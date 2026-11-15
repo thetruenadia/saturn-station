@@ -28,6 +28,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Add the browser's power-depletion shutdown screen and a reboot action that starts a fresh shift.
 - [x] Keep a persistent, concise movement and camera control legend on the gameplay screen.
 - [x] Add a five-slot quick inventory strip with numbered keyboard selection.
+- [x] Add rotating 3D inventory inspection for the recovered manipulator, power cell, access card, note and fabrication parts; adapt the inventory grid to narrow windows.
 - [x] Port click-to-select object interactions and E-triggered auto-approach, with WASD interruption and state-aware target prompts.
 - [x] Port the loose manipulator recovery and equipment-mount flow: its model begins in the maintenance claw, disappears on recovery, enters storage, and must be fitted before operating the case or switch.
 - [x] Add a 20-slot item grid with item descriptions and manipulator equip/stow controls.
@@ -37,7 +38,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Require manually dragging recipe components into the fabrication tray before crafting.
 - [ ] Expand the file archive to match the browser's full contents.
 - [x] Replace probe place/confirm buttons with a drag-to-wrist-socket installation target and regression coverage.
-- [ ] Match remaining movement guidance, richer component inspection and remaining pickup feedback to the browser game's current clarity work.
+- [ ] Match remaining movement guidance and pickup feedback to the browser game's current clarity work; add higher-detail authored inventory models.
 - [ ] Port the full interactive prop/narration coverage, including room storytelling and the remaining functional objects.
 - [ ] Replace the remaining simplified props and materials with higher-detail native assets while preserving the worn, cable-dense industrial aesthetic.
 - [ ] Visually playtest desktop and mobile-like window sizes and iterate on camera, collision, interaction distances and layout.
