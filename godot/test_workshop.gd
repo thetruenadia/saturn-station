@@ -2,6 +2,13 @@ extends SceneTree
 
 var workshop: Node
 
+func approach_target(target_name: String) -> void:
+	var point: Vector2 = workshop.targets[target_name]
+	workshop.player.position = Vector3(point.x,0,point.y)
+	workshop.nearby = target_name
+	workshop.selected_target = ""
+	workshop.move_target = Vector2.ZERO
+
 func _initialize() -> void:
 	call_deferred("run_workshop")
 
@@ -18,6 +25,26 @@ func run_workshop() -> void:
 	assert((workshop.ambient_player.stream as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD)
 	assert(workshop._interaction_hint("Service case") == "MANIPULATOR REQUIRED")
 	assert(workshop._interaction_hint("Observation window") == "VIEW ENCELADUS")
+	var arm_screen_position: Vector2 = workshop.camera.unproject_position(Vector3(-7.2,0.85,3.0))
+	var click_down := InputEventMouseButton.new()
+	click_down.button_index = MOUSE_BUTTON_LEFT
+	click_down.pressed = true
+	click_down.position = arm_screen_position
+	workshop._unhandled_input(click_down)
+	var click_up := InputEventMouseButton.new()
+	click_up.button_index = MOUSE_BUTTON_LEFT
+	click_up.position = arm_screen_position
+	workshop._unhandled_input(click_up)
+	assert(workshop.selected_target == "Lock-service manipulator")
+	workshop.interact()
+	assert(workshop.move_target == Vector2(-7.2,3.0) and not workshop.progression.claw_salvaged)
+	var arm_distance_before := Vector2(workshop.player.position.x,workshop.player.position.z).distance_to(workshop.move_target)
+	workshop._physics_process(0.2)
+	var arm_distance_after := Vector2(workshop.player.position.x,workshop.player.position.z).distance_to(Vector2(-7.2,3.0))
+	assert(arm_distance_after < arm_distance_before)
+	assert(workshop.player.position.x >= -12.5 and workshop.player.position.x <= 12.5)
+	workshop.move_target = Vector2.ZERO
+	workshop.selected_target = ""
 	var view_key := InputEventKey.new()
 	view_key.pressed = true
 	view_key.physical_keycode = KEY_V
@@ -49,7 +76,7 @@ func run_workshop() -> void:
 	workshop._unhandled_input(skip_key)
 	assert(not workshop.opening_active and workshop.visual.visible)
 	assert(workshop.controls_hint.visible)
-	workshop.nearby = "Observation window"
+	approach_target("Observation window")
 	workshop.interact()
 	assert(workshop.observation_active and workshop.observation_prompt.visible)
 	assert(not workshop.observation_prompt.text.contains("Enceladus"))
@@ -58,7 +85,7 @@ func run_workshop() -> void:
 	return_key.physical_keycode = KEY_E
 	workshop._unhandled_input(return_key)
 	assert(not workshop.observation_active)
-	workshop.nearby = "Handwritten note"
+	approach_target("Handwritten note")
 	workshop.interact()
 	assert(workshop.progression.note_taken and workshop.progression.inventory.get("note",0) == 1)
 	assert(not workshop.note_visual.visible)
@@ -74,13 +101,13 @@ func run_workshop() -> void:
 	workshop.open_menu("note")
 	assert(workshop.menu.get_child_count() > 0)
 	workshop.close_menu()
-	workshop.nearby = "Crew table"
+	approach_target("Crew table")
 	workshop.interact()
 	assert(workshop.narration.visible and workshop.narration.text.contains("Two mugs"))
-	workshop.nearby = "Mara's cup"
+	approach_target("Mara's cup")
 	workshop.interact()
 	assert(workshop.narration.text.contains("watched the plumes"))
-	workshop.nearby = "Unfinished handover"
+	approach_target("Unfinished handover")
 	workshop.interact()
 	assert(workshop.narration.text.contains("Claw still binding"))
 	workshop.narration.hide()
@@ -89,13 +116,13 @@ func run_workshop() -> void:
 	assert(float(workshop.visual.get("stride")) > 0.0)
 	workshop.visual.call("set_moving",false)
 
-	workshop.nearby = "Service case"
+	approach_target("Service case")
 	workshop.interact()
 	assert(not workshop.progression.case_open and workshop.message.contains("fitted manipulator"))
-	workshop.nearby = "Auxiliary power"
+	approach_target("Auxiliary power")
 	workshop.interact()
 	assert(not workshop.powered and workshop.message.contains("stiff to move"))
-	workshop.nearby = "Lock-service manipulator"
+	approach_target("Lock-service manipulator")
 	workshop.interact()
 	assert(workshop.progression.manipulator_recovered and not workshop.progression.arm_equipped)
 	assert(not workshop.claw.visible and not workshop.recovered_arm.visible)
@@ -114,13 +141,13 @@ func run_workshop() -> void:
 	workshop.equip_or_stow_manipulator()
 	assert(workshop.progression.arm_equipped and workshop.recovered_arm.visible)
 	workshop.close_menu()
-	workshop.nearby = "Service case"
+	approach_target("Service case")
 	workshop.interact()
 	assert(workshop._interaction_hint("Service case") == "RECOVER POWER CELL")
 	workshop.interact()
 	assert(workshop.progression.cells == 1)
 	assert(workshop.notice.visible and workshop.notice.text.contains("POWER CELL"))
-	workshop.nearby = "Auxiliary power"
+	approach_target("Auxiliary power")
 	workshop.interact()
 	assert(workshop.powered and workshop.progression.powered)
 	assert(workshop._current_directive().contains("ACCESS NOTE"))
@@ -134,7 +161,7 @@ func run_workshop() -> void:
 	workshop.close_menu()
 	assert(workshop.progression.claw_salvaged and not workshop.claw.visible)
 	assert(workshop.visual.get_node("Body/CastChassis/RecoveredYellowServiceArm").visible)
-	workshop.nearby = "ETNA terminal"
+	approach_target("ETNA terminal")
 	workshop.interact()
 	assert(workshop.mode == "terminal" and workshop.interface.visible)
 	assert(not workshop.terminal_booted)
@@ -166,7 +193,7 @@ func run_workshop() -> void:
 	workshop.run_terminal_command("SPEC")
 	assert(workshop.progression.spec_released and workshop.shard.visible)
 	workshop.close_menu()
-	workshop.nearby = "Specification shard"
+	approach_target("Specification shard")
 	workshop.interact()
 	assert(workshop.progression.spec_unlocked and not workshop.shard.visible)
 
@@ -192,7 +219,7 @@ func run_workshop() -> void:
 	probe_socket._drop_data(Vector2.ZERO,{"part_type":"access_probe"})
 	assert(workshop.progression.probe_installed and workshop.probe_visual.visible)
 	workshop.close_menu()
-	workshop.nearby = "Maintenance exit"
+	approach_target("Maintenance exit")
 	workshop.interact()
 	assert(workshop.progression.door_open)
 	workshop.interact()

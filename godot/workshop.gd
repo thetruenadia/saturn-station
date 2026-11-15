@@ -54,6 +54,10 @@ var menu: VBoxContainer
 var fabrication_tray: FabricationTray
 var mode := ""
 var nearby := ""
+var selected_target := ""
+var move_target := Vector2.ZERO
+var mouse_down_position := Vector2.ZERO
+var mouse_dragged := false
 var targets: Dictionary = {}
 var observation_counts: Dictionary = {}
 var shard: MeshInstance3D
@@ -280,7 +284,7 @@ func _ready() -> void:
 	prompt.add_theme_font_size_override("font_size",17)
 	controls_hint = Label.new()
 	layer.add_child(controls_hint)
-	controls_hint.text = "WASD MOVE  ·  DRAG LOOK  ·  WHEEL ZOOM\nE INTERACT  ·  1–5 SELECT ITEM  ·  Q POWER CELL"
+	controls_hint.text = "WASD MOVE  ·  CLICK + E APPROACH  ·  DRAG LOOK\nWHEEL ZOOM  ·  E INTERACT  ·  1–5 ITEMS  ·  Q CELL"
 	controls_hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	controls_hint.position = Vector2(24,-72)
 	controls_hint.size = Vector2(540,58)
@@ -731,13 +735,24 @@ func _unhandled_input(event: InputEvent) -> void:
 			close_observation()
 		return
 	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				mouse_down_position = event.position
+				mouse_dragged = false
+				dragging = true
+			elif dragging:
+				dragging = false
+				if not mouse_dragged and mode == "" and not paused:
+					_select_target_at(event.position)
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			dragging = event.pressed
 		if event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			zoom = clampf(zoom-1.0,5.0,26.0)
 		if event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			zoom = clampf(zoom+1.0,5.0,26.0)
 	if event is InputEventMouseMotion and dragging:
+		if mouse_down_position.distance_to(event.position) > 5.0:
+			mouse_dragged = true
 		yaw -= event.relative.x*0.007
 		pitch = clampf(pitch+event.relative.y*0.005,0.35,1.05)
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -752,6 +767,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					inventory_open = false
 				else:
 					paused = not paused
+					if paused:
+						move_target = Vector2.ZERO
 			KEY_I:
 				if not paused and charge > 0:
 					if mode == "inventory":
@@ -803,6 +820,14 @@ func _physics_process(delta: float) -> void:
 		var right := Vector3(cos(yaw),0,-sin(yaw))
 		direction = forward*(float(Input.is_physical_key_pressed(KEY_W))-float(Input.is_physical_key_pressed(KEY_S))) + right*(float(Input.is_physical_key_pressed(KEY_D))-float(Input.is_physical_key_pressed(KEY_A)))
 		direction = direction.normalized()
+		if direction.length_squared() > 0.01:
+			move_target = Vector2.ZERO
+		elif move_target != Vector2.ZERO:
+			var to_target := Vector2(move_target.x-player.position.x,move_target.y-player.position.z)
+			if to_target.length() <= 1.45:
+				move_target = Vector2.ZERO
+			else:
+				direction = Vector3(to_target.x,0,to_target.y).normalized()
 		charge = maxf(0.0,charge-delta*0.1)
 	player.velocity = direction*3.4
 	if direction.length_squared() > 0.01:
@@ -823,8 +848,12 @@ func _physics_process(delta: float) -> void:
 		prompt.text = "POWER DEPLETED — restart the scene to retry."
 	elif progression.finished:
 		prompt.text = "WORKSHOP COMPLETE — restart the scene to replay."
+	elif selected_target != "" and _target_available(selected_target) and Vector2(player.position.x,player.position.z).distance_to(targets[selected_target]) <= 2.4:
+		prompt.text = "E — " + _interaction_hint(selected_target)
 	elif nearby != "":
 		prompt.text = "E — " + _interaction_hint(nearby)
+	if move_target != Vector2.ZERO and not paused and mode == "":
+		prompt.text = "AUTO WALK  ·  " + selected_target.to_upper() + "  ·  WASD TO INTERRUPT"
 	prompt.text += "\n" + message + "\nCells: " + str(progression.cells) + "  |  Q use cell"
 	directive.text = _current_directive()
 	directive.visible = mode == "" and not paused and not opening_active
@@ -1030,7 +1059,51 @@ func _interaction_hint(target_name: String) -> String:
 		_:
 			return "INSPECT " + target_name.to_upper()
 
+func _target_available(target_name: String) -> bool:
+	if target_name == "Lock-service manipulator" and progression.claw_salvaged:
+		return false
+	if target_name == "Handwritten note" and progression.note_taken:
+		return false
+	if target_name == "Specification shard" and not progression.spec_released:
+		return false
+	return targets.has(target_name)
+
+func _select_target_at(screen_position: Vector2) -> String:
+	var selected := ""
+	var nearest_pixels := 58.0
+	for target_name in targets:
+		if not _target_available(target_name):
+			continue
+		var ground: Vector2 = targets[target_name]
+		var world_position := Vector3(ground.x,0.85,ground.y)
+		if camera.is_position_behind(world_position):
+			continue
+		var screen_target := camera.unproject_position(world_position)
+		var pixel_distance := screen_target.distance_to(screen_position)
+		if pixel_distance < nearest_pixels:
+			nearest_pixels = pixel_distance
+			selected = str(target_name)
+	if selected != "":
+		selected_target = selected
+		message = selected + " selected. Press E to interact or approach."
+		show_notice("SELECTED  ·  " + selected.to_upper() + "  ·  PRESS E")
+	return selected
+
 func interact() -> void:
+	var target_name := selected_target if selected_target != "" and _target_available(selected_target) else nearby
+	if target_name == "":
+		message = "No service object in reach. Click an object, then press E to approach it."
+		return
+	var target_point: Vector2 = targets.get(target_name,Vector2(player.position.x,player.position.z))
+	if Vector2(player.position.x,player.position.z).distance_to(target_point) > 2.4:
+		selected_target = target_name
+		move_target = target_point
+		message = "Moving to " + target_name + "."
+		show_notice("MOVING TO  ·  " + target_name.to_upper())
+		return
+	move_target = Vector2.ZERO
+	selected_target = ""
+	nearby = target_name
 	match nearby:
 		"Service case":
 			if not progression.arm_equipped:
@@ -1117,6 +1190,7 @@ func interact() -> void:
 func open_menu(next: String) -> void:
 	mode = next
 	dragging = false
+	move_target = Vector2.ZERO
 	visual.call("set_servicing", next == "bench")
 	if next == "terminal":
 		terminal_booted = false

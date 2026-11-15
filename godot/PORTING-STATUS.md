@@ -26,6 +26,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Add a centered top-screen task directive plus pickup and power-restored notices.
 - [x] Keep a persistent, concise movement and camera control legend on the gameplay screen.
 - [x] Add a five-slot quick inventory strip with numbered keyboard selection.
+- [x] Port click-to-select object interactions and E-triggered auto-approach, with WASD interruption and state-aware target prompts.
 - [x] Port the loose manipulator recovery and equipment-mount flow: its model begins in the maintenance claw, disappears on recovery, enters storage, and must be fitted before operating the case or switch.
 - [x] Add a 20-slot item grid with item descriptions and manipulator equip/stow controls.
 - [x] Add crew belongings, sorted repair rejects, wall utility wiring and floor routes as linked, inspectable room details.
