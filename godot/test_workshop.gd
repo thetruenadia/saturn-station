@@ -13,6 +13,13 @@ func run_workshop() -> void:
 	assert(workshop.camera != null and workshop.camera.current)
 	assert(workshop.claw.visible)
 	assert(not workshop.probe_visual.visible)
+	assert(workshop.visual.get_node("Body/CastChassis/LowCastHull") != null)
+	assert(not workshop.visual.get_node("Body/CastChassis/RecoveredYellowServiceArm").visible)
+	assert(workshop.get_node("ExposedStationInfrastructure").get_child_count() > 30)
+	workshop.visual.call("set_moving",true)
+	await create_timer(0.18).timeout
+	assert(float(workshop.visual.get("stride")) > 0.0)
+	workshop.visual.call("set_moving",false)
 
 	workshop.nearby = "Service case"
 	workshop.interact()
@@ -29,6 +36,7 @@ func run_workshop() -> void:
 	workshop.nearby = "Broken claw"
 	workshop.interact()
 	assert(workshop.progression.claw_salvaged and not workshop.claw.visible)
+	assert(workshop.visual.get_node("Body/CastChassis/RecoveredYellowServiceArm").visible)
 	workshop.nearby = "ETNA terminal"
 	workshop.interact()
 	assert(workshop.mode == "terminal" and workshop.interface.visible)

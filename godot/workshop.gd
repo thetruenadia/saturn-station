@@ -24,7 +24,7 @@ var targets: Dictionary = {}
 var shard: MeshInstance3D
 var claw: MeshInstance3D
 var exit_door: MeshInstance3D
-var probe_visual: MeshInstance3D
+var probe_visual: Node3D
 var message := ""
 var dragging := false
 var room := [
@@ -105,6 +105,9 @@ func _ready() -> void:
 		block(self, Vector3(x,0.0,0), Vector3(0.025,0.025,20), "35382f")
 	for z in range(-10,11,2):
 		block(self, Vector3(0,0.0,z), Vector3(26,0.025,0.025), "35382f")
+	var infrastructure := preload("res://workshop_atmosphere.tscn").instantiate()
+	infrastructure.name = "ExposedStationInfrastructure"
+	add_child(infrastructure)
 	for item in room:
 		var station := Node3D.new()
 		add_child(station)
@@ -132,19 +135,8 @@ func _ready() -> void:
 	collider.shape = capsule
 	collider.position.y = 1
 	player.add_child(collider)
-	visual = Node3D.new()
+	visual = preload("res://mu1_robot.tscn").instantiate()
 	player.add_child(visual)
-	block(visual,Vector3(0,2.05,0),Vector3(1.15,0.72,2.4),"667865")
-	block(visual,Vector3(0.18,2.16,1.25),Vector3(0.48,0.43,0.2),"242826")
-	var optic := block(visual,Vector3(0.18,2.16,1.37),Vector3(0.18,0.18,0.05),"b84c38")
-	optic.material_override = material("b84c38",true)
-	block(visual,Vector3(-0.3,2.48,-0.3),Vector3(0.38,0.19,0.65),"82917a")
-	for side in [-1,1]:
-		var thigh := block(visual,Vector3(side*0.72,1.45,-0.22),Vector3(0.28,0.95,0.35),"414d43")
-		thigh.rotation.x = -0.35
-		var shin := block(visual,Vector3(side*0.84,0.65,-0.03),Vector3(0.22,1.03,0.27),"777c70")
-		shin.rotation.x = 0.44
-		block(visual,Vector3(side*0.84,0.13,0.32),Vector3(0.37,0.22,0.9),"242826")
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.current = true
@@ -224,6 +216,7 @@ func _physics_process(delta: float) -> void:
 	if direction.length_squared() > 0.01:
 		visual.rotation.y = lerp_angle(visual.rotation.y,atan2(direction.x,direction.z),minf(delta*10,1.0))
 	player.move_and_slide()
+	visual.call("set_moving", active and direction.length_squared() > 0.01)
 	player.position.x = clampf(player.position.x,-12.5,12.5)
 	player.position.z = clampf(player.position.z,-9.5,9.5)
 	nearby = nearest_target()
@@ -251,8 +244,7 @@ func setup_progression(layer: CanvasLayer) -> void:
 	shard = block(self,Vector3(5.4,0.65,-3.95),Vector3(0.35,0.48,0.12),"69bc9c")
 	shard.material_override = material("69bc9c",true)
 	shard.hide()
-	probe_visual = block(visual,Vector3(0.65,1.7,1.1),Vector3(0.12,0.15,0.65),"987344")
-	probe_visual.hide()
+	probe_visual = visual.get_node("Body/CastChassis/RecoveredYellowServiceArm/WristAccessProbe")
 	for i in range(4):
 		var x := 6.8+i*0.98
 		block(self,Vector3(x,1.12,-2),Vector3(0.96,2.24,0.7),"b2ad97",true)
@@ -308,6 +300,7 @@ func interact() -> void:
 		"Broken claw":
 			if progression.salvage_claw():
 				claw.hide()
+				visual.call("set_recovered_arm", true)
 				message = "Claw dismantled: gears, chip, wire."
 		"Specification shard":
 			if progression.collect_spec():
@@ -324,11 +317,13 @@ func interact() -> void:
 func open_menu(next: String) -> void:
 	mode = next
 	dragging = false
+	visual.call("set_servicing", next == "bench")
 	interface.show()
 	refresh_menu()
 
 func close_menu() -> void:
 	mode = ""
+	visual.call("set_servicing", false)
 	progression.cancel_staging()
 	interface.hide()
 
@@ -372,7 +367,7 @@ func place_probe() -> void:
 
 func install_probe() -> void:
 	if progression.install(at_bench()):
-		probe_visual.show()
+		visual.call("set_probe_installed", true)
 	refresh_menu()
 
 func refresh_menu() -> void:
