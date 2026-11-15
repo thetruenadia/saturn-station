@@ -119,6 +119,7 @@ var opening_layer: CanvasLayer
 var persistence_enabled := true
 var save_elapsed := 0.0
 const SAVE_PATH := "user://saturn-station.save"
+var save_path := SAVE_PATH
 var room := [
 	["Service case", -5.0, 2.0, 1.0, 0.73],
 	["Auxiliary power", -10.8, -8.5, 1.15, 0.55],
@@ -366,6 +367,7 @@ func _ready() -> void:
 	if persistence_enabled:
 		_load_progress()
 	update_camera()
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
 	if get_tree().has_meta("start_maker_opening") and bool(get_tree().get_meta("start_maker_opening")):
 		get_tree().remove_meta("start_maker_opening")
 		call_deferred("start_maker_opening")
@@ -1155,8 +1157,8 @@ func _set_brightness(value: float) -> void:
 	_save_game_preferences()
 
 func restart_demo() -> void:
-	if FileAccess.file_exists(SAVE_PATH):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	if FileAccess.file_exists(save_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
 	get_tree().set_meta("start_maker_opening",true)
 	get_tree().change_scene_to_file("res://workshop.tscn")
 
@@ -1660,13 +1662,16 @@ func install_probe() -> void:
 	_save_progress()
 	refresh_menu()
 
-func _save_progress() -> void:
+func _save_progress() -> Error:
 	if not persistence_enabled:
-		return
+		return OK
 	var save := ConfigFile.new()
 	save.set_value("progress", "snapshot", progression.snapshot())
 	save.set_value("world", "state", _capture_world_state())
-	save.save(SAVE_PATH)
+	var result := save.save(save_path)
+	if result != OK:
+		push_warning("Unable to save workshop progress to %s (error %s)." % [save_path,result])
+	return result
 
 func _capture_world_state() -> Dictionary:
 	return {
@@ -1692,7 +1697,7 @@ func _restore_world_state(state: Dictionary) -> void:
 
 func _load_progress() -> void:
 	var save := ConfigFile.new()
-	if save.load(SAVE_PATH) != OK:
+	if save.load(save_path) != OK:
 		return
 	var world_state: Variant = save.get_value("world", "state", {})
 	if world_state is Dictionary:
@@ -1721,7 +1726,7 @@ func _load_progress() -> void:
 		exit_door.position.y = 4.8
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
+	if is_instance_valid(player) and (what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED):
 		_save_progress()
 
 func prepare_menu_backdrop() -> void:
@@ -1734,15 +1739,34 @@ func prepare_menu_backdrop() -> void:
 	if layer:
 		layer.hide()
 
-func refresh_menu() -> void:
+func _inventory_layout_for_width(viewport_width: float) -> Dictionary:
+	var panel_width := clampf(viewport_width-32.0,220.0,780.0)
+	var columns := 5 if panel_width >= 560.0 else 4 if panel_width >= 340.0 else 3
+	return {"panel_width":panel_width,"columns":columns,"stack_inspection":panel_width < 460.0}
+
+func _on_viewport_size_changed() -> void:
+	if mode != "" and interface and interface.visible:
+		call_deferred("refresh_menu")
+
+func refresh_menu(viewport_size_override: Vector2 = Vector2.ZERO) -> void:
 	for child in menu.get_children():
 		menu.remove_child(child)
 		child.queue_free()
 	var panel_width := 420.0
+	var inventory_columns := 4
+	var stack_inspection := false
+	var viewport_size := viewport_size_override if viewport_size_override != Vector2.ZERO else get_viewport().get_visible_rect().size
 	if mode == "inventory":
-		panel_width = minf(780.0,maxf(340.0,get_viewport().get_visible_rect().size.x-40.0))
-	interface.offset_left = -panel_width
-	interface.offset_right = -20
+		var layout := _inventory_layout_for_width(viewport_size.x)
+		panel_width = float(layout["panel_width"])
+		inventory_columns = int(layout["columns"])
+		stack_inspection = bool(layout["stack_inspection"])
+	interface.offset_left = -panel_width-16.0
+	interface.offset_right = -16
+	var available_height := viewport_size.y
+	var vertical_half := minf(260.0,maxf(0.0,(available_height-32.0)*0.5))
+	interface.offset_top = -vertical_half
+	interface.offset_bottom = vertical_half
 	line("SATURN STATION / " + mode.to_upper())
 	match mode:
 		"generator_hall":
@@ -1753,7 +1777,7 @@ func refresh_menu() -> void:
 			line("EQUIPMENT STORAGE  ·  %d / 20 SLOTS" % progression.item_count())
 			var grid := GridContainer.new()
 			grid.name = "InventoryGrid"
-			grid.columns = 5 if panel_width >= 560.0 else 4
+			grid.columns = inventory_columns
 			grid.add_theme_constant_override("h_separation",5)
 			grid.add_theme_constant_override("v_separation",5)
 			menu.add_child(grid)
@@ -1761,7 +1785,8 @@ func refresh_menu() -> void:
 			for i in range(20):
 				var slot := Button.new()
 				slot.name = "InventorySlot%02d" % i
-				slot.custom_minimum_size = Vector2(68,48)
+				var slot_width := clampf((panel_width-32.0-float(inventory_columns-1)*5.0)/float(inventory_columns),54.0,68.0)
+				slot.custom_minimum_size = Vector2(slot_width,48)
 				if i < items.size():
 					var item_type: String = items[i]
 					slot.text = "%02d\n%s" % [i+1,item_type.capitalize().substr(0,8)]
@@ -1771,11 +1796,11 @@ func refresh_menu() -> void:
 					slot.text = "%02d\n—" % (i+1)
 					slot.disabled = true
 				grid.add_child(slot)
-			var inspection_row := HBoxContainer.new()
+			var inspection_row: BoxContainer = VBoxContainer.new() if stack_inspection else HBoxContainer.new()
 			inspection_row.name = "InventoryInspectionRow"
 			inspection_row.add_theme_constant_override("separation",12)
 			menu.add_child(inspection_row)
-			var item_preview := _make_inventory_preview(inventory_inspection,panel_width)
+			var item_preview := _make_inventory_preview(inventory_inspection,panel_width-32.0 if stack_inspection else panel_width)
 			inspection_row.add_child(item_preview)
 			var selected := PanelContainer.new()
 			selected.name = "InventoryInspection"

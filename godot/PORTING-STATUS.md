@@ -12,7 +12,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Industrial workshop overhead trays, exposed cable runs, wall returns and powered cabinets.
 - [x] Generator 04's monumental vessel, peripheral generator shells, multi-level galleries, connected descending stair route and isometric/perspective traversal.
 - [x] Door-triggered demo ending with a dancing MU-1 model, animated confetti, restart, credits and main-menu choices.
-- [x] Progress and world-state serialization, including MU-1 position/heading, remaining charge, and camera state, with periodic and pause/close saves.
+- [x] Progress and world-state serialization, including MU-1 position/heading, remaining charge, and camera state, with periodic and pause/close saves plus a file-backed save/reload regression.
 
 ## Remaining parity work
 
@@ -33,6 +33,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Port the loose manipulator recovery and equipment-mount flow: its model begins in the maintenance claw, disappears on recovery, enters storage, and must be fitted before operating the case or switch.
 - [x] Animate the recovered manipulator from the maintenance claw to MU-1 before storing it, with servo and recovery sounds.
 - [x] Add a 20-slot item grid with item descriptions and manipulator equip/stow controls.
+- [x] Reflow the item grid and inspection panel for narrow windows, including a stacked 320-pixel layout and resize-triggered refresh.
 - [x] Add crew belongings, sorted repair rejects, wall utility wiring and floor routes as linked, inspectable room details.
 - [x] Render the worker access card with a faded portrait, name and ETNA password when inspected.
 - [x] Add native UI click and typing sounds, terminal boot tones, and pickup chimes.

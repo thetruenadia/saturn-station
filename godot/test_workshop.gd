@@ -24,6 +24,10 @@ func run_workshop() -> void:
 	assert(workshop.hotbar_slots.size() == 5)
 	assert(workshop.ambient_player.playing)
 	assert((workshop.ambient_player.stream as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD)
+	var desktop_inventory_layout: Dictionary = workshop._inventory_layout_for_width(1280.0)
+	assert(desktop_inventory_layout["panel_width"] == 780.0 and desktop_inventory_layout["columns"] == 5)
+	var mobile_inventory_layout: Dictionary = workshop._inventory_layout_for_width(320.0)
+	assert(mobile_inventory_layout["panel_width"] == 288.0 and mobile_inventory_layout["columns"] == 3 and mobile_inventory_layout["stack_inspection"])
 	workshop.player.position = Vector3(3.5,0,-2.25)
 	workshop.visual.rotation.y = 1.1
 	workshop.charge = 42.0
@@ -47,6 +51,43 @@ func run_workshop() -> void:
 	workshop.player.position = Vector3.ZERO
 	workshop.charge = 60.0
 	workshop.yaw = PI / 4.0
+	workshop.pitch = 0.72
+	workshop.zoom = 15.0
+	workshop.isometric = true
+	workshop.update_camera()
+	var saved_path: String = workshop.save_path
+	var regression_path := "/private/tmp/saturn-station-godot-save-regression.cfg"
+	if FileAccess.file_exists(regression_path):
+		DirAccess.remove_absolute(regression_path)
+	workshop.save_path = regression_path
+	workshop.persistence_enabled = true
+	workshop.player.position = Vector3(4.25,0,-3.5)
+	workshop.visual.rotation.y = -0.7
+	workshop.charge = 37.0
+	workshop.yaw = 1.7
+	workshop.pitch = 0.44
+	workshop.zoom = 9.5
+	workshop.isometric = false
+	assert(workshop._save_progress() == OK)
+	workshop.player.position = Vector3.ZERO
+	workshop.visual.rotation.y = 0.0
+	workshop.charge = 60.0
+	workshop.yaw = PI/4.0
+	workshop.pitch = 0.72
+	workshop.zoom = 15.0
+	workshop.isometric = true
+	workshop._load_progress()
+	assert(is_equal_approx(workshop.player.position.x,4.25) and is_equal_approx(workshop.player.position.z,-3.5))
+	assert(is_equal_approx(workshop.charge,37.0) and is_equal_approx(workshop.visual.rotation.y,-0.7))
+	assert(is_equal_approx(workshop.yaw,1.7) and is_equal_approx(workshop.pitch,0.44) and is_equal_approx(workshop.zoom,9.5))
+	assert(not workshop.isometric)
+	workshop.persistence_enabled = false
+	workshop.save_path = saved_path
+	DirAccess.remove_absolute(regression_path)
+	workshop.player.position = Vector3.ZERO
+	workshop.visual.rotation.y = 0.0
+	workshop.charge = 60.0
+	workshop.yaw = PI/4.0
 	workshop.pitch = 0.72
 	workshop.zoom = 15.0
 	workshop.isometric = true
@@ -181,6 +222,12 @@ func run_workshop() -> void:
 	assert(item_preview.find_child("RotatingItemModel",true,false).get_child_count() > 2)
 	var item_inspection = workshop.menu.find_child("InventoryInspection",true,false)
 	assert(item_inspection.get_child(0).text.contains("Heavy gripper"))
+	workshop.refresh_menu(Vector2(320,640))
+	assert(workshop.menu.find_child("InventoryGrid",true,false).columns == 3)
+	assert(workshop.menu.find_child("InventoryInspectionRow",true,false) is VBoxContainer)
+	assert(is_equal_approx(workshop.interface.size.x,288.0))
+	workshop.refresh_menu(Vector2(1280,800))
+	assert(workshop.menu.find_child("InventoryGrid",true,false).columns == 5)
 	workshop.equip_or_stow_manipulator()
 	assert(workshop.progression.arm_equipped and workshop.recovered_arm.visible)
 	assert(workshop._interaction_hint("Service case") == "RELEASE SERVICE CASE")
