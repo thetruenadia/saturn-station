@@ -1,45 +1,21 @@
-# Saturn Station
+# Saturn Station — native Godot port
 
-An experimental 3D science-fiction exploration/adventure game set aboard a deteriorating industrial settlement orbiting Saturn.
+Open `godot/project.godot` in Godot 4.7 or newer and press F5. The Godot build now starts at a native main menu; the original browser game remains unchanged.
 
-Play as **MU-1**, a modular maintenance machine created to help the people living on the station. The present playable prototype is a self-contained workshop demo; the wider station, interchangeable systems and narrative are still in development.
+The current playable route covers the B-7 service bay through Generator 04. It includes a continuous Maker opening with a Y skip and direct handoff to gameplay, the workshop repair and fabrication sequence with components dragged into a fabrication tray, a native MU-1 robot with walking and service animations, a more connected industrial ceiling and wall system, persisted workshop progress, a native menu/settings/credits screen, the large Generator 04 gallery, continuous walkable stairs, isometric/perspective camera switching, and a demo ending with animated confetti and a miniature dancing MU-1. The workshop has a five-slot numbered quick inventory, a persistent movement/camera legend, a centered task directive, pickup notices, an inspectable staff card and ETNA access note, a cinematic observation window, connected wall wiring and floor route marks, and story details for equipment and crew belongings.
 
-## Play prototype 0.2
+Controls: WASD walk, E interact, I inventory, C maintenance bench, Q use a cell, V switch isometric/perspective, drag to orbit, scroll to zoom, R reset view, Esc close or pause. Generator 04 also accepts arrow-key movement; E returns through the upper service door or completes the demo at the lower gallery door.
 
-Serve the repository over HTTP (JavaScript modules require it):
+## Still being ported
 
-```sh
-python3 -m http.server 8876
-```
+This is a staged migration, not yet a feature-complete replacement. Richer component inspection and the browser build's full materials and prop interactions still need native Godot implementations. The original menu track loops only on the main menu with a saved toggle; it stops when a demo starts. The workshop has a quiet looping power-room hum, separate synthesized click/key/pickup cues, and terminal boot tones. The ambience is stopped on the menu backdrop, keeping the menu soundtrack separate. Terminal commands 1, 2 and 3 check the isolated link, seal the exit, and shut down auxiliary power. The observation window currently uses a procedural Enceladus stand-in; the terminal also has ETNA authentication, command and file sections, a persistent record-entry section, and probe-spec release. Locker recovery remains a simplified interface. Recipe components must be dragged into the fabrication tray, and the finished probe must then be dragged into MU-1's wrist socket.
 
-Visit **http://localhost:8876/** (redirects to `prototype-3d.html`). The 0.2 main menu is integrated into the game. Requires a modern WebGL browser and an internet connection for the Three.js CDN.
-
-**Controls:** WASD to move; drag the mouse to rotate the isometric camera; scroll to zoom; E to interact; I for inventory; Q to use a power cell; Escape to pause. Any first-person view can use its own appropriate mouse-look controls. For other controls follow the in-game prompts.
-
-## Project status
-
-- **Active:** prototype 0.2 — 3D workshop, Maker opening, equipment collection, power switching, ETNA terminal, main menu and local save slots.
-- **Archived:** prototype 0.1 — retained only for reference at [legacy/0.1/](legacy/0.1/). No new features should target it.
-- **Next:** end-to-end demo review and workshop art/animation polish, then more meaningful modular equipment and a second station area.
-- **Later:** an installable charging interface for powered charging ports (design undecided); wider infrastructure restoration and inhabited areas.
-
-See [ROADMAP.md](ROADMAP.md), [ASSET-STYLE-GUIDE.md](ASSET-STYLE-GUIDE.md), [OPENING.md](OPENING.md), [IMPROVEMENT-NOTES.md](IMPROVEMENT-NOTES.md) and [ASSET-CHANGES.md](ASSET-CHANGES.md).
-
-## Tests
+## Regression checks
 
 ```sh
-node --test tests/*.test.mjs
-node verify-systems.mjs
-node --check prototype-3d.js
-node --check maker-opening.js
+godot --headless --path godot --editor --quit
+godot --headless --path godot --script res://test_progression.gd
+godot --headless --path godot --script res://test_workshop.gd
+godot --headless --path godot --script res://test_generator_hall.gd
+godot --headless --path godot --script res://test_main_menu.gd
 ```
-
-Automated checks do not replace a full browser playthrough. The root `index.html` forwards to the active prototype so static hosting opens 0.2 by default.
-
-## Design decisions
-
-MU-1 is the canonical robot designation (SRV-09 is retired). Third-person movement is WASD with mouse camera rotation and wheel zoom; first-person mode may differ. Do not implement plug-in charging yet: it is reserved for a future installable modification.
-
-### Main menu music
-
-Main menu music: India Davies Nilsson. The track loops only while the menu is open and stops when starting or loading the demo. Playback is attempted automatically; if browser policy blocks it, normal menu interaction retries without a play prompt. A small speaker icon at the bottom right toggles menu music. The normalized MP3 is preferred, with PCM WAV fallback; the original AAC is retained. Hidden tabs pause playback.
