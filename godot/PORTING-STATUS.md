@@ -17,7 +17,8 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 ## Remaining parity work
 
 - [x] Port the continuous Maker opening, its skip behavior and handoff to gameplay.
-- [ ] Port menu-only music and ambient audio.
+- [x] Port the original menu track with an on/off setting and stop/reset when starting or continuing the demo.
+- [ ] Add ambient room audio.
 - [x] Port window inspection and its cinematic Enceladus view.
 - [x] Add terminal boot flow, ETNA password, commands/files sections and a saved record-entry section.
 - [x] Add a cinematic observation-window interaction, recoverable ETNA note and short narration at major workshop props.

@@ -7,11 +7,22 @@ var continue_button: Button
 var primary_panel: PanelContainer
 var settings_panel: PanelContainer
 var credits_panel: PanelContainer
+var music_player: AudioStreamPlayer
+var menu_music_enabled := true
 
 func _ready() -> void:
 	var backdrop = preload("res://workshop.tscn").instantiate()
 	add_child(backdrop)
 	backdrop.call("prepare_menu_backdrop")
+	music_player = AudioStreamPlayer.new()
+	music_player.name = "MenuOnlyMusic"
+	music_player.stream = load("res://assets/audio/main-menu.mp3")
+	if music_player.stream is AudioStreamMP3:
+		music_player.stream.loop = true
+	add_child(music_player)
+	menu_music_enabled = _load_music_enabled()
+	if menu_music_enabled:
+		music_player.play()
 	_build_interface()
 
 func _build_interface() -> void:
@@ -70,6 +81,11 @@ func _build_interface() -> void:
 	volume.value = _load_volume()
 	volume.value_changed.connect(_set_volume)
 	settings.add_child(volume)
+	var music := CheckButton.new()
+	music.text = "MENU MUSIC"
+	music.button_pressed = menu_music_enabled
+	music.toggled.connect(_set_music_enabled)
+	settings.add_child(music)
 	var view := CheckButton.new()
 	view.text = "Start in isometric view"
 	view.button_pressed = _load_isometric()
@@ -114,12 +130,14 @@ func _add_back_button(parent: VBoxContainer, panel: Control) -> void:
 	parent.add_child(back)
 
 func _start_new() -> void:
+	_stop_menu_music()
 	get_tree().set_meta("start_maker_opening", true)
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	get_tree().change_scene_to_file("res://workshop.tscn")
 
 func _continue_game() -> void:
+	_stop_menu_music()
 	get_tree().set_meta("start_maker_opening", false)
 	var save := ConfigFile.new()
 	if save.load(SAVE_PATH) == OK:
@@ -128,6 +146,28 @@ func _continue_game() -> void:
 			get_tree().change_scene_to_file("res://generator_hall.tscn")
 			return
 	get_tree().change_scene_to_file("res://workshop.tscn")
+
+func _stop_menu_music() -> void:
+	if music_player and music_player.playing:
+		music_player.stop()
+
+func _load_music_enabled() -> bool:
+	var prefs := ConfigFile.new()
+	if prefs.load(PREFS_PATH) != OK:
+		return true
+	return bool(prefs.get_value("sound", "menu_enabled", true))
+
+func _set_music_enabled(value: bool) -> void:
+	menu_music_enabled = value
+	if music_player:
+		if value:
+			music_player.play()
+		else:
+			music_player.stop()
+	var prefs := ConfigFile.new()
+	prefs.load(PREFS_PATH)
+	prefs.set_value("sound", "menu_enabled", value)
+	prefs.save(PREFS_PATH)
 
 func _load_volume() -> float:
 	var prefs := ConfigFile.new()
