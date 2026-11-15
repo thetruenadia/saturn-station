@@ -117,3 +117,32 @@ func use_exit() -> String:
 		return "Workshop complete."
 	door_open = true
 	return "Access probe engaged. Interact again to exit."
+
+func snapshot() -> Dictionary:
+	return {
+		"inventory": inventory.duplicate(true), "lockers": lockers.duplicate(true),
+		"staged": staged.duplicate(true), "cells": cells, "case_open": case_open,
+		"cell_taken": cell_taken, "powered": powered, "authenticated": authenticated,
+		"spec_released": spec_released, "spec_unlocked": spec_unlocked,
+		"claw_salvaged": claw_salvaged, "probe_crafted": probe_crafted,
+		"probe_installed": probe_installed, "install_placed": install_placed,
+		"door_open": door_open, "finished": finished
+	}
+
+func restore(data: Dictionary) -> void:
+	inventory = data.get("inventory", {}).duplicate(true)
+	lockers = data.get("lockers", [{"card":1,"camera":1,"tin":1},{"motor":1,"plate":1,"wire":1},{"gear":1,"wire":1},{"wire":1,"plate":1}]).duplicate(true)
+	staged = data.get("staged", {}).duplicate(true)
+	cells = int(data.get("cells", 0))
+	case_open = bool(data.get("case_open", false))
+	cell_taken = bool(data.get("cell_taken", false))
+	powered = bool(data.get("powered", false))
+	authenticated = bool(data.get("authenticated", false))
+	spec_released = bool(data.get("spec_released", false))
+	spec_unlocked = bool(data.get("spec_unlocked", false))
+	claw_salvaged = bool(data.get("claw_salvaged", false))
+	probe_crafted = bool(data.get("probe_crafted", false))
+	probe_installed = bool(data.get("probe_installed", false))
+	install_placed = bool(data.get("install_placed", false))
+	door_open = bool(data.get("door_open", false))
+	finished = bool(data.get("finished", false))

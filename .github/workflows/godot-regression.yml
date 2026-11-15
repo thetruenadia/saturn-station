@@ -11,7 +11,13 @@ jobs:
           use-dotnet: false
       - name: Parse the native project
         run: godot --headless --path godot --editor --quit
-      - name: Check progression rules
+      - name: Check progression rules and save snapshots
         run: godot --headless --path godot --script res://test_progression.gd
       - name: Run workshop scene progression
         run: godot --headless --path godot --script res://test_workshop.gd
+      - name: Run Generator 04 scene and stair traversal
+        run: godot --headless --path godot --script res://test_generator_hall.gd
+      - name: Run main menu and settings scene
+        run: godot --headless --path godot --script res://test_main_menu.gd
+      - name: Launch the configured main scene
+        run: godot --headless --path godot --quit-after 8

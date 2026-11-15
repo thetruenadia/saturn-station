@@ -7,10 +7,21 @@ func _initialize() -> void:
 
 func run_workshop() -> void:
 	workshop = load("res://workshop.tscn").instantiate()
+	workshop.persistence_enabled = false
 	root.add_child(workshop)
 	await process_frame
 	assert(workshop.player != null)
 	assert(workshop.camera != null and workshop.camera.current)
+	var view_key := InputEventKey.new()
+	view_key.pressed = true
+	view_key.physical_keycode = KEY_V
+	workshop._unhandled_input(view_key)
+	workshop.update_camera()
+	assert(workshop.camera.projection == Camera3D.PROJECTION_PERSPECTIVE)
+	view_key.pressed = true
+	workshop._unhandled_input(view_key)
+	workshop.update_camera()
+	assert(workshop.camera.projection == Camera3D.PROJECTION_ORTHOGONAL)
 	assert(workshop.claw.visible)
 	assert(not workshop.probe_visual.visible)
 	assert(workshop.visual.get_node("Body/CastChassis/LowCastHull") != null)
@@ -66,8 +77,8 @@ func run_workshop() -> void:
 	workshop.interact()
 	assert(workshop.progression.door_open)
 	workshop.interact()
-	assert(workshop.progression.finished)
-	print("Workshop scene progression passed end to end")
+	assert(workshop.progression.finished and workshop.mode == "generator_hall")
+	print("Workshop scene progression through the Generator 04 doorway passed")
 	workshop.queue_free()
 	await process_frame
 	quit()

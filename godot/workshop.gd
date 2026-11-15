@@ -27,6 +27,9 @@ var exit_door: MeshInstance3D
 var probe_visual: Node3D
 var message := ""
 var dragging := false
+var isometric := true
+var persistence_enabled := true
+const SAVE_PATH := "user://saturn-station.save"
 var room := [
 	["Service case", -5.0, 2.0, 1.0, 0.73],
 	["Auxiliary power", -10.8, -8.5, 1.15, 0.55],
@@ -71,6 +74,9 @@ func block(parent: Node3D, pos: Vector3, size: Vector3, hex: String, solid := fa
 	return mesh
 
 func _ready() -> void:
+	var preferences := ConfigFile.new()
+	if preferences.load("user://saturn-station-prefs.cfg") == OK:
+		isometric = bool(preferences.get_value("view", "isometric", true))
 	var env := WorldEnvironment.new()
 	var atmosphere := Environment.new()
 	atmosphere.background_mode = Environment.BG_COLOR
@@ -142,6 +148,7 @@ func _ready() -> void:
 	camera.current = true
 	add_child(camera)
 	var layer := CanvasLayer.new()
+	layer.name = "WorkshopHUD"
 	add_child(layer)
 	hud = Label.new()
 	layer.add_child(hud)
@@ -152,14 +159,24 @@ func _ready() -> void:
 	prompt.position = Vector2(24,110)
 	prompt.add_theme_font_size_override("font_size",17)
 	setup_progression(layer)
+	if persistence_enabled:
+		_load_progress()
 	update_camera()
 
 func update_camera() -> void:
 	var focus := player.position + Vector3(0,1.3,0)
-	var offset := Vector3(sin(yaw)*cos(pitch),sin(pitch),cos(yaw)*cos(pitch))*20.0
-	camera.position = focus + offset
-	camera.look_at(focus)
-	camera.size = zoom
+	if isometric:
+		camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+		camera.size = zoom
+		var offset := Vector3(sin(yaw)*cos(pitch),sin(pitch),cos(yaw)*cos(pitch))*20.0
+		camera.position = focus + offset
+		camera.look_at(focus)
+	else:
+		camera.projection = Camera3D.PROJECTION_PERSPECTIVE
+		camera.fov = 65.0
+		camera.position = player.position + Vector3(0,1.55,0)
+		var look_direction := Vector3(-sin(yaw)*cos(pitch),sin(pitch),-cos(yaw)*cos(pitch))
+		camera.look_at(camera.position + look_direction)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
@@ -174,6 +191,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		pitch = clampf(pitch+event.relative.y*0.005,0.35,1.05)
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
+			KEY_V, KEY_SECTION:
+				isometric = not isometric
+				update_camera()
 			KEY_ESCAPE:
 				if mode != "":
 					close_menu()
@@ -222,7 +242,7 @@ func _physics_process(delta: float) -> void:
 	nearby = nearest_target()
 	update_camera()
 	hud.text = "SATURN STATION  /  GODOT FOUNDATION\nMU-1   |   CHARGE %03d%%   |   GRID %s" % [int(ceil(charge)), "ONLINE" if powered else "OFFLINE"]
-	prompt.text = "WASD move  /  Drag orbit  /  Wheel zoom  /  R reset  /  I inventory  /  Esc pause"
+	prompt.text = "WASD move  /  Drag orbit  /  Wheel zoom  /  V isometric  /  R reset  /  I inventory  /  Esc pause"
 	if paused:
 		prompt.text = "PAUSED — Esc to resume"
 	elif mode != "":
@@ -284,12 +304,14 @@ func interact() -> void:
 	match nearby:
 		"Service case":
 			message = progression.use_case()
+			_save_progress()
 		"Auxiliary power":
 			powered = true
 			progression.powered = true
 			power_lamp.material_override = material("72ff92",true)
 			amber_light.light_color = Color("d4b56d")
 			message = "Auxiliary grid online."
+			_save_progress()
 		"ETNA terminal":
 			if powered:
 				open_menu("terminal")
@@ -302,14 +324,19 @@ func interact() -> void:
 				claw.hide()
 				visual.call("set_recovered_arm", true)
 				message = "Claw dismantled: gears, chip, wire."
+				_save_progress()
 		"Specification shard":
 			if progression.collect_spec():
 				shard.hide()
 				message = "Fabrication specification recovered."
+				_save_progress()
 		"Maintenance exit":
 			message = progression.use_exit()
 			if progression.door_open:
 				exit_door.position.y = 4.8
+				_save_progress()
+			if progression.finished:
+				open_menu("generator_hall")
 		_:
 			if nearby.begins_with("Locker "):
 				open_menu(nearby)
@@ -342,33 +369,77 @@ func action(label: String, callback: Callable, enabled := true) -> void:
 
 func load_part(type: String) -> void:
 	progression.stage(type)
+	_save_progress()
 	refresh_menu()
 
 func take_part(index: int, type: String) -> void:
 	progression.take(index,type)
+	_save_progress()
 	refresh_menu()
 
 func authenticate(password: LineEdit) -> void:
 	message = progression.login(password.text)
+	_save_progress()
 	refresh_menu()
 
 func export_spec() -> void:
 	if progression.release_spec():
 		shard.show()
+	_save_progress()
 	close_menu()
 
 func fabricate_probe() -> void:
 	progression.fabricate(at_bench())
+	_save_progress()
 	refresh_menu()
 
 func place_probe() -> void:
 	progression.install_placed = true
+	_save_progress()
 	refresh_menu()
 
 func install_probe() -> void:
 	if progression.install(at_bench()):
 		visual.call("set_probe_installed", true)
+	_save_progress()
 	refresh_menu()
+
+func _save_progress() -> void:
+	if not persistence_enabled:
+		return
+	var save := ConfigFile.new()
+	save.set_value("progress", "snapshot", progression.snapshot())
+	save.save(SAVE_PATH)
+
+func _load_progress() -> void:
+	var save := ConfigFile.new()
+	if save.load(SAVE_PATH) != OK:
+		return
+	var snapshot: Variant = save.get_value("progress", "snapshot", {})
+	if not snapshot is Dictionary:
+		return
+	progression.restore(snapshot)
+	powered = progression.powered
+	if powered:
+		power_lamp.material_override = material("72ff92", true)
+		amber_light.light_color = Color("d4b56d")
+	if progression.claw_salvaged:
+		claw.hide()
+		visual.call("set_recovered_arm", true)
+	if progression.spec_released:
+		shard.show()
+	if progression.probe_installed:
+		visual.call("set_probe_installed", true)
+	if progression.door_open:
+		exit_door.position.y = 4.8
+
+func prepare_menu_backdrop() -> void:
+	paused = true
+	set_process(false)
+	set_physics_process(false)
+	var layer := get_node_or_null("WorkshopHUD") as CanvasLayer
+	if layer:
+		layer.hide()
 
 func refresh_menu() -> void:
 	for child in menu.get_children():
@@ -376,6 +447,10 @@ func refresh_menu() -> void:
 		child.queue_free()
 	line("SATURN STATION / " + mode.to_upper())
 	match mode:
+		"generator_hall":
+			line("Beyond this pressure door: Generator 04.")
+			line("One of several machines that once kept a city alive.")
+			action("Enter Generator 04", enter_generator_hall)
 		"inventory":
 			for item in progression.inventory:
 				line(item.capitalize() + " × " + str(progression.inventory[item]))
@@ -416,3 +491,6 @@ func refresh_menu() -> void:
 					action("Recover "+item.capitalize(),take_part.bind(index,item),progression.lockers[index].get(item,0)>0)
 	line(message)
 	action("Close",close_menu)
+
+func enter_generator_hall() -> void:
+	get_tree().change_scene_to_file("res://generator_hall.tscn")

@@ -1,21 +1,21 @@
-# Native Godot port
+# Saturn Station — native Godot port
 
-Open `godot/project.godot` in Godot 4.3+ and run the main scene (F6) or project (F5).
+Open `godot/project.godot` in Godot 4.7 or newer and press F5. The Godot build now starts at a native main menu; the original browser game remains unchanged.
 
-WASD moves relative to the camera, drag to orbit, scroll to zoom, R resets, E interacts, I opens inventory, C uses the nearby maintenance station, Q consumes a fuel cell, and Esc closes or pauses.
+The current playable route covers the B-7 service bay through Generator 04. It includes the workshop repair and fabrication sequence, a native MU-1 robot with walking and service animations, a more connected industrial ceiling and wall system, persisted workshop progress, a native menu/settings/credits screen, the large Generator 04 gallery, continuous walkable stairs, isometric/perspective camera switching, and a demo ending with animated confetti and a miniature dancing MU-1.
 
-The native workshop implements the browser 0.2 progression: auxiliary power, case and cell, locker recovery, claw salvage, ETNA login, physical spec shard, manual component staging, fabrication, separate wrist placement and installation, and exit. The reusable MU-1 scene builds its asymmetrical chassis, folded maintenance arm, recoverable yellow service arm, articulated legs and probe from native meshes. Its gait and service reach animate in-game. The workshop atmosphere scene adds overhead cable trays, exposed hanging umbilicals, wall pipe returns and a bank of powered cabinets.
+Controls: WASD walk, E interact, I inventory, C maintenance bench, Q use a cell, V switch isometric/perspective, drag to orbit, scroll to zoom, R reset view, Esc close or pause. Generator 04 also accepts arrow-key movement; E returns through the upper service door or completes the demo at the lower gallery door.
 
-Some migration gaps remain: locker contents use fixed guaranteed drops and are collected through interface buttons; card inspection is text-only; fabrication confirmation is a click rather than hold. The opening, menu, audio, saves, observation, first-person mode and full asset replacement are not yet ported. The original browser game remains unchanged.
+## Still being ported
 
-Run the progression model test:
+This is a staged migration, not yet a feature-complete replacement. The Maker opening cinematic, menu music and game sound effects, window observation sequence, full terminal command/file/record browser, tutorial/directive polish, richer item inspection and pickup feedback, and the browser build's full materials and prop interactions still need native Godot implementations. The terminal currently covers ETNA authentication and probe specification release. Workshop salvage remains a guaranteed recovery interface, rather than individually manipulable 3D components.
+
+## Regression checks
 
 ```sh
+godot --headless --path godot --editor --quit
 godot --headless --path godot --script res://test_progression.gd
-```
-
-Run the end-to-end workshop scene test:
-
-```sh
 godot --headless --path godot --script res://test_workshop.gd
+godot --headless --path godot --script res://test_generator_hall.gd
+godot --headless --path godot --script res://test_main_menu.gd
 ```
