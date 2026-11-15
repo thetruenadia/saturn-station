@@ -824,7 +824,7 @@ func _physics_process(delta: float) -> void:
 	elif progression.finished:
 		prompt.text = "WORKSHOP COMPLETE — restart the scene to replay."
 	elif nearby != "":
-		prompt.text = "E — " + nearby
+		prompt.text = "E — " + _interaction_hint(nearby)
 	prompt.text += "\n" + message + "\nCells: " + str(progression.cells) + "  |  Q use cell"
 	directive.text = _current_directive()
 	directive.visible = mode == "" and not paused and not opening_active
@@ -992,6 +992,43 @@ func nearest_target() -> String:
 			best = distance
 			result = key
 	return result
+
+func _interaction_hint(target_name: String) -> String:
+	match target_name:
+		"Service case":
+			if not progression.arm_equipped:
+				return "MANIPULATOR REQUIRED"
+			if not progression.case_open:
+				return "RELEASE SERVICE CASE"
+			if not progression.cell_taken:
+				return "RECOVER POWER CELL"
+			return "CASE EMPTY"
+		"Auxiliary power":
+			if not progression.arm_equipped:
+				return "MANIPULATOR REQUIRED"
+			return "POWER ONLINE" if powered else "RESTORE AUXILIARY POWER"
+		"ETNA terminal":
+			return "OPEN CONTROL TERMINAL" if powered else "POWER REQUIRED"
+		"Maintenance station":
+			return "OPEN FABRICATION BENCH"
+		"Lock-service manipulator":
+			return "RECOVER MANIPULATOR"
+		"Specification shard":
+			return "RECOVER PROBE SPECIFICATION"
+		"Maintenance exit":
+			if progression.door_open:
+				return "PASS THROUGH OPEN PRESSURE DOOR"
+			if not powered:
+				return "RESTORE POWER FIRST"
+			if not progression.probe_installed:
+				return "ACCESS PROBE REQUIRED"
+			return "ENGAGE EXIT SOCKET"
+		"Observation window":
+			return "VIEW ENCELADUS"
+		"Handwritten note":
+			return "RECOVER ETNA ACCESS NOTE"
+		_:
+			return "INSPECT " + target_name.to_upper()
 
 func interact() -> void:
 	match nearby:

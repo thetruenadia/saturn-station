@@ -16,6 +16,8 @@ func run_workshop() -> void:
 	assert(workshop.hotbar_slots.size() == 5)
 	assert(workshop.ambient_player.playing)
 	assert((workshop.ambient_player.stream as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD)
+	assert(workshop._interaction_hint("Service case") == "MANIPULATOR REQUIRED")
+	assert(workshop._interaction_hint("Observation window") == "VIEW ENCELADUS")
 	var view_key := InputEventKey.new()
 	view_key.pressed = true
 	view_key.physical_keycode = KEY_V
@@ -105,6 +107,7 @@ func run_workshop() -> void:
 	assert(item_inspection.get_child(0).text.contains("Heavy gripper"))
 	workshop.equip_or_stow_manipulator()
 	assert(workshop.progression.arm_equipped and workshop.recovered_arm.visible)
+	assert(workshop._interaction_hint("Service case") == "RELEASE SERVICE CASE")
 	assert(workshop._hotbar_items().has("Manipulator ×1"))
 	workshop.equip_or_stow_manipulator()
 	assert(not workshop.progression.arm_equipped and not workshop.recovered_arm.visible)
@@ -113,6 +116,7 @@ func run_workshop() -> void:
 	workshop.close_menu()
 	workshop.nearby = "Service case"
 	workshop.interact()
+	assert(workshop._interaction_hint("Service case") == "RECOVER POWER CELL")
 	workshop.interact()
 	assert(workshop.progression.cells == 1)
 	assert(workshop.notice.visible and workshop.notice.text.contains("POWER CELL"))
