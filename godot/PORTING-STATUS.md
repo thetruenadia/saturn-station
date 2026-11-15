@@ -23,8 +23,10 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Add terminal boot flow, ETNA password, commands/files sections and a saved record-entry section.
 - [x] Add a cinematic observation-window interaction, recoverable ETNA note and short narration at major workshop props.
 - [x] Add a centered top-screen task directive plus pickup and power-restored notices.
+- [x] Keep a persistent, concise movement and camera control legend on the gameplay screen.
 - [x] Render the worker access card with a faded portrait, name and ETNA password when inspected.
 - [x] Add native UI click and typing sounds, terminal boot tones, and pickup chimes.
+- [x] Require manually dragging recipe components into the fabrication tray before crafting.
 - [ ] Expand the file archive to match the browser's full contents.
 - [ ] Match movement and probe-install guidance, richer component inspection and remaining pickup feedback to the browser game's current clarity work.
 - [ ] Port the full interactive prop/narration coverage, including room storytelling and the remaining functional objects.

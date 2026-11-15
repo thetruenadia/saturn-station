@@ -1,10 +1,31 @@
 extends Node3D
 # First native greybox: room-layout.js coordinates, prototype-3d.js palette and controls.
+class ComponentDragButton extends Button:
+	var part_type := ""
+	func _get_drag_data(_at_position: Vector2) -> Variant:
+		var preview := Label.new()
+		preview.text = part_type.to_upper()
+		preview.add_theme_color_override("font_color",Color("e3c985"))
+		set_drag_preview(preview)
+		return {"part_type":part_type}
+
+class FabricationTray extends PanelContainer:
+	var host
+	func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
+		if host == null or not data is Dictionary:
+			return false
+		var part_type := str(data.get("part_type",""))
+		return host.progression.can_stage(part_type)
+	func _drop_data(_at_position: Vector2, data: Variant) -> void:
+		if _can_drop_data(_at_position,data):
+			host.load_part(str(data.get("part_type","")))
+
 var player: CharacterBody3D
 var visual: Node3D
 var camera: Camera3D
 var hud: Label
 var prompt: Label
+var controls_hint: Label
 var power_lamp: MeshInstance3D
 var amber_light: OmniLight3D
 var yaw := PI / 4.0
@@ -18,6 +39,7 @@ var near_generator := false
 var progression = preload("res://progression.gd").new()
 var interface: PanelContainer
 var menu: VBoxContainer
+var fabrication_tray: FabricationTray
 var mode := ""
 var nearby := ""
 var targets: Dictionary = {}
@@ -212,6 +234,14 @@ func _ready() -> void:
 	layer.add_child(prompt)
 	prompt.position = Vector2(24,110)
 	prompt.add_theme_font_size_override("font_size",17)
+	controls_hint = Label.new()
+	layer.add_child(controls_hint)
+	controls_hint.text = "WASD MOVE  ·  DRAG LOOK  ·  WHEEL ZOOM\nE INTERACT  ·  V VIEW  ·  I INVENTORY  ·  Q POWER CELL"
+	controls_hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	controls_hint.position = Vector2(24,-72)
+	controls_hint.size = Vector2(540,58)
+	controls_hint.add_theme_font_size_override("font_size",15)
+	controls_hint.add_theme_color_override("font_color",Color("c4c6b6"))
 	directive = Label.new()
 	layer.add_child(directive)
 	directive.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -344,6 +374,7 @@ func start_maker_opening() -> void:
 		hud.hide()
 		prompt.hide()
 		directive.hide()
+		controls_hint.hide()
 	opening_layer = CanvasLayer.new()
 	opening_layer.layer = 8
 	add_child(opening_layer)
@@ -465,6 +496,7 @@ func _finish_maker_opening() -> void:
 		hud.show()
 		prompt.show()
 		directive.show()
+		controls_hint.show()
 	update_camera()
 
 func _build_observation_port() -> void:
@@ -647,6 +679,7 @@ func _physics_process(delta: float) -> void:
 	prompt.text += "\n" + message + "\nCells: " + str(progression.cells) + "  |  Q use cell"
 	directive.text = _current_directive()
 	directive.visible = mode == "" and not paused and not opening_active
+	controls_hint.visible = not opening_active
 
 func _current_directive() -> String:
 	if not powered:
@@ -1117,10 +1150,29 @@ func refresh_menu() -> void:
 				line("Specification required.")
 			else:
 				for type in progression.RECIPE:
-					line("%s   %s / %s staged   (%s owned)" % [type.capitalize(),progression.staged.get(type,0),progression.RECIPE[type],progression.inventory.get(type,0)])
-					action("Load "+type,load_part.bind(type),not progression.probe_crafted and progression.can_stage(type))
+					var part_button := ComponentDragButton.new()
+					part_button.part_type = type
+					part_button.text = "GRAB  %s  ·  %d / %d" % [type.to_upper(),progression.staged.get(type,0),progression.RECIPE[type]]
+					part_button.tooltip_text = "Drag this component into the fabrication tray."
+					part_button.disabled = progression.probe_crafted or not progression.can_stage(type)
+					menu.add_child(part_button)
+				fabrication_tray = FabricationTray.new()
+				fabrication_tray.name = "FabricationTray"
+				fabrication_tray.host = self
+				fabrication_tray.custom_minimum_size = Vector2(0,92)
+				menu.add_child(fabrication_tray)
+				var tray_label := Label.new()
+				tray_label.text = "FABRICATION TRAY\nDROP COMPONENTS HERE"
+				tray_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				tray_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+				tray_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+				fabrication_tray.add_child(tray_label)
+				line("Staged: " + str(progression.staged))
 				action("Fabricate access probe",fabricate_probe,progression.can_fabricate(at_bench()))
 				if progression.probe_crafted and not progression.probe_installed:
+					line("INSTALLATION GUIDE")
+					line("1 · Seat the access probe in MU-1's open wrist socket.")
+					line("2 · Confirm the fit only after the probe is seated.")
 					action("Place probe in wrist slot",place_probe,powered and at_bench())
 					action("Confirm installation",install_probe,progression.install_placed and powered and at_bench())
 				if progression.probe_installed:

@@ -12,6 +12,7 @@ func run_workshop() -> void:
 	await process_frame
 	assert(workshop.player != null)
 	assert(workshop.camera != null and workshop.camera.current)
+	assert(workshop.controls_hint.text.contains("WASD MOVE"))
 	var view_key := InputEventKey.new()
 	view_key.pressed = true
 	view_key.physical_keycode = KEY_V
@@ -41,6 +42,7 @@ func run_workshop() -> void:
 	skip_key.physical_keycode = KEY_Y
 	workshop._unhandled_input(skip_key)
 	assert(not workshop.opening_active and workshop.visual.visible)
+	assert(workshop.controls_hint.visible)
 	workshop.nearby = "Observation window"
 	workshop.interact()
 	assert(workshop.observation_active and workshop.observation_prompt.visible)
@@ -122,9 +124,13 @@ func run_workshop() -> void:
 
 	workshop.player.position = Vector3(-9,0,2.2)
 	workshop.open_menu("bench")
+	var tray = workshop.menu.find_child("FabricationTray",true,false)
+	assert(tray is PanelContainer)
 	for type in workshop.progression.RECIPE:
 		for i in range(workshop.progression.RECIPE[type]):
-			workshop.load_part(type)
+			assert(tray._can_drop_data(Vector2.ZERO,{"part_type":type}))
+			tray._drop_data(Vector2.ZERO,{"part_type":type})
+			tray = workshop.menu.find_child("FabricationTray",true,false)
 	assert(workshop.progression.can_fabricate(true))
 	workshop.fabricate_probe()
 	assert(workshop.progression.probe_crafted and not workshop.progression.probe_installed)
