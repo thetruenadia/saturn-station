@@ -52,6 +52,7 @@ var hotbar_labels: Array[Label] = []
 var hotbar_selected := -1
 var power_lamp: MeshInstance3D
 var amber_light: OmniLight3D
+var infrastructure: Node3D
 var yaw := PI / 4.0
 var pitch := 0.72
 var zoom := 15.0
@@ -266,7 +267,7 @@ func _ready() -> void:
 		block(self, Vector3(x,0.0,0), Vector3(0.025,0.025,20), "35382f")
 	for z in range(-10,11,2):
 		block(self, Vector3(0,0.0,z), Vector3(26,0.025,0.025), "35382f")
-	var infrastructure := preload("res://workshop_atmosphere.tscn").instantiate()
+	infrastructure = preload("res://workshop_atmosphere.tscn").instantiate()
 	infrastructure.name = "ExposedStationInfrastructure"
 	add_child(infrastructure)
 	for item in room:
@@ -366,6 +367,7 @@ func _ready() -> void:
 	_build_pause_screen(layer)
 	if persistence_enabled:
 		_load_progress()
+	infrastructure.call("set_power_state",powered)
 	update_camera()
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
 	if get_tree().has_meta("start_maker_opening") and bool(get_tree().get_meta("start_maker_opening")):
@@ -1358,6 +1360,7 @@ func interact() -> void:
 				return
 			powered = true
 			progression.powered = true
+			infrastructure.call("set_power_state",true)
 			power_lamp.material_override = material("72ff92",true)
 			amber_light.light_color = Color("d4b56d")
 			message = "Auxiliary grid online."
@@ -1607,6 +1610,7 @@ func run_terminal_command(command: String) -> void:
 		"3":
 			powered = false
 			progression.powered = false
+			infrastructure.call("set_power_state",false)
 			progression.authenticated = false
 			terminal_booted = false
 			power_lamp.material_override = material("70412a")
@@ -1710,6 +1714,7 @@ func _load_progress() -> void:
 	if progression.note_taken:
 		note_visual.hide()
 	if powered:
+		infrastructure.call("set_power_state",true)
 		power_lamp.material_override = material("72ff92", true)
 		amber_light.light_color = Color("d4b56d")
 	if progression.claw_salvaged:

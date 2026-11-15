@@ -24,6 +24,15 @@ func run_workshop() -> void:
 	assert(workshop.hotbar_slots.size() == 5)
 	assert(workshop.ambient_player.playing)
 	assert((workshop.ambient_player.stream as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD)
+	var atmosphere = workshop.infrastructure
+	var work_lights: Array = atmosphere.get("work_fixture_lights")
+	var emergency_lights: Array = atmosphere.get("emergency_lights")
+	assert(work_lights.size() == 6 and emergency_lights.size() == 6)
+	assert(not atmosphere.get("powered"))
+	for light in work_lights:
+		assert(is_zero_approx(light.light_energy))
+	for light in emergency_lights:
+		assert(light.light_energy > 0.0 and absf(light.position.x) > 13.0)
 	var desktop_inventory_layout: Dictionary = workshop._inventory_layout_for_width(1280.0)
 	assert(desktop_inventory_layout["panel_width"] == 780.0 and desktop_inventory_layout["columns"] == 5)
 	var mobile_inventory_layout: Dictionary = workshop._inventory_layout_for_width(320.0)
@@ -246,6 +255,10 @@ func run_workshop() -> void:
 	approach_target("Auxiliary power")
 	workshop.interact()
 	assert(workshop.powered and workshop.progression.powered)
+	assert(atmosphere.get("powered") and is_zero_approx(work_lights[0].light_energy))
+	await create_timer(1.9).timeout
+	for light in work_lights:
+		assert(light.light_energy > 0.0)
 	assert(workshop._current_directive().contains("ACCESS NOTE"))
 
 	# Recover the guaranteed recipe drops and the access card through the same
@@ -327,6 +340,11 @@ func run_workshop() -> void:
 	workshop.progression.authenticated = true
 	workshop.run_terminal_command("3")
 	assert(not workshop.powered and not workshop.progression.powered and workshop.mode == "")
+	assert(not atmosphere.get("powered"))
+	for light in work_lights:
+		assert(is_zero_approx(light.light_energy))
+	for light in emergency_lights:
+		assert(light.light_energy > 0.5)
 	workshop.charge = 0.0
 	workshop._physics_process(0.01)
 	assert(workshop.death_active and workshop.death_overlay.visible)

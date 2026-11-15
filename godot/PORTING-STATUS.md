@@ -10,6 +10,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Native screen panels for inventory, authentication, and recipe staging.
 - [x] Native MU-1 meshes, recoverable arm, movement gait, servicing reach, and probe state.
 - [x] Industrial workshop overhead trays, exposed cable runs, wall returns and powered cabinets.
+- [x] Stage workshop power-up lighting: wall-mounted emergency beacons dim as overhead fixtures flicker on in sequence; auxiliary shutdown restores emergency lighting.
 - [x] Generator 04's monumental vessel, peripheral generator shells, multi-level galleries, connected descending stair route and isometric/perspective traversal.
 - [x] Door-triggered demo ending with a dancing MU-1 model, animated confetti, restart, credits and main-menu choices.
 - [x] Progress and world-state serialization, including MU-1 position/heading, remaining charge, and camera state, with periodic and pause/close saves plus a file-backed save/reload regression.

@@ -3,11 +3,109 @@ extends Node3D
 ## The exposed cable looms echo the observatory machinery reference while
 ## keeping the work floor, lockers, and service routes open.
 
+var work_fixture_lights: Array[OmniLight3D] = []
+var work_fixture_emitters: Array[MeshInstance3D] = []
+var emergency_lights: Array[OmniLight3D] = []
+var emergency_emitters: Array[MeshInstance3D] = []
+var powered := false
+var ignition_elapsed := 0.0
+var ignition_active := false
+
 func _ready() -> void:
 	_add_ceiling_trays()
 	_add_hanging_umbilicals()
 	_add_wall_pipework()
 	_add_distribution_cabinets()
+	_add_lighting_fixtures()
+	set_power_state(false)
+
+func _process(delta: float) -> void:
+	if not ignition_active:
+		return
+	ignition_elapsed += delta
+	var complete := true
+	for index in range(work_fixture_lights.size()):
+		var elapsed := ignition_elapsed-float(index)*0.18
+		var level := 0.0
+		if elapsed >= 0.0:
+			if elapsed < 0.16:
+				level = 0.65
+			elif elapsed < 0.38:
+				level = 0.08
+			elif elapsed < 0.65:
+				level = 0.85
+			elif elapsed < 0.82:
+				level = 0.35
+			else:
+				level = minf(1.0,0.6+(elapsed-0.82)*2.0)
+		if level < 1.0:
+			complete = false
+		work_fixture_lights[index].light_energy = 2.1*level
+		var emitter_material := work_fixture_emitters[index].material_override as StandardMaterial3D
+		emitter_material.emission_energy_multiplier = 3.5*level
+	if complete:
+		ignition_active = false
+
+func set_power_state(value: bool) -> void:
+	powered = value
+	ignition_elapsed = 0.0
+	ignition_active = value
+	for index in range(work_fixture_lights.size()):
+		work_fixture_lights[index].light_energy = 0.0
+		var emitter_material := work_fixture_emitters[index].material_override as StandardMaterial3D
+		emitter_material.emission_energy_multiplier = 0.0
+	for index in range(emergency_lights.size()):
+		emergency_lights[index].light_energy = 0.08 if value else 0.58
+		var emitter_material := emergency_emitters[index].material_override as StandardMaterial3D
+		emitter_material.emission_energy_multiplier = 0.35 if value else 2.4
+
+func _add_lighting_fixtures() -> void:
+	var fixture_positions: Array[Vector3] = [Vector3(-9,4.5,6),Vector3(6,4.7,5),Vector3(-7,4.7,-4),Vector3(5,4.6,-7),Vector3(11.4,4,-9.5),Vector3(0,5,-1)]
+	var fixture_colors: Array[Color] = [Color("ffd6a0"),Color("ffd6a0"),Color("ffd6a0"),Color("c5e5e8"),Color("e9edcc"),Color("e4dfbd")]
+	for index in range(fixture_positions.size()):
+		var position := fixture_positions[index]
+		for side in [-1,1]:
+			_pipe(self,"LightFixtureSuspension",Vector3(position.x+float(side)*0.55,5.9,position.z),Vector3(position.x+float(side)*0.55,position.y,position.z),0.022,Color("676356"))
+		_box(self,"IndustrialLightHousing",position,Vector3(1.55,0.18,0.52),Color("383c35"))
+		var emitter := _box(self,"WorkLightEmitter",position+Vector3(0,-0.105,0),Vector3(1.28,0.045,0.34),fixture_colors[index])
+		var emitter_material := StandardMaterial3D.new()
+		emitter_material.albedo_color = fixture_colors[index]
+		emitter_material.emission_enabled = true
+		emitter_material.emission = fixture_colors[index]
+		emitter_material.emission_energy_multiplier = 0.0
+		emitter.material_override = emitter_material
+		var light := OmniLight3D.new()
+		light.name = "StagedWorkLight_%02d" % index
+		light.position = position+Vector3(0,-0.35,0)
+		light.light_color = fixture_colors[index]
+		light.omni_range = 11.0
+		light.light_energy = 0.0
+		light.shadow_enabled = false
+		add_child(light)
+		work_fixture_emitters.append(emitter)
+		work_fixture_lights.append(light)
+	# Emergency beacons sit directly on the wall structure; there are no freestanding light poles.
+	var emergency_positions: Array[Vector3] = [Vector3(-13.55,4.1,6),Vector3(-13.55,3.0,-5),Vector3(-13.55,1.8,0),Vector3(13.55,4.1,-8),Vector3(13.55,2.9,5),Vector3(13.55,1.8,-2)]
+	for index in range(emergency_positions.size()):
+		var position := emergency_positions[index]
+		var panel := _box(self,"EmergencyBeaconHousing",position,Vector3(0.14,0.44,0.52),Color("33362f"))
+		panel.rotation.y = PI/2.0 if position.x < 0.0 else -PI/2.0
+		var emitter := _box(self,"EmergencyBeaconEmitter",position+Vector3(0.05 if position.x < 0.0 else -0.05,0,0),Vector3(0.06,0.32,0.34),Color("a6190d"))
+		emitter.rotation.y = panel.rotation.y
+		var emitter_material := StandardMaterial3D.new()
+		emitter_material.albedo_color = Color("a6190d")
+		emitter_material.emission_enabled = true
+		emitter_material.emission = Color("ff1608")
+		emitter.material_override = emitter_material
+		var light := OmniLight3D.new()
+		light.name = "WallEmergencyLight_%02d" % index
+		light.position = position+Vector3(0.34 if position.x < 0.0 else -0.34,0,0)
+		light.light_color = Color("ff2410")
+		light.omni_range = 8.0
+		light.shadow_enabled = false
+		add_child(light)
+		emergency_emitters.append(emitter)
+		emergency_lights.append(light)
 
 func _material(color: Color, metal := 0.55, rough := 0.8) -> StandardMaterial3D:
 	var result := StandardMaterial3D.new()
