@@ -23,6 +23,7 @@ var nearby := ""
 var targets: Dictionary = {}
 var shard: MeshInstance3D
 var claw: MeshInstance3D
+var note_visual: MeshInstance3D
 var exit_door: MeshInstance3D
 var probe_visual: Node3D
 var message := ""
@@ -31,6 +32,9 @@ var isometric := true
 var terminal_booted := false
 var terminal_section := "commands"
 var terminal_file := ""
+var observation_active := false
+var observation_prompt: Label
+var narration: Label
 var persistence_enabled := true
 const SAVE_PATH := "user://saturn-station.save"
 var room := [
@@ -103,7 +107,11 @@ func _ready() -> void:
 	amber_light.light_energy = 1.8
 	block(self, Vector3(0,-0.2,0), Vector3(28,0.35,22), "555346", true)
 	block(self, Vector3(-14,3,-0), Vector3(0.55,6,22), "171f1d", true)
-	block(self, Vector3(-2.15,3,-11), Vector3(23.7,6,0.55), "171f1d", true)
+	block(self, Vector3(-7.15,3,-11), Vector3(13.7,6,0.55), "171f1d", true)
+	block(self, Vector3(7.1,3,-11), Vector3(5.2,6,0.55), "171f1d", true)
+	block(self, Vector3(2.1,5.3,-11), Vector3(4.8,1.4,0.55), "171f1d", true)
+	block(self, Vector3(2.1,0.65,-11), Vector3(4.8,1.3,0.55), "171f1d", true)
+	_build_observation_port()
 	block(self, Vector3(13.8,3,-11), Vector3(0.4,6,0.55), "171f1d", true)
 	exit_door = block(self, Vector3(11.4,1.5,-10.6), Vector3(3.8,3,0.4), "88876a", true)
 	for x in range(-12,13,4):
@@ -161,12 +169,33 @@ func _ready() -> void:
 	layer.add_child(prompt)
 	prompt.position = Vector2(24,110)
 	prompt.add_theme_font_size_override("font_size",17)
+	narration = Label.new()
+	layer.add_child(narration)
+	narration.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	narration.position = Vector2(-360, 84)
+	narration.size = Vector2(720, 72)
+	narration.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	narration.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	narration.add_theme_font_size_override("font_size", 20)
+	narration.add_theme_color_override("font_color", Color("dfcf9e"))
+	narration.hide()
+	observation_prompt = Label.new()
+	layer.add_child(observation_prompt)
+	observation_prompt.text = "E / ESC  ·  RETURN TO STATION"
+	observation_prompt.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	observation_prompt.offset_bottom = -30
+	observation_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	observation_prompt.add_theme_font_size_override("font_size", 15)
+	observation_prompt.add_theme_color_override("font_color", Color("d6d2bf"))
+	observation_prompt.hide()
 	setup_progression(layer)
 	if persistence_enabled:
 		_load_progress()
 	update_camera()
 
 func update_camera() -> void:
+	if observation_active:
+		return
 	var focus := player.position + Vector3(0,1.3,0)
 	if isometric:
 		camera.projection = Camera3D.PROJECTION_ORTHOGONAL
@@ -181,7 +210,102 @@ func update_camera() -> void:
 		var look_direction := Vector3(-sin(yaw)*cos(pitch),sin(pitch),-cos(yaw)*cos(pitch))
 		camera.look_at(camera.position + look_direction)
 
+func _build_observation_port() -> void:
+	for x in [ -2.35, 2.35 ]:
+		block(self, Vector3(2.1 + x, 3.0, -10.62), Vector3(0.16, 4.2, 0.2), "60695f")
+	for y in [0.95, 5.05]:
+		block(self, Vector3(2.1, y, -10.62), Vector3(4.85, 0.16, 0.2), "60695f")
+	var glass := MeshInstance3D.new()
+	var glass_shape := BoxMesh.new()
+	glass_shape.size = Vector3(4.55, 3.9, 0.1)
+	glass.mesh = glass_shape
+	var pane := StandardMaterial3D.new()
+	pane.albedo_color = Color(0.12, 0.28, 0.31, 0.32)
+	pane.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	pane.emission_enabled = true
+	pane.emission = Color("132b30")
+	pane.emission_energy_multiplier = 0.2
+	pane.roughness = 0.25
+	glass.material_override = pane
+	glass.position = Vector3(2.1, 3.0, -10.8)
+	add_child(glass)
+	var moon := MeshInstance3D.new()
+	var globe := SphereMesh.new()
+	globe.radius = 2.45
+	globe.height = 4.9
+	globe.radial_segments = 40
+	globe.rings = 24
+	moon.mesh = globe
+	moon.position = Vector3(2.1, 3.0, -18.2)
+	moon.material_override = material("a8b2af")
+	add_child(moon)
+	for i in 9:
+		var mark := MeshInstance3D.new()
+		var crater := SphereMesh.new()
+		crater.radius = 0.12 + float(i % 3) * 0.07
+		crater.height = crater.radius * 2.0
+		mark.mesh = crater
+		mark.material_override = material("8e9a98")
+		var angle := float(i) * TAU / 9.0
+		mark.position = Vector3(2.1 + sin(angle) * 1.55, 3.0 + cos(angle) * 1.35, -20.35)
+		add_child(mark)
+	var plume_material := material("c4d6d1", true)
+	for x in [-0.36, 0.18, 0.7]:
+		var plume := MeshInstance3D.new()
+		var plume_shape := CylinderMesh.new()
+		plume_shape.top_radius = 0.025
+		plume_shape.bottom_radius = 0.16
+		plume_shape.height = 3.2 + absf(x) * 1.4
+		plume.mesh = plume_shape
+		plume.material_override = plume_material
+		plume.position = Vector3(2.1 + x, 5.8, -18.2)
+		add_child(plume)
+	for i in 34:
+		var star := MeshInstance3D.new()
+		var dot := SphereMesh.new()
+		dot.radius = 0.025 + float(i % 3) * 0.012
+		dot.height = dot.radius * 2.0
+		star.mesh = dot
+		star.material_override = material("d0d1b9", true)
+		star.position = Vector3(-11.0 + float((i * 13) % 29) * 0.94, 0.4 + float((i * 7) % 11) * 0.57, -28.0)
+		add_child(star)
+
+func begin_observation() -> void:
+	if observation_active:
+		return
+	observation_active = true
+	paused = true
+	dragging = false
+	camera.projection = Camera3D.PROJECTION_PERSPECTIVE
+	camera.fov = 48.0
+	camera.position = Vector3(2.1, 2.75, -8.8)
+	camera.look_at(Vector3(2.1, 3.0, -22.0))
+	observation_prompt.show()
+	prompt.text = "E / ESC — return to the station"
+
+func close_observation() -> void:
+	observation_active = false
+	paused = false
+	observation_prompt.hide()
+	update_camera()
+
+func show_narration(text: String) -> void:
+	narration.text = text
+	narration.modulate.a = 1.0
+	narration.show()
+	var tween := create_tween()
+	tween.tween_interval(3.2)
+	tween.tween_property(narration, "modulate:a", 0.0, 0.8)
+	tween.tween_callback(narration.hide)
+
 func _unhandled_input(event: InputEvent) -> void:
+	if observation_active:
+		if event is InputEventMouseMotion and dragging:
+			camera.rotate_y(-event.relative.x * 0.002)
+			camera.rotate_object_local(Vector3.RIGHT, -event.relative.y * 0.002)
+		if event is InputEventKey and event.pressed and (event.physical_keycode == KEY_E or event.physical_keycode == KEY_ESCAPE):
+			close_observation()
+		return
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
 			dragging = event.pressed
@@ -227,6 +351,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					open_menu("bench")
 
 func _physics_process(delta: float) -> void:
+	if observation_active:
+		return
 	var active: bool = not paused and mode == "" and charge > 0 and not progression.finished
 	var direction := Vector3.ZERO
 	if active:
@@ -259,7 +385,25 @@ func _physics_process(delta: float) -> void:
 	prompt.text += "\n" + message + "\nCells: " + str(progression.cells) + "  |  Q use cell"
 
 func setup_progression(layer: CanvasLayer) -> void:
-	targets = {"Service case":Vector2(-5,2),"Auxiliary power":Vector2(-10.8,-8.5),"ETNA terminal":Vector2(5,-5.5),"Maintenance station":Vector2(-9,2.2),"Broken claw":Vector2(-7.2,3),"Specification shard":Vector2(5.4,-3.95),"Maintenance exit":Vector2(11.4,-10.6)}
+	targets = {
+		"Service case":Vector2(-5,2), "Auxiliary power":Vector2(-10.8,-8.5),
+		"ETNA terminal":Vector2(5,-5.5), "Maintenance station":Vector2(-9,2.2),
+		"Broken claw":Vector2(-7.2,3), "Specification shard":Vector2(5.4,-3.95),
+		"Maintenance exit":Vector2(11.4,-10.6), "Observation window":Vector2(2.1,-9.0),
+		"Handwritten note":Vector2(2.1,-7.7), "Crew table":Vector2(8.3,-5.0),
+		"Exchanger":Vector2(-5.5,-9.2), "Turbine":Vector2(-11,-2),
+		"Press":Vector2(-11.4,1.8), "Engine":Vector2(-11,-5.7),
+		"Helmet stand":Vector2(11.2,-2.1)
+	}
+	note_visual = block(self,Vector3(2.1,0.58,-7.7),Vector3(0.46,0.04,0.3),"d5c17a")
+	var note_label := Label3D.new()
+	note_label.text = "ETNA"
+	note_label.font_size = 30
+	note_label.pixel_size = 0.004
+	note_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	note_visual.add_child(note_label)
+	if progression.note_taken:
+		note_visual.hide()
 	claw = block(self,Vector3(-7.2,0.25,3),Vector3(0.65,0.3,0.42),"68765b")
 	for side in [-1,1]:
 		var finger := block(claw,Vector3(side*0.21,0,0.34),Vector3(0.1,0.16,0.46),"777c70")
@@ -294,6 +438,8 @@ func nearest_target() -> String:
 	var result := ""
 	for key in targets:
 		if key == "Broken claw" and progression.claw_salvaged:
+			continue
+		if key == "Handwritten note" and progression.note_taken:
 			continue
 		if key == "Specification shard" and not progression.spec_released:
 			continue
@@ -333,6 +479,28 @@ func interact() -> void:
 				shard.hide()
 				message = "Fabrication specification recovered."
 				_save_progress()
+		"Observation window":
+			begin_observation()
+		"Handwritten note":
+			if not progression.note_taken:
+				progression.note_taken = true
+				progression.add("note")
+				note_visual.hide()
+				message = "Access note recovered. The handwritten password reads ETNA."
+				show_narration("A note caught beneath the window frame. Four letters, written in a hurried hand: ETNA.")
+				_save_progress()
+		"Crew table":
+			show_narration("Two mugs. One chair pulled back. The shift log stops halfway through a sentence.")
+		"Exchanger":
+			show_narration("Heat exchanger C-2. Its return line still ticks as the metal cools.")
+		"Turbine":
+			show_narration("A bearing knocks somewhere inside the turbine housing. The sound travels through the floor.")
+		"Press":
+			show_narration("The service press is locked at the bottom of its stroke. Someone left the work half-finished.")
+		"Engine":
+			show_narration("A sealed drive unit. The casing is cold, but a faint vibration remains in its mounts.")
+		"Helmet stand":
+			show_narration("A pressure helmet, visor turned toward the station window.")
 		"Maintenance exit":
 			message = progression.use_exit()
 			if progression.door_open:
@@ -473,6 +641,8 @@ func _load_progress() -> void:
 		return
 	progression.restore(snapshot)
 	powered = progression.powered
+	if progression.note_taken:
+		note_visual.hide()
 	if powered:
 		power_lamp.material_override = material("72ff92", true)
 		amber_light.light_color = Color("d4b56d")
@@ -508,6 +678,8 @@ func refresh_menu() -> void:
 			for item in progression.inventory:
 				line(item.capitalize() + " × " + str(progression.inventory[item]))
 			line("Power cells: " + str(progression.cells))
+			if progression.inventory.get("note",0) > 0:
+				action("Inspect access note",open_menu.bind("note"))
 			if progression.inventory.get("card",0) > 0:
 				action("Inspect worker card",open_menu.bind("card"))
 			if progression.probe_crafted:
@@ -515,6 +687,10 @@ func refresh_menu() -> void:
 		"card":
 			line("Mara Venn / Staff access card")
 			line("Handwritten note: ETNA")
+		"note":
+			line("RECOVERED NOTE / WINDOW FRAME")
+			line("The paper is damp at the edges. The pencil marks are still legible:")
+			line("ETNA")
 		"terminal":
 			if not terminal_booted:
 				line("PSP-6 WAVE TERMINAL / SELF TEST")
