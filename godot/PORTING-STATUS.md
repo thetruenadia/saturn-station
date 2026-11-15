@@ -37,6 +37,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Build distinct rotating previews for the access card, ETNA note, gear, servo motor, wiring loom, control chip and armour plate.
 - [x] Show the service case opening, reveal the physical power cell, remove it on pickup, and restore that case state from saved progression.
 - [x] Replace the generic key-device blocks with a phosphor CRT terminal and a multi-control auxiliary power panel whose lamps and screen respond to grid state and terminal boot/authentication.
+- [x] Build named rotary-converter, coolant-exchanger, workshop-press and auxiliary-compressor assemblies into their existing stations, tying them into the service-bay layout.
 - [x] Port click-to-select object interactions and E-triggered auto-approach, with WASD interruption and state-aware target prompts.
 - [x] Add a projected proximity marker with the current action or a move-closer cue; hide it behind panels, pauses and cutscenes.
 - [x] Port the loose manipulator recovery and equipment-mount flow: its model begins in the maintenance claw, disappears on recovery, enters storage, and must be fitted before operating the case or switch.
@@ -49,7 +50,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [x] Require manually dragging recipe components into the fabrication tray before crafting.
 - [x] Expose the full native station file archive, including system status and staff directory, alongside the logs/spec/incident records.
 - [x] Replace probe place/confirm buttons with a drag-to-wrist-socket installation target and regression coverage.
-- [ ] Finish remaining pickup feedback polish and add authored models for non-inventory room props.
+- [ ] Finish remaining pickup feedback polish and refine the remaining room props and material wear.
 - [ ] Port the full interactive prop/narration coverage, including room storytelling and the remaining functional objects.
 - [ ] Replace the remaining simplified props and materials with higher-detail native assets while preserving the worn, cable-dense industrial aesthetic.
 - [ ] Visually playtest desktop and mobile-like window sizes and iterate on camera, collision, interaction distances and layout.
