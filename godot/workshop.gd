@@ -212,7 +212,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					open_menu("bench")
 
 func _physics_process(delta: float) -> void:
-	var active := not paused and mode == "" and charge > 0 and not progression.finished
+	var active: bool = not paused and mode == "" and charge > 0 and not progression.finished
 	var direction := Vector3.ZERO
 	if active:
 		var forward := Vector3(-sin(yaw),0,-cos(yaw))
