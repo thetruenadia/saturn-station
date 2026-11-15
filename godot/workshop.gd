@@ -816,6 +816,76 @@ func action(label: String, callback: Callable, enabled := true) -> void:
 	button.pressed.connect(callback)
 	menu.add_child(button)
 
+func _worker_portrait() -> Texture2D:
+	var image := Image.create(96,128,false,Image.FORMAT_RGBA8)
+	image.fill(Color("aaa99c"))
+	for y in range(128):
+		for x in range(96):
+			var dx := float(x-48)
+			var dy := float(y-48)
+			if y >= 83 and pow((dx/39.0),2.0)+pow(((float(y)-119.0)/36.0),2.0) < 1.0:
+				image.set_pixel(x,y,Color("716e61"))
+			elif pow(dx/20.0,2.0)+pow(dy/27.0,2.0) < 1.0:
+				image.set_pixel(x,y,Color("b49d7e"))
+			if y < 43 and pow(dx/22.0,2.0)+pow(((float(y)-37.0)/18.0),2.0) < 1.0:
+				image.set_pixel(x,y,Color("4f4a3e"))
+	for eye_x in [41,55]:
+		for y in range(47,50):
+			image.set_pixel(eye_x,y,Color("48453d"))
+	for x in range(44,53):
+		image.set_pixel(x,70,Color("777164"))
+	for x in range(35,62):
+		image.set_pixel(x,77,Color("6d594a"))
+	var texture := ImageTexture.create_from_image(image)
+	return texture
+
+func _add_worker_card() -> void:
+	var card := PanelContainer.new()
+	card.name = "WorkerAccessCard"
+	card.custom_minimum_size = Vector2(340,210)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("b5ad91")
+	style.border_color = Color("625d4e")
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(4)
+	card.add_theme_stylebox_override("panel",style)
+	menu.add_child(card)
+	var body := VBoxContainer.new()
+	body.add_theme_constant_override("separation",5)
+	card.add_child(body)
+	var header := Label.new()
+	header.text = "S A T U R N   S T A T I O N   /   B-7"
+	header.add_theme_font_size_override("font_size",12)
+	header.add_theme_color_override("font_color",Color("514d42"))
+	body.add_child(header)
+	var details := HBoxContainer.new()
+	details.add_theme_constant_override("separation",12)
+	body.add_child(details)
+	var portrait := TextureRect.new()
+	portrait.name = "WorkerPortrait"
+	portrait.texture = _worker_portrait()
+	portrait.custom_minimum_size = Vector2(86,116)
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	details.add_child(portrait)
+	var text_column := VBoxContainer.new()
+	details.add_child(text_column)
+	var name_label := Label.new()
+	name_label.text = "MARA VENN"
+	name_label.add_theme_font_size_override("font_size",20)
+	name_label.add_theme_color_override("font_color",Color("35342f"))
+	text_column.add_child(name_label)
+	var faded := Label.new()
+	faded.text = "SERVICE CREW\nLOWER EXCHANGER BAY\nAUTHORIZATION: LIMITED"
+	faded.modulate = Color(0.38,0.37,0.33,0.64)
+	faded.add_theme_font_size_override("font_size",12)
+	text_column.add_child(faded)
+	var password := Label.new()
+	password.text = "PASSWORD  /  ETNA"
+	password.add_theme_font_size_override("font_size",16)
+	password.add_theme_color_override("font_color",Color("6e492a"))
+	body.add_child(password)
+
 func load_part(type: String) -> void:
 	progression.stage(type)
 	_save_progress()
@@ -958,8 +1028,7 @@ func refresh_menu() -> void:
 			if progression.probe_crafted:
 				line("Access probe: " + ("installed" if progression.probe_installed else "stowed"))
 		"card":
-			line("Mara Venn / Staff access card")
-			line("Handwritten note: ETNA")
+			_add_worker_card()
 		"note":
 			line("RECOVERED NOTE / WINDOW FRAME")
 			line("The paper is damp at the edges. The pencil marks are still legible:")

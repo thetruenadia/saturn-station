@@ -83,6 +83,9 @@ func run_workshop() -> void:
 	# locker callbacks the in-game buttons use.
 	for pair in [[0,"card"],[1,"motor"],[1,"plate"],[1,"wire"],[2,"gear"],[2,"wire"],[3,"plate"]]:
 		workshop.take_part(pair[0],pair[1])
+	workshop.open_menu("card")
+	assert(workshop.menu.find_child("WorkerPortrait",true,false) is TextureRect)
+	workshop.close_menu()
 	workshop.nearby = "Broken claw"
 	workshop.interact()
 	assert(workshop.progression.claw_salvaged and not workshop.claw.visible)
