@@ -35,6 +35,9 @@ var terminal_file := ""
 var observation_active := false
 var observation_prompt: Label
 var narration: Label
+var directive: Label
+var notice: Label
+var notice_tween: Tween
 var opening_active := false
 var opening_started := false
 var opening_elapsed := 0.0
@@ -182,6 +185,26 @@ func _ready() -> void:
 	layer.add_child(prompt)
 	prompt.position = Vector2(24,110)
 	prompt.add_theme_font_size_override("font_size",17)
+	directive = Label.new()
+	layer.add_child(directive)
+	directive.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	directive.position = Vector2(-390, 20)
+	directive.size = Vector2(780, 38)
+	directive.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	directive.add_theme_font_size_override("font_size", 19)
+	directive.add_theme_color_override("font_color", Color("e3c985"))
+	directive.add_theme_color_override("font_shadow_color", Color(0,0,0,0.8))
+	directive.add_theme_constant_override("shadow_offset_x", 2)
+	directive.add_theme_constant_override("shadow_offset_y", 2)
+	notice = Label.new()
+	layer.add_child(notice)
+	notice.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	notice.position = Vector2(-300,-110)
+	notice.size = Vector2(600,42)
+	notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	notice.add_theme_font_size_override("font_size",21)
+	notice.add_theme_color_override("font_color",Color("f0d496"))
+	notice.hide()
 	narration = Label.new()
 	layer.add_child(narration)
 	narration.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -293,6 +316,7 @@ func start_maker_opening() -> void:
 	if layer:
 		hud.hide()
 		prompt.hide()
+		directive.hide()
 	opening_layer = CanvasLayer.new()
 	opening_layer.layer = 8
 	add_child(opening_layer)
@@ -413,6 +437,7 @@ func _finish_maker_opening() -> void:
 	if layer:
 		hud.show()
 		prompt.show()
+		directive.show()
 	update_camera()
 
 func _build_observation_port() -> void:
@@ -593,6 +618,36 @@ func _physics_process(delta: float) -> void:
 	elif nearby != "":
 		prompt.text = "E — " + nearby
 	prompt.text += "\n" + message + "\nCells: " + str(progression.cells) + "  |  Q use cell"
+	directive.text = _current_directive()
+	directive.visible = mode == "" and not paused and not opening_active
+
+func _current_directive() -> String:
+	if not powered:
+		return "DIRECTIVE 01  /  RESTORE AUXILIARY POWER"
+	if not progression.authenticated:
+		return "DIRECTIVE 02  /  FIND THE ACCESS NOTE · POWER THE TERMINAL"
+	if not progression.spec_unlocked and not progression.spec_released:
+		return "DIRECTIVE 03  /  TERMINAL · RUN SPEC"
+	if progression.spec_released:
+		return "DIRECTIVE 04  /  RECOVER THE RELEASED SPECIFICATION"
+	if not progression.probe_crafted:
+		return "DIRECTIVE 05  /  STAGE COMPONENTS AT THE MAINTENANCE BENCH"
+	if not progression.probe_installed:
+		return "DIRECTIVE 06  /  PLACE THE ACCESS PROBE IN MU-1'S WRIST SLOT"
+	if not progression.door_open:
+		return "EXIT  /  USE THE PROBE AT THE PRESSURE DOOR"
+	return "EXIT  /  PASS THROUGH THE OPEN PRESSURE DOOR"
+
+func show_notice(text: String) -> void:
+	if notice_tween and notice_tween.is_running():
+		notice_tween.kill()
+	notice.text = text
+	notice.modulate.a = 1.0
+	notice.show()
+	notice_tween = create_tween()
+	notice_tween.tween_interval(2.4)
+	notice_tween.tween_property(notice,"modulate:a",0.0,0.45)
+	notice_tween.tween_callback(notice.hide)
 
 func setup_progression(layer: CanvasLayer) -> void:
 	targets = {
@@ -662,7 +717,10 @@ func nearest_target() -> String:
 func interact() -> void:
 	match nearby:
 		"Service case":
+			var previous_cells: int = progression.cells
 			message = progression.use_case()
+			if progression.cells > previous_cells:
+				show_notice("ITEM RECOVERED  ·  PORTABLE POWER CELL")
 			_save_progress()
 		"Auxiliary power":
 			powered = true
@@ -670,6 +728,7 @@ func interact() -> void:
 			power_lamp.material_override = material("72ff92",true)
 			amber_light.light_color = Color("d4b56d")
 			message = "Auxiliary grid online."
+			show_notice("POWER RESTORED  ·  AUXILIARY GRID ONLINE")
 			_save_progress()
 		"ETNA terminal":
 			if powered:
@@ -683,11 +742,13 @@ func interact() -> void:
 				claw.hide()
 				visual.call("set_recovered_arm", true)
 				message = "Claw dismantled: gears, chip, wire."
+				show_notice("SALVAGED  ·  MOTOR / CHIP / WIRE")
 				_save_progress()
 		"Specification shard":
 			if progression.collect_spec():
 				shard.hide()
 				message = "Fabrication specification recovered."
+				show_notice("ITEM RECOVERED  ·  ACCESS PROBE SPECIFICATION")
 				_save_progress()
 		"Observation window":
 			begin_observation()
@@ -698,6 +759,7 @@ func interact() -> void:
 				note_visual.hide()
 				message = "Access note recovered. The handwritten password reads ETNA."
 				show_narration("A note caught beneath the window frame. Four letters, written in a hurried hand: ETNA.")
+				show_notice("ITEM RECOVERED  ·  ETNA ACCESS NOTE")
 				_save_progress()
 		"Crew table":
 			show_narration("Two mugs. One chair pulled back. The shift log stops halfway through a sentence.")
@@ -760,7 +822,8 @@ func load_part(type: String) -> void:
 	refresh_menu()
 
 func take_part(index: int, type: String) -> void:
-	progression.take(index,type)
+	if progression.take(index,type):
+		show_notice("ITEM RECOVERED  ·  " + type.to_upper())
 	_save_progress()
 	refresh_menu()
 
