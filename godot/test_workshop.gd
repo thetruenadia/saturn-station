@@ -248,6 +248,12 @@ func run_workshop() -> void:
 	workshop.progression.authenticated = true
 	workshop.run_terminal_command("3")
 	assert(not workshop.powered and not workshop.progression.powered and workshop.mode == "")
+	workshop.charge = 0.0
+	workshop._physics_process(0.01)
+	assert(workshop.death_active and workshop.death_overlay.visible)
+	assert(workshop.death_overlay.find_child("RebootUnitButton",true,false) is Button)
+	workshop._unhandled_input(pause_key)
+	assert(not workshop.paused and workshop.death_overlay.visible)
 	print("Workshop scene progression through the Generator 04 doorway passed")
 	workshop.queue_free()
 	await process_frame

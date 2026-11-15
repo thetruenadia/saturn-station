@@ -84,6 +84,8 @@ var ambient_player: AudioStreamPlayer
 var world_environment: WorldEnvironment
 var pause_overlay: ColorRect
 var pause_content: VBoxContainer
+var death_overlay: ColorRect
+var death_active := false
 var pause_settings_active := false
 var master_volume := 0.8
 var brightness := 1.0
@@ -738,6 +740,8 @@ func show_observation(id: String, heading: String, lines: Array[String]) -> void
 	show_narration(heading.to_upper() + "\n" + lines[mini(count,lines.size()-1)])
 
 func _unhandled_input(event: InputEvent) -> void:
+	if death_active:
+		return
 	if opening_active:
 		if event is InputEventKey and event.pressed and event.physical_keycode == KEY_Y:
 			_finish_maker_opening()
@@ -827,6 +831,8 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	if observation_active:
 		return
+	if charge <= 0.0 and not death_active:
+		_show_death_screen()
 	var active: bool = not paused and mode == "" and charge > 0 and not progression.finished
 	var direction := Vector3.ZERO
 	if active:
@@ -976,8 +982,43 @@ func _build_pause_screen(layer: CanvasLayer) -> void:
 	pause_content.add_theme_constant_override("separation",12)
 	card.add_child(pause_content)
 	_refresh_pause_screen(false)
+	death_overlay = ColorRect.new()
+	death_overlay.name = "PowerDepletedScreen"
+	death_overlay.color = Color(0.015,0.02,0.018,0.92)
+	death_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	death_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.add_child(death_overlay)
+	death_overlay.hide()
+	var death_center := CenterContainer.new()
+	death_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	death_overlay.add_child(death_center)
+	var death_card := PanelContainer.new()
+	death_card.custom_minimum_size = Vector2(430,0)
+	death_center.add_child(death_card)
+	var death_content := VBoxContainer.new()
+	death_content.add_theme_constant_override("separation",12)
+	death_card.add_child(death_content)
+	var failure_code := Label.new()
+	failure_code.text = "SRV-09 / CRITICAL FAILURE"
+	failure_code.add_theme_color_override("font_color",Color("c6b97f"))
+	death_content.add_child(failure_code)
+	var failure_title := Label.new()
+	failure_title.text = "POWER DEPLETED"
+	failure_title.add_theme_font_size_override("font_size",34)
+	death_content.add_child(failure_title)
+	var failure_note := Label.new()
+	failure_note.text = "MU-1 has shut down. Restart the demo to begin a fresh shift."
+	failure_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	death_content.add_child(failure_note)
+	var reboot := Button.new()
+	reboot.name = "RebootUnitButton"
+	reboot.text = "REBOOT UNIT"
+	reboot.pressed.connect(restart_demo)
+	death_content.add_child(reboot)
 
 func set_paused(value: bool) -> void:
+	if death_active and value:
+		return
 	paused = value
 	if pause_overlay:
 		pause_overlay.visible = value
@@ -1097,6 +1138,17 @@ func restart_demo() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	get_tree().set_meta("start_maker_opening",true)
 	get_tree().change_scene_to_file("res://workshop.tscn")
+
+func _show_death_screen() -> void:
+	death_active = true
+	paused = false
+	move_target = Vector2.ZERO
+	if pause_overlay:
+		pause_overlay.hide()
+	if death_overlay:
+		death_overlay.show()
+	visual.call("set_moving",false)
+	message = "CRITICAL: UNIT POWER DEPLETED."
 
 func _refresh_hotbar() -> void:
 	if hotbar_labels.size() != 5:
