@@ -24,6 +24,33 @@ func run_workshop() -> void:
 	assert(workshop.hotbar_slots.size() == 5)
 	assert(workshop.ambient_player.playing)
 	assert((workshop.ambient_player.stream as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD)
+	workshop.player.position = Vector3(3.5,0,-2.25)
+	workshop.visual.rotation.y = 1.1
+	workshop.charge = 42.0
+	workshop.yaw = 2.4
+	workshop.pitch = 0.55
+	workshop.zoom = 11.0
+	workshop.isometric = false
+	var saved_world: Dictionary = workshop._capture_world_state()
+	workshop.player.position = Vector3.ZERO
+	workshop.visual.rotation.y = 0.0
+	workshop.charge = 60.0
+	workshop.yaw = 0.8
+	workshop.pitch = 0.72
+	workshop.zoom = 15.0
+	workshop.isometric = true
+	workshop._restore_world_state(saved_world)
+	assert(is_equal_approx(workshop.player.position.x,3.5) and is_equal_approx(workshop.player.position.z,-2.25))
+	assert(is_equal_approx(workshop.charge,42.0) and is_equal_approx(workshop.visual.rotation.y,1.1))
+	assert(is_equal_approx(workshop.yaw,2.4) and is_equal_approx(workshop.pitch,0.55) and is_equal_approx(workshop.zoom,11.0))
+	assert(not workshop.isometric)
+	workshop.player.position = Vector3.ZERO
+	workshop.charge = 60.0
+	workshop.yaw = PI / 4.0
+	workshop.pitch = 0.72
+	workshop.zoom = 15.0
+	workshop.isometric = true
+	workshop.update_camera()
 	assert(workshop._interaction_hint("Service case") == "MANIPULATOR REQUIRED")
 	assert(workshop._interaction_hint("Observation window") == "VIEW ENCELADUS")
 	var pause_key := InputEventKey.new()

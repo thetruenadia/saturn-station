@@ -116,6 +116,7 @@ var opening_caption: Label
 var opening_button: Button
 var opening_layer: CanvasLayer
 var persistence_enabled := true
+var save_elapsed := 0.0
 const SAVE_PATH := "user://saturn-station.save"
 var room := [
 	["Service case", -5.0, 2.0, 1.0, 0.73],
@@ -843,6 +844,11 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	if observation_active:
 		return
+	if persistence_enabled:
+		save_elapsed += delta
+		if save_elapsed >= 2.0:
+			save_elapsed = 0.0
+			_save_progress()
 	if charge <= 0.0 and not death_active:
 		_show_death_screen()
 	var active: bool = not paused and mode == "" and charge > 0 and not progression.finished
@@ -1032,6 +1038,8 @@ func set_paused(value: bool) -> void:
 	if death_active and value:
 		return
 	paused = value
+	if value:
+		_save_progress()
 	if pause_overlay:
 		pause_overlay.visible = value
 	if value:
@@ -1627,12 +1635,38 @@ func _save_progress() -> void:
 		return
 	var save := ConfigFile.new()
 	save.set_value("progress", "snapshot", progression.snapshot())
+	save.set_value("world", "state", _capture_world_state())
 	save.save(SAVE_PATH)
+
+func _capture_world_state() -> Dictionary:
+	return {
+		"charge": charge,
+		"player_x": player.position.x,
+		"player_z": player.position.z,
+		"heading": visual.rotation.y,
+		"camera_yaw": yaw,
+		"camera_pitch": pitch,
+		"camera_zoom": zoom,
+		"isometric": isometric
+	}
+
+func _restore_world_state(state: Dictionary) -> void:
+	charge = clampf(float(state.get("charge", charge)), 0.0, 100.0)
+	player.position.x = clampf(float(state.get("player_x", player.position.x)), -12.5, 12.5)
+	player.position.z = clampf(float(state.get("player_z", player.position.z)), -9.5, 9.5)
+	visual.rotation.y = float(state.get("heading", visual.rotation.y))
+	yaw = float(state.get("camera_yaw", yaw))
+	pitch = clampf(float(state.get("camera_pitch", pitch)), 0.15, 1.35)
+	zoom = clampf(float(state.get("camera_zoom", zoom)), 5.0, 26.0)
+	isometric = bool(state.get("isometric", isometric))
 
 func _load_progress() -> void:
 	var save := ConfigFile.new()
 	if save.load(SAVE_PATH) != OK:
 		return
+	var world_state: Variant = save.get_value("world", "state", {})
+	if world_state is Dictionary:
+		_restore_world_state(world_state)
 	var snapshot: Variant = save.get_value("progress", "snapshot", {})
 	if not snapshot is Dictionary:
 		return
@@ -1655,6 +1689,10 @@ func _load_progress() -> void:
 		visual.call("set_probe_installed", true)
 	if progression.door_open:
 		exit_door.position.y = 4.8
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
+		_save_progress()
 
 func prepare_menu_backdrop() -> void:
 	paused = true
