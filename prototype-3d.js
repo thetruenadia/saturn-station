@@ -581,11 +581,11 @@ function terminalCommand(k){
 }
 function enterGeneratorHall(){
  if(!doorOpen||!generatorHall)return;
- hallActive=true;generatorHall.setActive(true);robot.position.set(11.4,0,-13.2);target=null;selected=null;Object.keys(keys).forEach(k=>keys[k]=false);
+ hallActive=true;generatorHall.setActive(true);robot.position.set(11.4,0,-13.2);robot.rotation.y=Math.PI;lookHeading=Math.PI;target=null;selected=null;camera.position.set(robot.position.x+12,robot.position.y+15,robot.position.z+12);controls.target.set(robot.position.x,robot.position.y+1.25,robot.position.z-5);camera.zoom=.82;camera.updateProjectionMatrix();Object.keys(keys).forEach(k=>keys[k]=false);
  task.textContent='GENERATOR 04 · Follow the connected side stair down to the lower gallery gate.';generatorHall.showArrival();saveProgress();
 }
 function returnToWorkshop(){
- hallActive=false;generatorHall?.setActive(false);robot.position.set(11.4,0,-9.1);target=null;selected=null;Object.keys(keys).forEach(k=>keys[k]=false);
+ hallActive=false;generatorHall?.setActive(false);robot.position.set(11.4,0,-9.1);camera.position.set(robot.position.x+12,robot.position.y+15,robot.position.z+12);controls.target.set(robot.position.x,robot.position.y+1.3,robot.position.z);camera.zoom=1.55;camera.updateProjectionMatrix();target=null;selected=null;Object.keys(keys).forEach(k=>keys[k]=false);
  doorOpen=true;leftLeaf.position.x=-1.85;rightLeaf.position.x=1.85;task.textContent='Back in the B-7 service bay.';saveProgress();notify('RETURNED TO B-7 SERVICE BAY');
 }
 function finishDemo(){
@@ -1091,7 +1091,7 @@ function restoreProgress(){
   if(hasArm)removeObject(arm);lidPivot.rotation.x=caseOpen?-1.35:0;cell.visible=caseOpen&&!caseCellTaken;
   powerOn=flag('powerOn');powerElapsed=10;generatorLever.rotation.z=powerOn?.75:0;terminalScreen.material=terminalLamp.material=powerOn?terminalLit:terminalDark;
   terminalBooted=powerOn&&flag('terminalBooted');doorOpen=flag('doorOpen')&&workshop.hasProbe&&powerOn;leftLeaf.position.x=doorOpen?-1.85:0;rightLeaf.position.x=doorOpen?1.85:0;
-  controls.target.set(robot.position.x,1.3,robot.position.z);camera.position.set(robot.position.x+12,16,robot.position.z+12);notify('LOCAL PROGRESS RESTORED');
+  controls.target.set(robot.position.x,robot.position.y+1.3,robot.position.z);camera.zoom=hallActive?.82:1.55;camera.updateProjectionMatrix();camera.zoom=hallActive?.82:1.55;camera.updateProjectionMatrix();controls.target.set(robot.position.x,robot.position.y+1.3,robot.position.z+(hallActive?-5:0));camera.position.set(robot.position.x+12,robot.position.y+15,robot.position.z+12);notify('LOCAL PROGRESS RESTORED');
  }catch{}
 }
 window.addEventListener('pagehide',saveProgress);
@@ -1115,7 +1115,7 @@ function moveRobot(dx,dz){
  if(canOccupy(robot.position.x,robot.position.z+dz)){robot.position.z+=dz;if(hallActive)robot.position.y=generatorHall.worldFloor(robot.position.x,robot.position.z,robot.position.y)}
 }
 function animate(){requestAnimationFrame(animate);const elapsed=clock.getDelta();const dt=Math.min(elapsed,.04);if(mainMenu?.active){observation?.update(0);return;}if(observation?.active){controls.enabled=false;observation.update(dt);renderer.render(scene,observation.approachCamera);return;}referenceAssets.update(paused||ended||workshop.isOpen?0:dt,powerOn,reducedMotion,!!pickup&&pickup.time>.53);if(opening?.active){controls.enabled=false;if(!paused)opening.update(elapsed);renderer.render(scene,opening.camera);return;}controls.enabled=!firstPerson&&!inventory.classList.contains('open')&&!workshop.isOpen&&!paused&&!devConsole.classList.contains('open')&&!terminalOpen;// Keep MU-1 in view instead of orbiting the empty centre of the expanded chamber.
-const desiredFocus=workshop.isOpen?new THREE.Vector3(-5.3,1.3,2.2):new THREE.Vector3(robot.position.x,robot.position.y+1.25,robot.position.z);
+const desiredFocus=workshop.isOpen?new THREE.Vector3(-5.3,1.3,2.2):new THREE.Vector3(robot.position.x,robot.position.y+1.25,robot.position.z+(hallActive?-5:0));
 const followDelta=desiredFocus.sub(controls.target).multiplyScalar(1-Math.exp(-dt*4));
 controls.target.add(followDelta);camera.position.add(followDelta);
 controls.update();if(inventory.classList.contains('open')){renderInventoryPreview();renderItemInspection(dt)}if(!paused&&!ended&&!terminalOpen&&!inventory.classList.contains('open')&&!devConsole.classList.contains('open')){let mx=(keys.d?1:0)-(keys.a?1:0),mz=(keys.s?1:0)-(keys.w?1:0);if(firstPerson){const f=-mz,r=mx;mx=Math.sin(lookHeading)*f+Math.cos(lookHeading)*r;mz=Math.cos(lookHeading)*f-Math.sin(lookHeading)*r;}const len=Math.hypot(mx,mz);const wantsMove=len>0&&!pickup&&!workshop.isOpen;

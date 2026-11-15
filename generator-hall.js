@@ -32,6 +32,7 @@ export function createGeneratorHall({THREE,scene,interactables}) {
   const cream=new THREE.MeshStandardMaterial({color:0x777461,roughness:.86,metalness:.38});
   const teal=new THREE.MeshStandardMaterial({color:0x3e7778,roughness:.56,metalness:.52});
   const amber=new THREE.MeshStandardMaterial({color:0xb16b2b,roughness:.43,metalness:.24,emissive:0x512707,emissiveIntensity:.7});
+  const copper=new THREE.MeshStandardMaterial({color:0x956543,roughness:.61,metalness:.62});
   const glow=new THREE.MeshStandardMaterial({color:0xf3a64f,roughness:.3,emissive:0xf27821,emissiveIntensity:2.8});
   const mats={metal,dark,rust,cream,teal,amber,glow};
   function box(parent,w,h,d,material,x,y,z,rx=0,ry=0,rz=0){
@@ -47,8 +48,8 @@ export function createGeneratorHall({THREE,scene,interactables}) {
     mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
   }
   // Tall riveted shell and structural ribs suggest a vessel much larger than this gallery.
-  const shell=cylinder(root,15.2,17.4,48,metal,0,3,-15,48);
-  shell.material=metal;
+  const shell=new THREE.Mesh(new THREE.CylinderGeometry(15.2,17.4,48,48,2,true,Math.PI*.30,Math.PI*1.4),metal);
+  shell.position.set(0,3,-15);shell.castShadow=true;shell.receiveShadow=true;root.add(shell);
   cylinder(root,17.8,17.2,1.1,rust,0,-21.3,-15,48);
   cylinder(root,13.4,15.4,2.4,cream,0,27.8,-15,48);
   cylinder(root,10.2,13.4,12,metal,0,34.8,-15,40);
@@ -56,18 +57,40 @@ export function createGeneratorHall({THREE,scene,interactables}) {
   cylinder(root,3.5,5.1,5,amber,0,51.3,-15,40);
   for(let i=0;i<28;i++){
     const a=i*Math.PI*2/28,x=Math.sin(a),z=Math.cos(a);
+    if(a<Math.PI*.32||a>Math.PI*1.68)continue; // Leave the service-facing aperture open.
     beam([x*17.4,-20.5,-15+z*17.4],[x*15.3,25,-15+z*15.3],.24,i%4===0?rust:cream);
     cylinder(root,.42,.42,1.1,teal,x*17.2,-20.2,-15+z*17.2,12);
   }
+  // The open service face exposes stator windings and the inner rotor instead of a blank shell.
+  for(const y of [-17,-8,1,10,19]){
+    const stator=new THREE.Mesh(new THREE.TorusGeometry(12.9,.31,10,80),y%2?copper:cream);stator.rotation.x=Math.PI/2;stator.position.set(0,y,-15);root.add(stator);
+  }
+  for(let i=0;i<22;i++){
+    const a=Math.PI*.32+i*(Math.PI*1.36/21),x=Math.sin(a),z=Math.cos(a);
+    beam([x*12.5,-18,-15+z*12.5],[x*12.5,23,-15+z*12.5],i%3===0?.31:.16,i%3===0?copper:cream);
+    if(i%2===0)cylinder(root,.34,.34,1.2,teal,x*12.4,-17.7,-15+z*12.4,10);
+  }
+  for(const y of [-12,2,16]){
+    for(let i=0;i<12;i++){
+      const a=i*Math.PI/6,x=Math.sin(a),z=Math.cos(a);
+      beam([x*2,y,-15+z*2],[x*10,y,-15+z*10],.12,i%2?rust:metal);
+    }
+    const hub=cylinder(root,2.4,2.4,.8,metal,0,y,-15,28);hub.rotation.x=Math.PI/2;
+  }
   // Open core well: nested luminous rings and a slow axial pulse, visible from every gallery.
-  const core=new THREE.Group();root.add(core);core.position.set(0,-15,-15);
+  const core=new THREE.Group();root.add(core);core.position.set(0,-10,-15);
   for(let i=0;i<5;i++){
     const ring=new THREE.Mesh(new THREE.TorusGeometry(7.6-i*.72,.18+i*.035,8,72),i%2?glow:amber);
     ring.rotation.x=Math.PI/2;ring.position.y=i*2.5;core.add(ring);
   }
-  const coreLight=new THREE.PointLight(0xf08136,180,72,1.7);coreLight.position.set(0,-13,-15);root.add(coreLight);
-  const inner=new THREE.Mesh(new THREE.CylinderGeometry(4.2,5.8,28,24,1,true),new THREE.MeshBasicMaterial({color:0xd66c2a,transparent:true,opacity:.11,side:THREE.DoubleSide}));
-  inner.position.set(0,-13,-15);root.add(inner);
+  const coreLight=new THREE.PointLight(0xf08136,180,72,1.7);coreLight.position.set(0,-3,-15);coreLight.intensity=65;root.add(coreLight);
+  const inner=new THREE.Mesh(new THREE.CylinderGeometry(4.8,6.2,40,24,1,true),new THREE.MeshBasicMaterial({color:0xd66c2a,transparent:true,opacity:.11,side:THREE.DoubleSide}));
+  inner.position.set(0,3,-15);root.add(inner);
+  const rotor=new THREE.Mesh(new THREE.CylinderGeometry(3.1,4.1,34,24,2,true),new THREE.MeshStandardMaterial({color:0x544638,roughness:.57,metalness:.72,emissive:0x51230f,emissiveIntensity:.4}));
+  rotor.position.set(0,3,-15);root.add(rotor);
+  for(const y of [-12,-4,4,12,20]){
+    const band=new THREE.Mesh(new THREE.TorusGeometry(4.2,.34,10,48),y%2?copper:amber);band.rotation.x=Math.PI/2;band.position.set(0,y,-15);root.add(band);
+  }
   // The immense hall, overhead catwalks, and cross-braced girders frame the dynamo.
   for(const x of [-48,-42,-30,30,42,48]){
     for(const z of [-68,-54,-40,-26,-12,2,16]){
@@ -160,9 +183,10 @@ export function createGeneratorHall({THREE,scene,interactables}) {
   box(gate,.09,.7,.15,glow,1.72,2.7,.48);
   box(gate,1.4,.18,.2,cream,0,4.65,.4);
   const entry=new THREE.Group();entry.position.set(0,0,20);root.add(entry);
-  box(entry,4.6,5.1,.55,metal,0,2.55,0);
-  box(entry,3.3,4,.18,dark,0,2.5,.36);
-  for(const x of [-1.8,1.8])box(entry,.22,5.3,.6,rust,x,2.65,0);
+  // Leave the B-7 threshold open; the player has already opened the bulkhead.
+  box(entry,.48,5.1,.58,metal,-2.1,2.55,0);box(entry,.48,5.1,.58,metal,2.1,2.55,0);
+  box(entry,4.6,.52,.58,metal,0,5.02,0);
+  for(const x of [-1.8,1.8])box(entry,.2,5.25,.62,rust,x,2.62,0);
   const returnAnchor=new THREE.Object3D();returnAnchor.position.set(0,0,19);root.add(returnAnchor);
   const exitAnchor=new THREE.Object3D();exitAnchor.position.set(-39,0,-50);root.add(exitAnchor);
   const returnTarget={userData:{name:'B-7 RETURN HATCH',x:11.4,z:-15,y:1.65,area:'generator04'}};
@@ -182,7 +206,7 @@ export function createGeneratorHall({THREE,scene,interactables}) {
   function update(dt,active){
     core.rotation.y+=dt*.16;
     const pulse=.85+Math.sin(performance.now()*.0012)*.15;
-    coreLight.intensity=active?180*pulse:65*pulse;
+    coreLight.intensity=active?65*pulse:24*pulse;
     for(const {point,phase} of lamps)point.intensity=(active?14:4)*(0.8+Math.sin(performance.now()*.001+phase)*.18);
   }
   function worldFloor(x,z,y){return generatorFloorAt(x-11.4,z+34,y)}
