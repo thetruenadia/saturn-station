@@ -20,6 +20,7 @@ Reference: the current Saturn Station 0.2 browser prototype and the Generator 04
 - [ ] Port menu-only music, interaction sounds, terminal boot/key sounds and ambient audio.
 - [ ] Port window inspection and its cinematic Enceladus view.
 - [x] Add terminal boot flow, ETNA password, commands/files sections and a saved record-entry section.
+- [x] Add a cinematic observation-window interaction, recoverable ETNA note and short narration at major workshop props.
 - [ ] Add terminal boot/key sounds and expand the file archive to match the browser's full contents.
 - [ ] Match tutorial prompts, directives, notices, pickup feedback and item inspection to the browser game's current clarity work.
 - [ ] Port the full interactive prop/narration coverage, including room storytelling and the remaining functional objects.
