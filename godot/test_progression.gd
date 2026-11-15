@@ -41,9 +41,15 @@ func _initialize() -> void:
 	s.use_exit()
 	assert(s.finished)
 	var snapshot: Dictionary = s.snapshot()
+	s.note_taken = true
+	s.add("note")
+	s.record_entry = "Four letters: ETNA."
+	snapshot = s.snapshot()
 	var restored = preload("res://progression.gd").new()
 	restored.restore(snapshot)
 	assert(restored.inventory == s.inventory)
 	assert(restored.powered and restored.finished)
+	assert(restored.note_taken and restored.inventory.get("note",0) == 1)
+	assert(restored.record_entry == "Four letters: ETNA.")
 	print("Workshop progression assertions passed")
 	quit()
